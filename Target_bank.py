@@ -41,7 +41,7 @@ class Target_bank:
         f = " area: " + str(self.rect_area) + " "
         sp = " sprayed :" + str(e) + " "
         wr = "wait_round: " + str(self.wait_another_step)
-        world_data = " x world " + str(self.x_meter) + " y world " + str(self.y_meter) + " "
+        world_data = " x world " + str(round(self.x_meter, 3)) + " y world " + str(round(self.y_meter, 3)) + " "
         x_base = "x base: " + str(round(self.grape_world[0], 3)) + " "
         y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
         z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
@@ -50,6 +50,16 @@ class Target_bank:
         # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
 
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world):
+        """
+        :param x: x center coordinate in meters
+        :param y: y center coordinate in meters
+        :param w: width in meters
+        :param h: height in meters
+        :param angle: in degrees from the horizontal line
+        :param mask: a 2D bitmap of the grape.
+        :param pixels_data: all data in pixels
+        :param grape_world: data in meter
+        """
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
         # self.y_base = str(round(self.grape_world[1], 3))
@@ -86,12 +96,12 @@ def check_if_in_TB(grape_world, target):
     if len(g_param.TB) > 0:
         for i in range(len(g_param.TB)):  # TODO: make it only for possible grapes in reach of the image
             point_b = g_param.TB[i].grape_world
-            print("grape_world", grape_world)
-            print("distance : ", np.linalg.norm(grape_world - point_b))
+            # print("grape_world", grape_world)
+            # print("distance : ", np.linalg.norm(grape_world - point_b))
             distance_between_grapes = np.linalg.norm(grape_world - point_b)
             if distance_between_grapes < same_grape_distance_threshold:
 
-                print("distance between old and new cluster", distance_between_grapes)
+                # print("distance between old and new cluster", distance_between_grapes)
                 g_param.TB[i].x_p = int(target[6][0])
                 g_param.TB[i].y_p = int(target[6][1])
                 g_param.TB[i].w_p = int(target[6][2])
@@ -113,24 +123,32 @@ def check_close_to_edge(target):
     angle = target[4]
     dist_on_x_from_center = w_m * math.cos(math.radians(angle))
     dist_to_edge = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center))
-    print("g_param.half_width_meter :", g_param.half_width_meter)
-    print("x_m : ", x_m, " dist_on_x_from_center: ", dist_on_x_from_center)
-    print("dist_to_edge : ", dist_to_edge)
-    print("dist_to_edge < edge_distance_threshold :", dist_to_edge < edge_distance_threshold)
+    # print("g_param.half_width_meter :", g_param.half_width_meter)
+    # print("x_m : ", x_m, " dist_on_x_from_center: ", dist_on_x_from_center)
+    # print("dist_to_edge : ", dist_to_edge)
+    # print("dist_to_edge < edge_distance_threshold :", dist_to_edge < edge_distance_threshold)
     return dist_to_edge < edge_distance_threshold
 
 
+def round_to_three(arr):
+    for i in range(0,4):
+        arr[i] = round(arr[i], 3)
+    return arr
+
+
 def add_to_TB(target):
+    target = round_to_three(target)
     too_close = check_close_to_edge(target)  # FIXME Edo
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
     ans, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if ans:
-        print("the grape already in TB")
+        # print("the grape already in TB")
         # print("true") # TODO check the end condition
         closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[0],
                                                                                                               target[1])
         if closer_to_center or too_close:  # not sprayed and closer to center
             g_param.TB[temp_target_index].grape_world = temp_grape_world
+
 
         # if not temp_target.sprayed:
         #     print("why update?: ", g.TB)
@@ -139,11 +157,11 @@ def add_to_TB(target):
     else:
 
         if not too_close:
-            print("the grape not in TB yet")
+            # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
                                           target[5], target[6], temp_grape_world))
             Target_bank.grape_index += 1
-        print("not in TB yet but too close to edge")
+        # print("not in TB yet but too close to edge")
 
 
 def sort_by_and_check_for_grapes(sorting_type):

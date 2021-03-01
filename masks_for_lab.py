@@ -3,16 +3,53 @@ import cv2 as cv
 import argparse
 import random as rng
 import matplotlib.pyplot as plt
+from termcolor import colored
+
 from Target_bank import check_if_in_TB, add_to_TB, sort_by_and_check_for_grapes, sort_by_rect_size
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from numpy import *
 import math
 from math import pi, cos, sin
 import sys
-from PIL import Image
 from pyueye import ueye
 import numpy as np
 import g_param
+import time
+import os
+
+def image_resize(image, width = None, height = None, inter = cv.INTER_AREA):
+    # initialize the dimensions of the image to be resized and
+    # grab the image size
+    dim = None
+    (h, w) = image.shape[:2]
+
+    # if both the width and height are None, then return the
+    # original image
+    if width is None and height is None:
+        return image
+
+    # check to see if the width is None
+    if width is None:
+        # calculate the ratio of the height and construct the
+        # dimensions
+        r = height / float(h)
+        dim = (int(w * r), height)
+
+    # otherwise, the height is None
+    else:
+        # calculate the ratio of the width and construct the
+        # dimensions
+        r = width / float(w)
+        dim = (width, int(h * r))
+
+    # resize the image
+    resized = cv.resize(image, dim, interpolation = inter)
+
+    # return the resized image
+    return resized
+
+
+
 
 
 def showInMovedWindow(winname, img, x = 0, y = 0):
@@ -339,7 +376,7 @@ class calcs():
 # Libraries
 
 
-def ueye_take_picture_2(i):
+def ueye_take_picture_2(image_number):
     # Variables
     hCam = ueye.HIDS(0)  # 0: first available camera;  1-254: The camera with the specified camera ID
     sInfo = ueye.SENSORINFO()
@@ -354,23 +391,23 @@ def ueye_take_picture_2(i):
     bytes_per_pixel = int(nBitsPerPixel / 8)
 
     # ---------------------------------------------------------------------------------------------------------------------------------------
-    print("START")
-    print()
+    # print("START")
+    # print()
 
     # Starts the driver and establishes the connection to the camera
     nRet = ueye.is_InitCamera(hCam, None)
-    if nRet != ueye.IS_SUCCESS:
-        print("is_InitCamera ERROR")
+    # if nRet != ueye.IS_SUCCESS:
+    #     print("is_InitCamera ERROR")
 
     # Reads out the data hard-coded in the non-volatile camera memory and writes it to the data structure that cInfo points to
     nRet = ueye.is_GetCameraInfo(hCam, cInfo)
-    if nRet != ueye.IS_SUCCESS:
-        print("is_GetCameraInfo ERROR")
+    # if nRet != ueye.IS_SUCCESS:
+    #     print("is_GetCameraInfo ERROR")
 
     # You can query additional information about the sensor type used in the camera
     nRet = ueye.is_GetSensorInfo(hCam, sInfo)
-    if nRet != ueye.IS_SUCCESS:
-        print("is_GetSensorInfo ERROR")
+    # if nRet != ueye.IS_SUCCESS:
+    #     print("is_GetSensorInfo ERROR")
 
     # Set display mode to DIB
     nRet = ueye.is_SetDisplayMode(hCam, ueye.IS_SET_DM_DIB)
@@ -381,26 +418,26 @@ def ueye_take_picture_2(i):
         # setup the color depth to the current windows setting
         ueye.is_GetColorDepth(hCam, nBitsPerPixel, m_nColorMode)
         bytes_per_pixel = int(nBitsPerPixel / 8)
-        print("IS_COLORMODE_BAYER: ", )
-        print("\tm_nColorMode: \t\t", m_nColorMode)
-        print("\tnBitsPerPixel: \t\t", nBitsPerPixel)
-        print("\tbytes_per_pixel: \t\t", bytes_per_pixel)
-        print()
+        # print("IS_COLORMODE_BAYER: ", )
+        # print("\tm_nColorMode: \t\t", m_nColorMode)
+        # print("\tnBitsPerPixel: \t\t", nBitsPerPixel)
+        # print("\tbytes_per_pixel: \t\t", bytes_per_pixel)
+        # print()
 
     # Can be used to set the size and position of an "area of interest"(AOI) within an image
     nRet = ueye.is_AOI(hCam, ueye.IS_AOI_IMAGE_GET_AOI, rectAOI, ueye.sizeof(rectAOI))
-    if nRet != ueye.IS_SUCCESS:
-        print("is_AOI ERROR")
+    # if nRet != ueye.IS_SUCCESS:
+    #     print("is_AOI ERROR")
 
     width = rectAOI.s32Width
     height = rectAOI.s32Height
 
     # Prints out some information about the camera and the sensor
-    print("Camera model:\t\t", sInfo.strSensorName.decode('utf-8'))
-    print("Camera serial no.:\t", cInfo.SerNo.decode('utf-8'))
-    print("Maximum image width:\t", width)
-    print("Maximum image height:\t", height)
-    print()
+    # print("Camera model:\t\t", sInfo.strSensorName.decode('utf-8'))
+    # print("Camera serial no.:\t", cInfo.SerNo.decode('utf-8'))
+    # print("Maximum image width:\t", width)
+    # print("Maximum image height:\t", height)
+    # print()
 
     # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -428,44 +465,62 @@ def ueye_take_picture_2(i):
 
     # Enables the queue mode for existing image memory sequences
     nRet = ueye.is_InquireImageMem(hCam, pcImageMemory, MemID, width, height, nBitsPerPixel, pitch)
-    if nRet != ueye.IS_SUCCESS:
-        print("is_InquireImageMem ERROR")
-    else:
-        print("Press q to leave the programm")
+    # if nRet != ueye.IS_SUCCESS:
+    #     print("is_InquireImageMem ERROR")
+    # else:
+    #     print("Press q to leave the programm")
 
     # ---------------------------------------------------------------------------------------------------------------------------------------
 
     # Continuous image display
-    while (nRet == ueye.IS_SUCCESS):
+    if (nRet == ueye.IS_SUCCESS):
 
         # In order to display the image in an OpenCV window we need to...
         # ...extract the data of our image memory
-        array = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
+        pic_array_1 = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
+        time.sleep(1.1)
+        pic_array = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
 
         # ...reshape it in an numpy array...
-        frame = np.reshape(array, (height.value, width.value, bytes_per_pixel))
+        frame = np.reshape(pic_array, (height.value, width.value, bytes_per_pixel))
         frame = np.pad(frame, pad_width=[(506, 506), (0, 0), (0, 0)], mode='constant') # pad with zeros above and under
         # ...resize the image by a half
         frame = cv.resize(frame, (0, 0), fx=0.331606, fy=0.331606)
+
         # ---------------------------------------------------------------------------------------------------------------------------------------
         # ...and finally display it
         # cv.imshow("SimpleLive_Python_uEye_OpenCV", frame)
+        time.sleep(0.5)
         showInMovedWindow("SimpleLive_Python_uEye_OpenCV", frame)
+        time.sleep(0.5)
+
+        t = time.localtime()
+        current_time = time.strftime("%H_%M_%S", t)
 
         # Press q if you want to end the loop
-        if cv.waitKey(1) & 0xFF == ord('q'):
+        #if cv.waitKey(1) & 0xFF == ord('q'):
         # if cv.waitKey(100) or 0xFF == ord('q'):
-            frame = frame[:,:,0:3]
-            frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            print(frame.shape)
+        frame = frame[:,:,0:3]
+        frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+        # print(frame.shape)
+        folder_path_for_images = r'D:\Users\NanoProject\SonarNano\exp_data_16_2_21\rgb_images'
+        img_name = 'num_dt.jpeg'
+        img_name = img_name.replace("num", str(image_number))
+        img_name = img_name.replace("dt", str(current_time))
+        image_path = os.path.join(folder_path_for_images, img_name)
 
-            a_string = "C:/Drive/25_11_20/fake_grape_num.jpeg"
-            a_string = a_string.replace("num", str(0))
-            # a_string = a_string.replace("num", str(i))
-            im = Image.fromarray(frame)
-            plt.imsave(a_string, frame)
-            cv.destroyAllWindows()
-            break
+        plt.imsave(image_path, frame)
+        g_param.read_write_object.save_rgb_image(frame)
+        cv.destroyAllWindows()
+
+        # print("image_path!!!!!!:", image_path)
+        # a_string = "C:/Drive/25_11_20/num_dt.jpeg"
+        # a_string = a_string.replace("num", str(image_number))
+        # a_string = a_string.replace("dt", str(current_time))
+        # a_string = a_string.replace("num", str(i))
+        # im = Image.fromarray(frame)
+        # plt.imsave(a_string, frame)
+        # break
     # ---------------------------------------------------------------------------------------------------------------------------------------
 
     # Releases an image memory that was allocated using is_AllocImageMem() and removes it from the driver management
@@ -476,12 +531,10 @@ def ueye_take_picture_2(i):
 
     # Destroys the OpenCv windows
     cv.destroyAllWindows()
-
-    print()
-    print("END")
-
-# change
-max_number_of_pictures = 1
+    #
+    # print()
+    # print("END")
+    return image_path
 
 
 def biggest_box(det_rotated_boxes):
@@ -523,22 +576,19 @@ def meter_2_pixel(d, i):
 
 
 # im1 = 'path to captured image indside cv2.imageread'
-def take_picture_and_run(current_location):
+def take_picture_and_run(current_location, image_number):
     d = g_param.const_dist
-    box = [0,0,0,0,0]
-    i = 0
+    box = [0, 0, 0, 0, 0]
     plt.clf()  # clean the canvas
-    print(f"Picure number {i}")
-    ueye_take_picture_2(i)
-    img = cv.imread('C:/Drive/28_7_20/try_2.jpeg')
-    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-
-    ######## print to check if needed
-    cv.waitKey(0)
-    cv.destroyAllWindows()
-    im0 = img
-
+    image_details = f"Picure number {image_number}"
+    print(colored(image_details, 'green'))
+    image_path = ueye_take_picture_2(image_number)
+    # img = cv.imread(image_path)
+    # img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    #
+    # cv.destroyAllWindows()
     rng.seed(12345)
+
     def thresh_callback(val):
         threshold = val
         ret, thresh = cv.threshold(src_gray, 50, 255, cv.THRESH_BINARY)
@@ -569,7 +619,7 @@ def take_picture_and_run(current_location):
             color_index = 50
             tresh_size = 6000
             if area > tresh_size and (width_a/height_a > 0.15) and (height_a/width_a > 0.15):
-                print("area: ", area)
+                # print("area: ", area)
                 # TODO: להכפיל את הזוית ב-1
                 boxes.append(minRect[i])
                 cv.drawContours(green, [box], 0, (255-color_index,255-color_index*2,255-color_index*3))
@@ -580,7 +630,7 @@ def take_picture_and_run(current_location):
         description='Code for Creating Bounding rotated boxes and ellipses for contours tutorial.')
     parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
     args = parser.parse_args()
-    img = cv.imread('C:/Drive/25_11_20/fake_grape_0.jpeg')
+    img = cv.imread(image_path)
     # img = cv.resize(img, (1024, 692))  # Resize image
     RGB = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     ## mask of green (36,25,25) ~ (86, 255,255)q
@@ -589,8 +639,7 @@ def take_picture_and_run(current_location):
     imask = mask > 0
     green = np.zeros_like(img, np.uint8)
     green[imask] = img[imask]
-    src_gray =\
-    cv.cvtColor(green, cv.COLOR_BGR2GRAY)
+    src_gray = cv.cvtColor(green, cv.COLOR_BGR2GRAY)
     src_gray = cv.blur(src_gray, (3, 3))
     source_window = 'Source'
     cv.namedWindow(source_window)
@@ -636,7 +685,7 @@ def take_picture_and_run(current_location):
         det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(width_0), int(height_0), angle_0, None]
         box_in_meter = pixel_2_meter(d, det_box)
         det_rotated_boxes.append(box_in_meter)
-        grape = [box_in_meter[0],box_in_meter[1],box_in_meter[2],box_in_meter[3],box_in_meter[4], None,  det_box]
+        grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4], None,  det_box]
         add_to_TB(grape)
 
 
@@ -648,12 +697,12 @@ def take_picture_and_run(current_location):
     img = cv.putText(img, 'Green = Center point, Red = already sprayed', org = (175, 85),
                      fontFace = cv.FONT_HERSHEY_COMPLEX, fontScale = 1,
                      color = (255, 255, 255), thickness = 1,  lineType = 2)
-
     numpy_horizontal_concat = np.concatenate((img, green), axis=1)
+    numpy_horizontal_concat = image_resize(numpy_horizontal_concat, height=950)
     # cv.imshow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     showInMovedWindow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     g_param.masks_image = img
-    cv.waitKey(0)
+    # cv.waitKey(0) # TODO: uncomment
     cv.destroyAllWindows()
 
 

@@ -28,6 +28,7 @@ import tensorflow as tf
 import time
 import Target_bank as TBK
 import transform
+import read_write
 
 # from Target_bank import print_grape
 # TODO: uncomment this line and comment next for field exp
@@ -36,6 +37,7 @@ from masks_for_lab import take_picture_and_run as capture_update_TB, pixel_2_met
 import write_to_socket
 import read_from_socket
 
+g_param.read_write_object = read_write.ReadWrite()
 rs_rob = read_from_socket.ReadFromRobot()
 ws_rob = write_to_socket.Send2Robot()
 
@@ -54,7 +56,7 @@ start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.5101
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
 step_size = 0.25
 # the next two variables are just for the lab
-number_of_steps = 5
+number_of_steps = 3
 steps_counter = 0
 moving_direction = "right"  # right/left
 platform_step_size = 0.5
@@ -64,6 +66,7 @@ first_run, g_param.show_images = True, True  # g.show_images: if true, it is vis
 time_to_move_platform, external_signal_all_done = False, False
 not_finished, no_tech_problem = True, True  # no_tech_problem will be checked as part of init
 g_param.trans = transform.Trans()
+g_param.read_write_object.create_directories()
 ########################################################################################################################
 
 
@@ -316,7 +319,7 @@ if __name__ == '__main__':
 
     # The main loop:
     while not_finished and no_tech_problem:
-
+        g_param.image_number += 1
         if not first_run:
             print_line_sep_time()
             if g_param.time_to_move_platform:
@@ -331,12 +334,13 @@ if __name__ == '__main__':
             temp_location = current_location
             g_param.trans.set_pic_tcp(temp_location)
             g_param.trans.update_cam2base(current_location)
+            g_param.read_write_object.write_transformations_to_csv()
             steps_counter += 1
         else:
             first_run = False
 
         input("Press Enter to take picture")
-        capture_update_TB(current_location)  # 5 + 7-12 inside # TODO: add base world location to the input (or inside)
+        capture_update_TB(current_location, g_param.image_number)  # 5 + 7-12 inside # TODO: add base world location to the input (or inside)
         print("TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TBK.sort_by_and_check_for_grapes('leftest_first')  # 6
         input("press enter for continue to spraying")

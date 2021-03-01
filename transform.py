@@ -2,6 +2,7 @@
 import math
 import numpy as np
 import g_param
+import time
 
 
 def ang_vec2rot(rv):
@@ -30,7 +31,15 @@ class Trans:
         self.t_cam2world = np.identity(4)
         self.t_tcp2base = np.identity(4)
         self.ang_vec_tcp = np.array([])
+        self.pic_tcp = np.array([])
     # Turns axis angles  into rotation matrix
+
+    def set_pic_tcp(self, location):
+        self.pic_tcp = location
+
+    def update_distance(self, sonar_location):
+        g_param.const_dist = g_param.const_dist+abs(sonar_location[0]-self.pic_tcp[0])
+
 
     def update_base2world(self, mobile_location):
         pass
@@ -42,6 +51,8 @@ class Trans:
         self.t_tcp2base = np.append(self.t_tcp2base, [[cur_location[0]], [cur_location[1]], [cur_location[2]], [1]], axis=1)
         self.t_cam2base = np.matmul(self.t_tcp2base, self.t_cam2tcp)
         self.t_cam2world = np.matmul(self.t_base2world, self.t_cam2base)
+        g_param.read_write_object.write_transformations_to_csv()
+        time.sleep(0.01)
 
     def grape_world(self, x_cam, y_cam):
         grape_cam = np.array([float(x_cam), float(y_cam), 0, 1])

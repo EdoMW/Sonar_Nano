@@ -9,158 +9,168 @@ class ReadFromRobot:
     def __init__(self):
         self.HOST = "132.72.96.97"  # The remote host
         self.PORT_30003 = 30003
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.a
-        self.packet_1, self.packet_2, self.packet_3, self.packet_4,  self.packet_5, self.packet_6, self.packet_7, self.packet_8, self.packet_9, self.packet_10 = \
-            0, 0, 0, 0, 0,0, 0, 0, 0, 0
-        self.packet_11, self.packet_12, self.packet_13, self.packet_14, self.packet_15, self.packet_16, self.packet_17, self.packet_18, self.packet_19, self.packet_20 = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        self.packet_1, self.packet_2, self.packet_3, self.packet_4, self.packet_5, self.packet_6, self.packet_7, self.packet_8, self.packet_9, self.packet_30 = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        self.packet_1, self.packet_2, self.packet_3, self.packet_4, self.packet_5, self.packet_6, self.packet_7, self.packet_8, self.packet_9, self.packet_40 = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        self.packet_1, self.packet_2, self.packet_3, self.packet_4, self.packet_5, self.packet_6, self.packet_7, self.packet_8, self.packet_9, self.packet_50 = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        self.packet_1, self.packet_2, self.packet_3, self.packet_4, self.packet_5, self.packet_6, self.packet_7, self.packet_8, self.packet_9, self.packet_60 = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        self.packet_1, self.packet_2, self.packet_3, self.packet_4, self.packet_5, self.packet_6, self.packet_7, self.packet_8, self.packet_9, self.packet_70 = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        self.packet_1, self.packet_2, self.packet_3 = \
-            0, 0, 0
+        self.s = 0
+        self.packet_1, self.packet_2, self.packet_3, self.packet_4, self.packet_5, self.packet_6, self.packet_7, \
+            self.packet_8, self.packet_9, self.packet_10 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        self.packet_11, self.packet_12, self.packet_13, self.packet_14, self.packet_15, self.packet_16, \
+            self.packet_17, self.packet_18, self.packet_19, self.packet_20 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        self.packet_21, self.packet_22, self.packet_23, self.packet_24, self.packet_25, self.packet_26, \
+            self.packet_27, self.packet_28, self.packet_29, self.packet_30 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        self.packet_31, self.packet_32, self.packet_33, self.packet_34, self.packet_35, self.packet_36, \
+            self.packet_37, self.packet_38, self.packet_39, self.packet_40 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        self.packet_41, self.packet_42, self.packet_43, self.packet_44, self.packet_45, self.packet_46, \
+            self.packet_47, self.packet_48, self.packet_49, self.packet_50 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        self.packet_51, self.packet_52, self.packet_53, self.packet_54, self.packet_55, self.packet_56, \
+            self.packet_57, self.packet_58, self.packet_59, self.packet_60 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        self.packet_61, self.packet_62, self.packet_63, self.packet_64, self.packet_65, self.packet_66, \
+            self.packet_67, self.packet_68, self.packet_69, self.packet_70 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        self.packet_71, self.packet_72, self.packet_73 = 0, 0, 0
+        self.x, self.y, self.z, self.Rx, self.Ry, self.Rz = 0, 0, 0, 0, 0, 0
 
-    def connect2robread(self):
+        #self.connect_to_robot()
+
+    def __del__(self):
         try:
-            print("connecting to UR5.. \n",s)
+            print("disconnecting to UR5.. \nclose read from socket", self.s)
+            self.s.close()
+            time.sleep(0.1)
+        except socket.error as socketError:
+            print("Error: ", socketError)
+
+    def connect_to_robot(self):
+        try:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            print("connecting to UR5.. \nopen read from socket", self.s)
             self.s.settimeout(10)
             self.s.connect((self.HOST, self.PORT_30003))
             time.sleep(0.1)
-        except socket.error as socketerror:
-            print("Error: ", socketerror)
+        except socket.error as socketError:
+            print("Error: ", socketError)
 
-    def disconnect2robread(self):
+    def disconnect_to_robot(self):
         try:
-            print("disconnecting to UR5.. \n", s)
-            self.s.close()
+            print("disconnecting to UR5.. \nclose read from socket", self.s)
+            self.s.detach()
             time.sleep(0.1)
-        except socket.error as socketerror:
-            print("Error: ", socketerror)
+        except socket.error as socketError:
+            print("Error: ", socketError)
 
-    def read2rob(self):
+    def read_from_robot(self):
         # 3-8 Returns the desired angular position of all joints
         self.packet_1 = self.s.recv(4)
         self.packet_2 = self.s.recv(8)
-        self.packet_3 = s.recv(8)
-        self.packet_4 = s.recv(8)
-        self.packet_5 = s.recv(8)
-        self.packet_6 = s.recv(8)
-        self.packet_7 = s.recv(8)
-        self.packet_8 = s.recv(8)
+        self.packet_3 = self.s.recv(8)
+        self.packet_4 = self.s.recv(8)
+        self.packet_5 = self.s.recv(8)
+        self.packet_6 = self.s.recv(8)
+        self.packet_7 = self.s.recv(8)
+        self.packet_8 = self.s.recv(8)
         # 9-14 Returns the desired angular velocities of all joints
-        self.packet_9 = s.recv(8)
-        self.packet_10 = s.recv(8)
-        self.packet_11 = s.recv(8)
-        self.packet_12 = s.recv(8)
-        self.packet_13 = s.recv(8)
-        self.packet_14 = s.recv(8)
+        self.packet_9 = self.s.recv(8)
+        self.packet_10 = self.s.recv(8)
+        self.packet_11 = self.s.recv(8)
+        self.packet_12 = self.s.recv(8)
+        self.packet_13 = self.s.recv(8)
+        self.packet_14 = self.s.recv(8)
         # 15-20 Returns the desired angular accelerations of all joints
-        self.packet_15 = s.recv(8)
-        self.packet_16 = s.recv(8)
-        self.packet_17 = s.recv(8)
-        self.packet_18 = s.recv(8)
-        self.packet_19 = s.recv(8)
-        self.packet_20 = s.recv(8)
+        self.packet_15 = self.s.recv(8)
+        self.packet_16 = self.s.recv(8)
+        self.packet_17 = self.s.recv(8)
+        self.packet_18 = self.s.recv(8)
+        self.packet_19 = self.s.recv(8)
+        self.packet_20 = self.s.recv(8)
         # 21-26 Returns the desired Currents of all joints -- not used
-        self.packet_21 = s.recv(8)
-        self.packet_22 = s.recv(8)
-        self.packet_23 = s.recv(8)
-        self.packet_24 = s.recv(8)
-        self.packet_25 = s.recv(8)
-        self.packet_26 = s.recv(8)
+        self.packet_21 = self.s.recv(8)
+        self.packet_22 = self.s.recv(8)
+        self.packet_23 = self.s.recv(8)
+        self.packet_24 = self.s.recv(8)
+        self.packet_25 = self.s.recv(8)
+        self.packet_26 = self.s.recv(8)
         # 27-32 Returns the desired Torques of all joints
-        self.packet_27 = s.recv(8)
-        self.packet_28 = s.recv(8)
-        self.packet_29 = s.recv(8)
-        self.packet_30 = s.recv(8)
-        self.packet_31 = s.recv(8)
-        self.packet_32 = s.recv(8)
+        self.packet_27 = self.s.recv(8)
+        self.packet_28 = self.s.recv(8)
+        self.packet_29 = self.s.recv(8)
+        self.packet_30 = self.s.recv(8)
+        self.packet_31 = self.s.recv(8)
+        self.packet_32 = self.s.recv(8)
         # 33 Returns the same information as packages 3-8 -- not used again
-        self.packet_33 = s.recv(48)
+        self.packet_33 = self.s.recv(48)
         # 34 Returns the same information as packages 9-14 -- not used again
-        self.packet_34 = s.recv(48)
+        self.packet_34 = self.s.recv(48)
         # 35 Returns the same information as packages 15-20 -- not used again
-        self.packet_35 = s.recv(48)
+        self.packet_35 = self.s.recv(48)
         # 36 Returns the same information as packages 21-26 -- not used
-        self.packet_36 = s.recv(48)
+        self.packet_36 = self.s.recv(48)
         # 37-42 Returns actual cartesian coordinates of the tool
-        self.packet_37 = s.recv(8)
-        self.packet_38 = s.recv(8)
-        self.packet_39 = s.recv(8)
-        self.packet_40 = s.recv(8)
-        self.packet_41 = s.recv(8)
-        self.packet_42 = s.recv(8)
+        self.packet_37 = self.s.recv(8)
+        self.packet_38 = self.s.recv(8)
+        self.packet_39 = self.s.recv(8)
+        self.packet_40 = self.s.recv(8)
+        self.packet_41 = self.s.recv(8)
+        self.packet_42 = self.s.recv(8)
         # 43- 48 Returns actual speed of the tool given in cartesian coordinates.The first three values are the
         # cartesian speeds along x, y, z. and the last three define the current rotation axis, rx, ry, rz, and the
         # length | rz, ry, rz | defines the angular velocity in radians / s.
-        self.packet_43 = s.recv(8)
-        self.packet_44 = s.recv(8)
-        self.packet_45 = s.recv(8)
-        self.packet_46 = s.recv(8)
-        self.packet_47 = s.recv(8)
-        self.packet_48 = s.recv(8)
+        self.packet_43 = self.s.recv(8)
+        self.packet_44 = self.s.recv(8)
+        self.packet_45 = self.s.recv(8)
+        self.packet_46 = self.s.recv(8)
+        self.packet_47 = self.s.recv(8)
+        self.packet_48 = self.s.recv(8)
         # 49 Returns the generalized force on the tcp -- not used
-        self.packet_49 = s.recv(48)
+        self.packet_49 = self.s.recv(48)
         # 50 Returns Target Cartesian coordinates of the tool: (x,y,z,rx,ry,rz), where rx, ry and rz is a rotation
         # vector representation of the tool orientation --not used
-        self.packet_50 = s.recv(48)
+        self.packet_50 = self.s.recv(48)
         # 51 Returns Target speed of the tool given in Cartesian coordinates -- not used
-        self.packet_51 = s.recv(48)
+        self.packet_51 = self.s.recv(48)
         # 52 Returns Current state of the digital inputs. NOTE: these are bits encoded as int64_t,
         # e.g. a value of 5 corresponds to bit 0 and bit 2 set high
-        self.packet_52 = s.recv(8)
+        self.packet_52 = self.s.recv(8)
         # 53 Returns Temperature of each joint in degrees celsius -- not used
-        self.packet_53 = s.recv(48)
+        self.packet_53 = self.s.recv(48)
         # 54 Returns Controller realtime thread execution time
-        self.packet_54 = s.recv(8)
+        self.packet_54 = self.s.recv(8)
         # 55 Returns Test Value - A value used by Universal Robots software only -- not used
-        self.packet_55 = s.recv(8)
+        self.packet_55 = self.s.recv(8)
         # 56 Returns robot mode - see DataStreamFromURController in the Excel file for more information -- not used
-        self.packet_56 = s.recv(8)
+        self.packet_56 = self.s.recv(8)
         # 57 Returns Joint control mode -see DataStreamFromURController in the Excel file for more information -- not
         # used
-        self.packet_57 = s.recv(48)
+        self.packet_57 = self.s.recv(48)
         # 58 Returns Safety mode - see	DataStreamFromURController in the Excel file for more information -- not used
-        self.packet_58 = s.recv(8)
+        self.packet_58 = self.s.recv(8)
         # 59 is Used by Universal Robots software only
-        self.packet_59 = s.recv(48)
+        self.packet_59 = self.s.recv(48)
         # 60-62 Returns the current reading of the tool accelerometer as a three-dimensional vector.
         # The accelerometer axes are aligned with the tool coordinates, and pointing an axis upwards
         # results in a positive reading.
-        self.packet_60 = s.recv(8)
-        self.packet_61 = s.recv(8)
-        self.packet_62 = s.recv(8)
+        self.packet_60 = self.s.recv(8)
+        self.packet_61 = self.s.recv(8)
+        self.packet_62 = self.s.recv(8)
         # 63 is Used by Universal Robots software only
-        self.packet_63 = s.recv(48)
+        self.packet_63 = self.s.recv(48)
         # 64 Returns Speed scaling of the trajectory limiter -- not used
-        self.packet_64 = s.recv(8)
+        self.packet_64 = self.s.recv(8)
         # 65 Returns Norm of Cartesian linear momentum --not used
-        self.packet_65 = s.recv(8)
+        self.packet_65 = self.s.recv(8)
         # 66&67 are Used by Universal Robots software only
-        self.packet_66 = s.recv(8)
-        self.packet_67 = s.recv(8)
+        self.packet_66 = self.s.recv(8)
+        self.packet_67 = self.s.recv(8)
         # 68 Returns the main voltage -- not used
-        self.packet_68 = s.recv(8)
+        self.packet_68 = self.s.recv(8)
         # 69 Returns the robot voltage (48V) -- not used
-        self.packet_69 = s.recv(8)
+        self.packet_69 = self.s.recv(8)
         # 70 Returns the robot current --not used
-        self.package_70 = s.recv(8)
+        self.package_70 = self.s.recv(8)
         # 71 Returns Actual joint voltages -- not used
-        self.package_71 = s.recv(48)
+        self.package_71 = self.s.recv(48)
         # 72 Returns digital outputs --not used
-        self.package_72 = s.recv(8)
+        self.package_72 = self.s.recv(8)
         # 73 Returns program state --not used
-        self.package_73 = s.recv(8)
+        self.package_73 = self.s.recv(8)
 
-    def get_act_joint_pos(self):
+    def iget_act_joint_pos(self):
         packet_3 = self.packet_3.encode("hex")  # convert the data from \x hex notation to plain hex
         BaseInString = str(packet_3)
         base = struct.unpack('!d', packet_3.decode('hex'))[0]
@@ -186,7 +196,7 @@ class ReadFromRobot:
         wrist3 = struct.unpack('!d', packet_8.decode('hex'))[0]
         # print("Wrist3 in Deg = ", wrist3 * (180 / pi))
 
-    def get_act_joint_vel(self):
+    def iget_act_joint_vel(self):
         packet_9 = codecs.encode(self.packet_9, 'hex_codec')  # convert the data from \x hex notation to plain hex
         BaseVInString = str(packet_9)
         baseV = struct.unpack('!d', self.packet_9)[0]
@@ -214,7 +224,7 @@ class ReadFromRobot:
 
         return baseV, shoulderV, elbowV, wrist1V, wrist2V, wrist3V
 
-    def get_act_joint_a(self):
+    def iget_act_joint_a(self):
         packet_15 = codecs.encode(self.packet_15, 'hex_codec')  # convert the data from \x hex notation to plain hex
         BaseAInString = str(packet_15)
         baseA = struct.unpack('!d', self.packet_15)[0]
@@ -240,7 +250,7 @@ class ReadFromRobot:
         wrist3A = struct.unpack('!d', self.packet_20)[0]
         # print("Wrist3 Acceleration= ", wrist3A)
 
-    def get_act_torques(self):
+    def iget_act_torques(self):
         packet_27 = codecs.encode(self.packet_27, 'hex_codec')  # convert the data from \x hex notation to plain hex
         BaseTInString = str(packet_27)
         baseT = struct.unpack('!d', self.packet_27)[0]
@@ -266,50 +276,48 @@ class ReadFromRobot:
         wrist3T = struct.unpack('!d', self.packet_32)[0]
         # print("Wrist3 Torque in NM= ", wrist3T)
 
-    def get_tcp_position(self):  # IN BASE COORDINATES :
+    def iget_tcp_position(self):  # IN BASE COORDINATES :
         # packet_1 = codecs.encode(b'self.packet_1', 'hex_codec')
         # packet_1 = codecs.encode(self.packet_1, 'hex_codec')
         # print(packet_1)
 
         packet_37 = codecs.encode(self.packet_37, 'hex_codec')
-        # print(packet_37)
         xStr = packet_37.decode('utf-8')
         # print(xStr)
-        x = struct.unpack('!d', self.packet_37)[0]
+        self.x = struct.unpack('!d', self.packet_37)[0]
         # print(x)
 
         packet_38 = codecs.encode(self.packet_38, 'hex_codec')
         # print(packet_38)
         yStr = packet_38.decode('utf-8')
-        y = struct.unpack('!d', self.packet_38)[0]
+        self.y = struct.unpack('!d', self.packet_38)[0]
         # print(y)
 
         packet_39 = codecs.encode(self.packet_39, 'hex_codec')
         # print(packet_39)
         zStr = packet_39.decode('utf-8')
-        z = struct.unpack('!d', self.packet_39)[0]
+        self.z = struct.unpack('!d', self.packet_39)[0]
         # print(z)
 
         packet_40 = codecs.encode(self.packet_40, 'hex_codec')
         # print(packet_40)
         RxStr = packet_40.decode('utf-8')
-        Rx = struct.unpack('!d', self.packet_40)[0]
+        self.Rx = struct.unpack('!d', self.packet_40)[0]
         # print(Rx)
 
         packet_41 = codecs.encode(self.packet_41, 'hex_codec')
         # print(packet_41)
         RyStr = packet_41.decode('utf-8')
-        Ry = struct.unpack('!d', self.packet_41)[0]
+        self.Ry = struct.unpack('!d', self.packet_41)[0]
         # print(Ry)
 
         packet_42 = codecs.encode(self.packet_42, 'hex_codec')
         # print(packet_42)
         RzStr = packet_42.decode('utf-8')
-        Rz = struct.unpack('!d', self.packet_42)[0]
+        self.Rz = struct.unpack('!d', self.packet_42)[0]
         # print(Rz)
-        return (x, y, z, Rx, Ry, Rz)
 
-    def get_tcp_velocities(self):
+    def iget_tcp_velocities(self):
         packet_43 = codecs.encode(self.packet_43, 'hex_codec')  # convert the data from \x hex notation to plain hex
         xV = struct.unpack('!d', self.packet_43)[0]
         xVInString = str(packet_43)
@@ -336,7 +344,7 @@ class ReadFromRobot:
         # print("Rz Velocity = ", RzV)
         return (xV, yV, zV, RxV, RyV, RzV)
 
-    def Reading_tool_accelerometer(self):
+    def iget_tool_accelerometer(self):
         packet_60 = codecs.encode(self.packet_60, 'hex_codec')  # convert the data from \x hex notation to plain hex
         xacc = struct.unpack('!d', self.packet_60)[0]
         xaccInString = str(packet_60)
@@ -350,5 +358,10 @@ class ReadFromRobot:
         zacc = struct.unpack('!d', self.packet_62('hex'))[0]
         # print("Z tool accelerometer in m\s^2 = ", zacc)
 
+    def read_tcp_pos(self):
+        self.connect_to_robot()
+        self.read_from_robot()
+        self.iget_tcp_position()
+        self.disconnect_to_robot()
 
-
+        return self.x, self.y, self.z, self.Rx, self.Ry, self.Rz
