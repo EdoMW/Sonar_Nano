@@ -1,5 +1,7 @@
 *.pyc
 *.pyo
 __pycache__/
-*/.idea/workspace.xml
- */.idea/tasks.xml
+#*/.idea/workspace.xml
+# */.idea/tasks.xml
+*/.idea
+*/Code

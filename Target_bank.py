@@ -37,6 +37,8 @@ class Target_bank:
         y = " y:" + str(b) + " "
         x_c = " x_p:" + str(c) + " "
         y_c = " y_p:" + str(d)
+        w = f" w: {self.w_meter}"
+        h = f" h: {self.h_meter}"
         e = self.sprayed
         f = " area: " + str(self.rect_area) + " "
         sp = " sprayed :" + str(e) + " "
@@ -46,7 +48,10 @@ class Target_bank:
         y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
         z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
         base_data = x_base + y_base + z_base + '\n'
-        return ind + sp + wr + x_c + y_c + world_data + base_data
+        corners = f"corner_1: {self.corners[0]} corner_2: {self.corners[1]} " \
+                  f"corner_3: {self.corners[2]} corner_4: {self.corners[3]}"
+        angle = f" angle: {self.angle}"
+        return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n' + corners
         # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
 
     def calc_corners(self):
@@ -54,14 +59,16 @@ class Target_bank:
         w, h = self.w_meter, self.h_meter
         angle = self.angle
         ninety = pi/2
-        alpha = radians(angle)
-        beta = ninety - radians(angle)
+        # alpha = radians(angle)
+        # beta = ninety - radians(angle)
+        beta = radians(angle)
+        alpha = ninety - radians(angle)
         w = w/2
         h = h/2
-        cor_1 = [-cos(beta)*h + cos(alpha)*w, -sin(beta)*h -w*sin(alpha)]
-        cor_2 = [cos(beta) * h + cos(alpha) * w, sin(beta) * h - w * sin(alpha)]
-        cor_3 = [cos(beta) * h - cos(alpha) * w, sin(beta) * h + w * sin(alpha)]
-        cor_4 = [-cos(beta) * h - cos(alpha) * w, -sin(beta) * h + w * sin(alpha)]
+        cor_1 = [x_cen + (-cos(beta) * h + cos(alpha)*w), y_cen + (-sin(beta)*h - w*sin(alpha))]
+        cor_2 = [x_cen + (cos(beta) * h + cos(alpha) * w), y_cen + (sin(beta) * h - w * sin(alpha))]
+        cor_3 = [x_cen + (cos(beta) * h - cos(alpha) * w), y_cen + (sin(beta) * h + w * sin(alpha))]
+        cor_4 = [x_cen + (-cos(beta) * h - cos(alpha) * w), y_cen + (-sin(beta) * h + w * sin(alpha))]
         return [cor_1, cor_2, cor_3, cor_4]
 
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world):
@@ -94,7 +101,7 @@ class Target_bank:
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.wait_another_step = False
-        self.corners = self.calc_corners(self)
+        self.corners = self.calc_corners()
         # amount of updates, what iteration was the last update
 
 

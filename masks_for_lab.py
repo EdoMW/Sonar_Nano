@@ -561,7 +561,7 @@ def pixel_2_meter(d, box):
     cen_poi_x_0 = cen_poi_x_0 - int(1024 / 2)
     cen_poi_y_0 = cen_poi_y_0 - int(1024 / 2)
     cen_poi_x_0 = d * (cen_poi_x_0 / 1024) * (7.11 / 8)
-    cen_poi_y_0 = d * (cen_poi_y_0 / 1024) * (5.33 / 8)
+    cen_poi_y_0 = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.63  # FIXME talk to Sigal
     w = d * (box[2] / 1024) * (7.11 / 8)
     h = d * (box[3] / 1024) * (5.33 / 8)
     return [cen_poi_x_0, cen_poi_y_0, w, h, box[4]]
