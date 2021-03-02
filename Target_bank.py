@@ -2,6 +2,7 @@ import numpy as np
 import math
 from operator import itemgetter, attrgetter
 import g_param
+from math import cos, sin, pi,  radians
 
 
 ######################################################
@@ -21,7 +22,6 @@ def print_by_id():
     print("TB by id: ", "\n")
     for i in range(len(g_param.TB)):
         print(g_param.TB[i].index, end=" ")
-
 
 class Target_bank:
     grape_index = 0
@@ -48,6 +48,21 @@ class Target_bank:
         base_data = x_base + y_base + z_base + '\n'
         return ind + sp + wr + x_c + y_c + world_data + base_data
         # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
+
+    def calc_corners(self):
+        x_cen, y_cen = self.x_meter, self.y_meter
+        w, h = self.w_meter, self.h_meter
+        angle = self.angle
+        ninety = pi/2
+        alpha = radians(angle)
+        beta = ninety - radians(angle)
+        w = w/2
+        h = h/2
+        cor_1 = [-cos(beta)*h + cos(alpha)*w, -sin(beta)*h -w*sin(alpha)]
+        cor_2 = [cos(beta) * h + cos(alpha) * w, sin(beta) * h - w * sin(alpha)]
+        cor_3 = [cos(beta) * h - cos(alpha) * w, sin(beta) * h + w * sin(alpha)]
+        cor_4 = [-cos(beta) * h - cos(alpha) * w, -sin(beta) * h + w * sin(alpha)]
+        return [cor_1, cor_2, cor_3, cor_4]
 
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world):
         """
@@ -79,7 +94,9 @@ class Target_bank:
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.wait_another_step = False
+        self.corners = self.calc_corners(self)
         # amount of updates, what iteration was the last update
+
 
     def calc_dist_from_center(x, y):
         return math.sqrt(x * x + y * y)
