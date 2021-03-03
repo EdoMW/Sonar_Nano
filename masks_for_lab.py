@@ -561,7 +561,7 @@ def pixel_2_meter(d, box):
     cen_poi_x_0 = cen_poi_x_0 - int(1024 / 2)
     cen_poi_y_0 = cen_poi_y_0 - int(1024 / 2)
     cen_poi_x_0 = d * (cen_poi_x_0 / 1024) * (7.11 / 8)
-    cen_poi_y_0 = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.63  # FIXME talk to Sigal
+    cen_poi_y_0 = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.33  # FIXME talk to Sigal
     w = d * (box[2] / 1024) * (7.11 / 8)
     h = d * (box[3] / 1024) * (5.33 / 8)
     return [cen_poi_x_0, cen_poi_y_0, w, h, box[4]]
@@ -589,6 +589,13 @@ def take_picture_and_run(current_location, image_number):
     # cv.destroyAllWindows()
     rng.seed(12345)
 
+    def fix_angle_to_0_180(w, h, a):
+        if w <= h:
+            a += 180
+        else:
+            a += 90
+        return a
+
     def thresh_callback(val):
         threshold = val
         ret, thresh = cv.threshold(src_gray, 50, 255, cv.THRESH_BINARY)
@@ -610,7 +617,7 @@ def take_picture_and_run(current_location, image_number):
         for i, c in enumerate(contours):
             # color = (rng.randint(0, 256), rng.randint(0, 256), rng.randint(0, 256))
             box = cv.boxPoints(minRect[i])
-            box = np.intp(box)  # np.intp: Integer used for indexing (same as C ssize_t; normally either int32 or int64)
+            box = np.intp(box)
             width_a = int(minRect[i][1][0])
             height_a = int(minRect[i][1][1])
             area = width_a * height_a
@@ -657,7 +664,7 @@ def take_picture_and_run(current_location, image_number):
                        color=(255, 255, 255), thickness=1,
                        lineType=2)
 
-    # cv.waitKey(0)
+    cv.waitKey(0)
     cv.destroyAllWindows()
 
 
@@ -668,7 +675,7 @@ def take_picture_and_run(current_location, image_number):
         x = int(boxes[i][0][0])
         y = int(boxes[i][0][1])
         w = int(boxes[i][1][0])
-        h = int(boxes[i][1][0])
+        h = int(boxes[i][1][1])
         a = int(boxes[i][2])
         box = [x,y,w,h,a]
         predicted_masks_to_mrbb.append(box)
@@ -680,7 +687,8 @@ def take_picture_and_run(current_location, image_number):
         cen_poi_y_0 = predicted_masks_to_mrbb[b][1]
         width_0 = predicted_masks_to_mrbb[b][2]
         height_0 = predicted_masks_to_mrbb[b][3]
-        angle_0 = predicted_masks_to_mrbb[b][4] * (-1)
+        angle_0 = predicted_masks_to_mrbb[b][4] * -1
+        # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
         # angle_0 = (angle_0*180)/pi
         det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(width_0), int(height_0), angle_0, None]
         box_in_meter = pixel_2_meter(d, det_box)
@@ -702,7 +710,7 @@ def take_picture_and_run(current_location, image_number):
     # cv.imshow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     showInMovedWindow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     g_param.masks_image = img
-    # cv.waitKey(0) # TODO: uncomment
+    cv.waitKey(0) # TODO: uncomment
     cv.destroyAllWindows()
 
 

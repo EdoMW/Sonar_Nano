@@ -3,6 +3,7 @@ import math
 from operator import itemgetter, attrgetter
 import g_param
 from math import cos, sin, pi,  radians
+import cv2 as cv
 
 
 ######################################################
@@ -26,7 +27,7 @@ def print_by_id():
 class Target_bank:
     grape_index = 0
 
-    def __repr__(self):
+    def target_to_string(self):
         ind = self.index
         ind = " ID : " + str(ind) + " "
         a = self.x_meter
@@ -48,10 +49,14 @@ class Target_bank:
         y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
         z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
         base_data = x_base + y_base + z_base + '\n'
+        angle = f" angle: {self.angle}"
+        return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
+
+    def __repr__(self):
+        params = self.target_to_string()
         corners = f"corner_1: {self.corners[0]} corner_2: {self.corners[1]} " \
                   f"corner_3: {self.corners[2]} corner_4: {self.corners[3]}"
-        angle = f" angle: {self.angle}"
-        return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n' + corners
+        return params + corners + '\n' + '\n'
         # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
 
     def calc_corners(self):
@@ -59,16 +64,17 @@ class Target_bank:
         w, h = self.w_meter, self.h_meter
         angle = self.angle
         ninety = pi/2
-        # alpha = radians(angle)
-        # beta = ninety - radians(angle)
-        beta = radians(angle)
-        alpha = ninety - radians(angle)
+        alpha = radians(angle)
+        beta = ninety - radians(angle)
+        # beta = radians(angle)
+        # alpha = ninety - radians(angle)
         w = w/2
         h = h/2
-        cor_1 = [x_cen + (-cos(beta) * h + cos(alpha)*w), y_cen + (-sin(beta)*h - w*sin(alpha))]
-        cor_2 = [x_cen + (cos(beta) * h + cos(alpha) * w), y_cen + (sin(beta) * h - w * sin(alpha))]
-        cor_3 = [x_cen + (cos(beta) * h - cos(alpha) * w), y_cen + (sin(beta) * h + w * sin(alpha))]
-        cor_4 = [x_cen + (-cos(beta) * h - cos(alpha) * w), y_cen + (-sin(beta) * h + w * sin(alpha))]
+        cor_1 = [round(x_cen + (-cos(beta) * h + cos(alpha)*w), 3), round(y_cen + (-sin(beta)*h - w*sin(alpha)), 3)]
+        cor_2 = [round(x_cen + (cos(beta) * h + cos(alpha) * w), 3), round(y_cen + (sin(beta) * h - w * sin(alpha)), 3)]
+        cor_3 = [round(x_cen + (cos(beta) * h - cos(alpha) * w), 3), round(y_cen + (sin(beta) * h + w * sin(alpha)), 3)]
+        cor_4 = [round(x_cen + (-cos(beta) * h - cos(alpha) * w), 3), round(y_cen + (-sin(beta)*h + w * sin(alpha)), 3)]
+        # auto_corners = cv.boxPoints(box)
         return [cor_1, cor_2, cor_3, cor_4]
 
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world):

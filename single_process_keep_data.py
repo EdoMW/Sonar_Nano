@@ -17,18 +17,14 @@
 #     show_images = True (default) show images
 
 import sys
-import g_param
 import numpy as np
 import cv2 as cv
-import DAQ_BG
-from test_one_record import test_spec
-from preprocessing_and_adding import preprocess_one_record
-from distance import distance2
 import tensorflow as tf
 import time
-import Target_bank as TBK
-import transform
-import read_write
+import logging
+
+logging.getLogger('tensorflow').disabled = True
+
 
 # from Target_bank import print_grape
 # TODO: uncomment this line and comment next for field exp
@@ -36,6 +32,16 @@ import read_write
 from masks_for_lab import take_picture_and_run as capture_update_TB, pixel_2_meter, showInMovedWindow, meter_2_pixel
 import write_to_socket
 import read_from_socket
+import Target_bank as TBK
+import transform
+import read_write
+import DAQ_BG
+from test_one_record import test_spec
+from preprocessing_and_adding import preprocess_one_record
+from distance import distance2
+import g_param
+
+
 
 g_param.read_write_object = read_write.ReadWrite()
 rs_rob = read_from_socket.ReadFromRobot()
@@ -50,8 +56,10 @@ sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 ########################################################################################################################
 # parameters ###########################################################################################################
 ########################################################################################################################
+start_pos = np.array([-0.30741425, -0.24198481, 0.52430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
+# start_pos = np.array([-0.38741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
 # start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255 ])  # Left pos
-start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
+# start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255])  # check pos # TODO ORIGINAL
 # start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
 step_size = 0.25
@@ -341,6 +349,7 @@ if __name__ == '__main__':
 
         input("Press Enter to take picture")
         capture_update_TB(current_location, g_param.image_number)  # 5 + 7-12 inside # TODO: add base world location to the input (or inside)
+        g_param.read_write_object.write_target_bank_to_csv(g_param.TB)
         print("TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TBK.sort_by_and_check_for_grapes('leftest_first')  # 6
         input("press enter for continue to spraying")

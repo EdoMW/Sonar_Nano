@@ -5,12 +5,12 @@ half_width_meter = 0.34
 show_images = True
 spray_sonar = True
 trans = None
-const_dist = 0.71
+const_dist = 0.72
 image_number = 0
 # const_dist = 0.51 # it was 1cm bigger than measured
 
 read_write_object = None
-safety_dist = 0.16
+safety_dist = 0.25
 time_to_move_platform = False
 
 def calc_image_width():
