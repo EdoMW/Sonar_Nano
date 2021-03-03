@@ -609,15 +609,19 @@ def take_picture_and_run(current_location, image_number):
         contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         # Find the rotated rectangles and ellipses for each contour
         minRect = [None] * len(contours)
+        corners_rect = [None] * len(contours)
         # rect = ((center_x,center_y),(width,height),angle)
         for i, c in enumerate(contours):
             minRect[i] = cv.minAreaRect(c)
+            corners_rect[i] = cv.boxPoints(minRect[i])
         drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
 
         for i, c in enumerate(contours):
             # color = (rng.randint(0, 256), rng.randint(0, 256), rng.randint(0, 256))
             box = cv.boxPoints(minRect[i])
             box = np.intp(box)
+            print("points ", corners_rect[i]) # TODO- continue from here
+            # width_from_points = np.linalg.norm(a-b)
             width_a = int(minRect[i][1][0])
             height_a = int(minRect[i][1][1])
             area = width_a * height_a
@@ -648,6 +652,13 @@ def take_picture_and_run(current_location, image_number):
     green[imask] = img[imask]
     src_gray = cv.cvtColor(green, cv.COLOR_BGR2GRAY)
     src_gray = cv.blur(src_gray, (3, 3))
+
+    # na = np.array(src_gray) # TODO fixme- next 4 lines if only black image, take another image.
+    # f = np.dot(na.astype(np.uint32), [1])
+    # nColours = len(np.unique(f))
+    # print("nColours", nColours)
+
+
     source_window = 'Source'
     cv.namedWindow(source_window)
     max_thresh = 255
@@ -677,7 +688,7 @@ def take_picture_and_run(current_location, image_number):
         w = int(boxes[i][1][0])
         h = int(boxes[i][1][1])
         a = int(boxes[i][2])
-        box = [x,y,w,h,a]
+        box = [x, y, w, h, a]
         predicted_masks_to_mrbb.append(box)
 
     det_rotated_boxes = []
