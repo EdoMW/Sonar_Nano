@@ -4,6 +4,7 @@ import argparse
 import random as rng
 import matplotlib.pyplot as plt
 from termcolor import colored
+import itertools
 
 from Target_bank import check_if_in_TB, add_to_TB, sort_by_and_check_for_grapes, sort_by_rect_size
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
@@ -561,10 +562,44 @@ def pixel_2_meter(d, box):
     cen_poi_x_0 = cen_poi_x_0 - int(1024 / 2)
     cen_poi_y_0 = cen_poi_y_0 - int(1024 / 2)
     cen_poi_x_0 = d * (cen_poi_x_0 / 1024) * (7.11 / 8)
-    cen_poi_y_0 = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.33  # FIXME talk to Sigal
-    w = d * (box[2] / 1024) * (7.11 / 8)
-    h = d * (box[3] / 1024) * (5.33 / 8)
-    return [cen_poi_x_0, cen_poi_y_0, w, h, box[4]]
+    cen_poi_y_0 = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.33
+    return [cen_poi_x_0, cen_poi_y_0]
+
+
+def point_pixels_2_meter(d, point):
+    cen_poi_x_0 = point[0]
+    cen_poi_y_0 = point[1]
+    cen_poi_x_0 = cen_poi_x_0 - int(1024 / 2)
+    cen_poi_y_0 = cen_poi_y_0 - int(1024 / 2)
+    x_point = d * (cen_poi_x_0 / 1024) * (7.11 / 8)
+    y_point = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.33
+    return [x_point, y_point]
+
+
+def box_points_to_np_array(d, corner):
+    p1 = point_pixels_2_meter(d, corner)
+    p1 = np.array(p1)
+    p1 = np.insert(arr=p1, obj=2, values=1, axis=0)
+    return p1
+
+
+def calculate_w_h(d, box_points):
+    """
+    calculates the width and height of the box.
+    I used the same method as the cv.minAreaRect way of calculating H,W
+    TODO: check if make always H>W and change logic acordingly
+    :param d: distance to grape
+    :param box_points: [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+    :return: w,h in meters
+    """
+    p1 = box_points_to_np_array(d, box_points[0])
+    p2 = box_points_to_np_array(d, box_points[1])
+    p3 = box_points_to_np_array(d, box_points[2])
+    w = np.linalg.norm(p1 - p2)
+    h = np.linalg.norm(p2 - p3)
+    return w, h
+
+
 
 
 def meter_2_pixel(d, i):
@@ -591,9 +626,9 @@ def take_picture_and_run(current_location, image_number):
 
     def fix_angle_to_0_180(w, h, a):
         if w <= h:
-            a += 180
-        else:
             a += 90
+        else:
+            a += 180
         return a
 
     def thresh_callback(val):
@@ -620,19 +655,16 @@ def take_picture_and_run(current_location, image_number):
             # color = (rng.randint(0, 256), rng.randint(0, 256), rng.randint(0, 256))
             box = cv.boxPoints(minRect[i])
             box = np.intp(box)
-            print("points ", corners_rect[i]) # TODO- continue from here
-            # width_from_points = np.linalg.norm(a-b)
             width_a = int(minRect[i][1][0])
             height_a = int(minRect[i][1][1])
             area = width_a * height_a
-            # print(minRect[i]) # for Debugging
-            # print(int(minRect[i][1][0]), int(minRect[i][1][1])) # for Debugging
             color_index = 50
             tresh_size = 6000
             if area > tresh_size and (width_a/height_a > 0.15) and (height_a/width_a > 0.15):
                 # print("area: ", area)
                 # TODO: להכפיל את הזוית ב-1
                 boxes.append(minRect[i])
+                corner_points.append(box)
                 cv.drawContours(green, [box], 0, (255-color_index,255-color_index*2,255-color_index*3))
                 color_index += 20
         # cv.imshow('mask__', green)
@@ -658,25 +690,24 @@ def take_picture_and_run(current_location, image_number):
     # nColours = len(np.unique(f))
     # print("nColours", nColours)
 
-
     source_window = 'Source'
     cv.namedWindow(source_window)
     max_thresh = 255
     thresh = 100  # initial threshold
     cv.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback)
-    boxes = []
+    boxes,corner_points = [], []
     thresh_callback(thresh)
     # print(len(boxes), boxes)
+    corner_points = [arr.tolist() for arr in corner_points]
+    corner_points = list(corner_points for corner_points,_ in itertools.groupby(corner_points))
     boxes = set(boxes) # remove duplicates
     boxes = list(boxes)
-    print(boxes)
-    cv.putText(green, 'Grapes detected', org=(500, 85),
-                       fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
-                       color=(255, 255, 255), thickness=1,
-                       lineType=2)
-
-    cv.waitKey(0)
+    boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
+    cv.putText(green, 'Grapes detected', org=(500, 85), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
+               color=(255, 255, 255), thickness=1, lineType=2)
+    # cv.waitKey(0)
     cv.destroyAllWindows()
+
 
 
 ##################### commented ******************
@@ -685,8 +716,7 @@ def take_picture_and_run(current_location, image_number):
     for i in range(0, amount_of_mask_detacted):
         x = int(boxes[i][0][0])
         y = int(boxes[i][0][1])
-        w = int(boxes[i][1][0])
-        h = int(boxes[i][1][1])
+        w, h = calculate_w_h(d, corner_points[i])
         a = int(boxes[i][2])
         box = [x, y, w, h, a]
         predicted_masks_to_mrbb.append(box)
@@ -702,7 +732,8 @@ def take_picture_and_run(current_location, image_number):
         # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
         # angle_0 = (angle_0*180)/pi
         det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(width_0), int(height_0), angle_0, None]
-        box_in_meter = pixel_2_meter(d, det_box)
+        x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
+        box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
         det_rotated_boxes.append(box_in_meter)
         grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4], None,  det_box]
         add_to_TB(grape)
@@ -721,7 +752,7 @@ def take_picture_and_run(current_location, image_number):
     # cv.imshow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     showInMovedWindow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     g_param.masks_image = img
-    cv.waitKey(0) # TODO: uncomment
+    # cv.waitKey(0) # TODO: uncomment
     cv.destroyAllWindows()
 
 

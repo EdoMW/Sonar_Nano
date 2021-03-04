@@ -93,8 +93,7 @@ class ReadWrite:
 
     def write_transformations_to_csv(self):
         """
-        :param pos: current position of the robot
-        :return:
+        current transformation of the robot
         """
         print(type(g_param.trans.t_cam2base))
         data = g_param.trans.t_cam2base.tolist()
@@ -138,8 +137,7 @@ class ReadWrite:
 
     def write_target_bank_to_csv(self, target_bank):
         """
-        :param: current position of the robot
-        :return:
+        :param: current target bank (list of TB objects)
         """
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()

@@ -2,7 +2,7 @@
 TB = []
 masks_image = None
 half_width_meter = 0.34
-show_images = True
+show_images = False
 spray_sonar = True
 trans = None
 const_dist = 0.72

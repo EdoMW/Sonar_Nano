@@ -42,7 +42,6 @@ from distance import distance2
 import g_param
 
 
-
 g_param.read_write_object = read_write.ReadWrite()
 rs_rob = read_from_socket.ReadFromRobot()
 ws_rob = write_to_socket.Send2Robot()
@@ -56,7 +55,7 @@ sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 ########################################################################################################################
 # parameters ###########################################################################################################
 ########################################################################################################################
-start_pos = np.array([-0.30741425, -0.24198481, 0.52430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
+start_pos = np.array([-0.30741425, -0.24198481, 0.44430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
 # start_pos = np.array([-0.38741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
 # start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255 ])  # Left pos
 # start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255])  # check pos # TODO ORIGINAL
@@ -280,7 +279,7 @@ def mark_sprayed_and_display():
         # sprayed and steel should appear in the image #
         if g_param.TB[a].sprayed and abs(g_param.TB[a].grape_world[1] -
                                          cam_0_base[1]) < half_image_left:
-            print("distance from center of image : ", g_param.TB[a].grape_world[1] - cam_0_base[1])
+            # print("distance from center of image : ", g_param.TB[a].grape_world[1] - cam_0_base[1])
             g_param.masks_image = cv.circle(g_param.masks_image, (int(g_param.TB[a].x_p), int(g_param.TB[a].y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
     if g_param.show_images:

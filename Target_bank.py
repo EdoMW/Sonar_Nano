@@ -1,5 +1,8 @@
 import numpy as np
 import math
+from sty import fg, bg, ef, rs
+from sty import Style, RgbFg
+fg.orange = Style(RgbFg(255, 150, 50))
 from operator import itemgetter, attrgetter
 import g_param
 from math import cos, sin, pi,  radians
@@ -30,6 +33,7 @@ class Target_bank:
     def target_to_string(self):
         ind = self.index
         ind = " ID : " + str(ind) + " "
+        ind = fg.orange + ind + fg.rs
         a = self.x_meter
         b = self.y_meter
         c = self.x_p
