@@ -95,7 +95,6 @@ class ReadWrite:
         """
         current transformation of the robot
         """
-        print(type(g_param.trans.t_cam2base))
         data = g_param.trans.t_cam2base.tolist()
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()
@@ -117,9 +116,7 @@ class ReadWrite:
         :param pos: current position of the robot
         :return:
         """
-        print(type(pos), pos)
         data = pos.tolist()
-        print(type(data), data)
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()
         folder_path_for_location = self.location_path

@@ -7,9 +7,18 @@ a = np.insert(arr = a,
               values = 4,
               axis = 1)
 print(a)
-
-b = [[1,2],[3,4],[5,6]]
-c = [["a","b"],["v", 'c'],["e","f"]]
-res = [list(itertools.chain(*i))
-       for i in zip(b, c)]
-print(res)
+#
+# b = [[1,2],[3,4],[5,6]]
+# c = [["a","b"],["v", 'c'],["e","f"]]
+# res = [list(itertools.chain(*i))
+#        for i in zip(b, c)]
+# print(res)
+#
+#
+print("np")
+for i in range(3):
+    print(a)
+    corner_list = a[i:i+1,:2]
+    corn = corner_list.tolist()
+    print(corn)
+    print(type(corn))

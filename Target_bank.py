@@ -1,13 +1,16 @@
 import numpy as np
 import math
-from sty import fg, bg, ef, rs
+from sty import fg
 from sty import Style, RgbFg
-fg.orange = Style(RgbFg(255, 150, 50))
 from operator import itemgetter, attrgetter
 import g_param
 from math import cos, sin, pi,  radians
 import cv2 as cv
 
+# Define colors for printing
+fg.orange = Style(RgbFg(255, 150, 50))
+fg.red = Style(RgbFg(247, 31, 0))
+fg.green = Style(RgbFg(31, 177, 31))
 
 ######################################################
 ################# Parameters to tune #################
@@ -44,7 +47,10 @@ class Target_bank:
         y_c = " y_p:" + str(d)
         w = f" w: {self.w_meter}"
         h = f" h: {self.h_meter}"
-        e = self.sprayed
+        if self.sprayed:
+            e = fg.green + str(self.sprayed) + fg.rs
+        else:
+            e = fg.red + str(self.sprayed) + fg.rs
         f = " area: " + str(self.rect_area) + " "
         sp = " sprayed :" + str(e) + " "
         wr = "wait_round: " + str(self.wait_another_step)
@@ -63,7 +69,11 @@ class Target_bank:
         return params + corners + '\n' + '\n'
         # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
 
-    def calc_corners(self):
+    def calc_corners_by_gemotry(self):
+        """
+        Doesn't work when extra process is done to the image.
+        :return:
+        """
         x_cen, y_cen = self.x_meter, self.y_meter
         w, h = self.w_meter, self.h_meter
         angle = self.angle
@@ -81,7 +91,7 @@ class Target_bank:
         # auto_corners = cv.boxPoints(box)
         return [cor_1, cor_2, cor_3, cor_4]
 
-    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world):
+    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world, corners):
         """
         :param x: x center coordinate in meters
         :param y: y center coordinate in meters
@@ -90,7 +100,7 @@ class Target_bank:
         :param angle: in degrees from the horizontal line
         :param mask: a 2D bitmap of the grape.
         :param pixels_data: all data in pixels
-        :param grape_world: data in meter
+        :param grape_world: data in meter #TODO- CHECK if it has a use.
         """
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
@@ -111,7 +121,7 @@ class Target_bank:
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.wait_another_step = False
-        self.corners = self.calc_corners()
+        self.corners = simlifay_corners(corners)
         # amount of updates, what iteration was the last update
 
 
@@ -149,19 +159,37 @@ def check_if_in_TB(grape_world, target):
     return False, None
 
 
+def simlifay_corners(corners):
+    """
+    convert corners from np.array to list, round to 3 decimel points.
+    :param corners: corners list of np.arrays
+    :return: corner list in meters
+    """
+    corners_simple = []
+    for i in range(4):
+        corner_list = corners[i][:2]
+        corn = corner_list.tolist()
+        corn = [round(corn[0], 3), round(corn[1],3)]
+        corners_simple.append(corn)
+    return corners_simple
+
+
 # add a new detected target to the TB
 # TODO: get as input current_location and use it to calc x,y locaiions
 def check_close_to_edge(target):
     x_m = target[0]
     w_m = target[2] / 2
+    h_m = target[3] / 2
     angle = target[4]
-    dist_on_x_from_center = w_m * math.cos(math.radians(angle))
-    dist_to_edge = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center))
+    dist_on_x_from_center_1 = w_m * math.cos(math.radians(angle))
+    dist_on_x_from_center_2 = h_m * math.cos(math.radians(angle))
+    dist_to_edge_1 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_1))
+    dist_to_edge_2 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_2))
     # print("g_param.half_width_meter :", g_param.half_width_meter)
     # print("x_m : ", x_m, " dist_on_x_from_center: ", dist_on_x_from_center)
     # print("dist_to_edge : ", dist_to_edge)
     # print("dist_to_edge < edge_distance_threshold :", dist_to_edge < edge_distance_threshold)
-    return dist_to_edge < edge_distance_threshold
+    return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
 
 
 def round_to_three(arr):
@@ -193,7 +221,7 @@ def add_to_TB(target):
         if not too_close:
             # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
-                                          target[5], target[6], temp_grape_world))
+                                          target[5], target[6], temp_grape_world, target[8]))
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")
 
@@ -214,19 +242,19 @@ def sort_by_and_check_for_grapes(sorting_type):
     if sorting_type == 'leftest_first':
         sort_by_leftest_first()
     if len(g_param.TB) > 0:
-        if g_param.TB[0].sprayed == True:
+        if g_param.TB[0].sprayed:
             return False
         else:
             return True
     return False
 
 
-def sort_by_leftest_first():  # TODO Edo, fix sorting in two stages
+def sort_by_leftest_first():
     g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_meter'))
     # g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'y_base'))
 
 
-def sort_by_rect_size():  # TODO Edo, fix sorting in two stages
+def sort_by_rect_size():
     g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'rect_area'))
 
 

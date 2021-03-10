@@ -595,9 +595,10 @@ def calculate_w_h(d, box_points):
     p1 = box_points_to_np_array(d, box_points[0])
     p2 = box_points_to_np_array(d, box_points[1])
     p3 = box_points_to_np_array(d, box_points[2])
+    p4 = box_points_to_np_array(d, box_points[3])
     w = np.linalg.norm(p1 - p2)
     h = np.linalg.norm(p2 - p3)
-    return w, h
+    return w, h, [p1, p2, p3, p4]
 
 
 
@@ -699,13 +700,13 @@ def take_picture_and_run(current_location, image_number):
     thresh_callback(thresh)
     # print(len(boxes), boxes)
     corner_points = [arr.tolist() for arr in corner_points]
-    corner_points = list(corner_points for corner_points,_ in itertools.groupby(corner_points))
-    boxes = set(boxes) # remove duplicates
+    # corner_points = list(corner_points for corner_points,_ in itertools.groupby(corner_points))  # remove duplicates
+    boxes = set(boxes)  # remove duplicates
     boxes = list(boxes)
     boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
     cv.putText(green, 'Grapes detected', org=(500, 85), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                color=(255, 255, 255), thickness=1, lineType=2)
-    # cv.waitKey(0)
+    cv.waitKey(0)
     cv.destroyAllWindows()
 
 
@@ -716,9 +717,9 @@ def take_picture_and_run(current_location, image_number):
     for i in range(0, amount_of_mask_detacted):
         x = int(boxes[i][0][0])
         y = int(boxes[i][0][1])
-        w, h = calculate_w_h(d, corner_points[i])
+        w, h, corners_in_meter = calculate_w_h(d, corner_points[i])
         a = int(boxes[i][2])
-        box = [x, y, w, h, a]
+        box = [x, y, w, h, a, corners_in_meter]
         predicted_masks_to_mrbb.append(box)
 
     det_rotated_boxes = []
@@ -735,9 +736,9 @@ def take_picture_and_run(current_location, image_number):
         x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
         box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
         det_rotated_boxes.append(box_in_meter)
-        grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4], None,  det_box]
+        grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
+                 None,  det_box, None, corners_in_meter]
         add_to_TB(grape)
-
 
     print("boxes", boxes)
     # using the TB
@@ -752,7 +753,8 @@ def take_picture_and_run(current_location, image_number):
     # cv.imshow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     showInMovedWindow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
     g_param.masks_image = img
-    # cv.waitKey(0) # TODO: uncomment
+
+    cv.waitKey(0) # TODO: uncomment
     cv.destroyAllWindows()
 
 
