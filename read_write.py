@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 
-
 def get_local_time_date(): # TODO- make it work
     """
     :return: hours_min_sec_millisec
@@ -48,40 +47,40 @@ class ReadWrite:
         self.masks_path = None
         self.sonar_path = None
         self.transformations_path = None
-        self.target_bank_path = None
 
     def create_directories(self):  # TODO: add Date to the name of the directory
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
         """
         Creates all directories and sub directories
         """
         # Directory
         directory = "exp_data_dataTime"
         directory = directory.replace("dataTime", get_local_time_2())
-        parent_dir = r'D:\Users\NanoProject\SonarNano'
+        parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         os.mkdir(path)
         directory_1, directory_2, directory_3 = "locations", "rgb_images", "masks"
-        directory_4, directory_5, directory_6 = "sonar", "transformations", "target_bank"
+        directory_4, directory_5 = "sonar", "transformations"
         path_1 = os.path.join(path, directory_1)
         path_2 = os.path.join(path, directory_2)
         path_3 = os.path.join(path, directory_3)
         path_4 = os.path.join(path, directory_4)
         path_5 = os.path.join(path, directory_5)
-        path_6 = os.path.join(path, directory_6)
         os.mkdir(path_1)
         os.mkdir(path_2)
         os.mkdir(path_3)
         os.mkdir(path_4)
         os.mkdir(path_5)
-        os.mkdir(path_6)
         self.location_path = path_1
         self.rgb_images_path = path_2
         self.masks_path = path_3
         self.sonar_path = path_4
         self.transformations_path = path_5
-        self.target_bank_path = path_6
 
     def save_rgb_image(self, frame):
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
         folder_path_for_images = self.rgb_images_path
         img_name = 'num_dt.jpeg'
         img_name = img_name.replace("num", str(g_param.image_number))
@@ -92,9 +91,13 @@ class ReadWrite:
         plt.close()  # closes figure
 
     def write_transformations_to_csv(self):
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
         """
-        current transformation of the robot
+        :param pos: current position of the robot
+        :return:
         """
+        print(type(g_param.trans.t_cam2base))
         data = g_param.trans.t_cam2base.tolist()
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()
@@ -107,16 +110,22 @@ class ReadWrite:
         file = open(transformation_path, 'w+')
         # writing the data into the file
         with file:
+            # write = csv.writer(file)
+            # write.writerows(data)
             out = csv.writer(file)
             out.writerows(map(lambda x: [x], data))
             file.close()
 
     def write_location_to_csv(self, pos):
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
         """
         :param pos: current position of the robot
         :return:
         """
+        print(type(pos), pos)
         data = pos.tolist()
+        print(type(data), data)
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()
         folder_path_for_location = self.location_path
@@ -128,17 +137,20 @@ class ReadWrite:
         file = open(location_path, 'w+')
         # writing the data into the file
         with file:
+            # write = csv.writer(file)
+            # write.writerows(data)
             out = csv.writer(file)
             out.writerows(map(lambda x: [x], data))
             file.close()
 
-    def write_target_bank_to_csv(self, target_bank):
+    def read_location_from_csv(self, image_number):
         """
-        :param: current target bank (list of TB objects)
+        :param pos: current position of the robot
+        :return:
         """
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()
-        folder_path_for_location = self.target_bank_path
+        folder_path_for_location = self.location_path
         location_data = 'num_dt.csv'
         location_data = location_data.replace("num", str(g_param.image_number))
         location_data = location_data.replace("dt", str(current_time))
@@ -147,6 +159,8 @@ class ReadWrite:
         file = open(location_path, 'w+')
         # writing the data into the file
         with file:
+            # write = csv.writer(file)
+            # write.writerows(data)
             out = csv.writer(file)
-            out.writerows(map(lambda x: [x], target_bank))
+            out.writerows(map(lambda x: [x]))
             file.close()

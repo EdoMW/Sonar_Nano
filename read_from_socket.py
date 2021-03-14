@@ -31,7 +31,7 @@ class ReadFromRobot:
 
     def __del__(self):
         try:
-            print("disconnecting to UR5.. \nclose read from socket", self.s)
+            # print("disconnecting to UR5.. \nclose read from socket", self.s)
             self.s.close()
             time.sleep(0.1)
         except socket.error as socketError:
@@ -40,7 +40,7 @@ class ReadFromRobot:
     def connect_to_robot(self):
         try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print("connecting to UR5.. \nopen read from socket", self.s)
+            # print("connecting to UR5.. \nopen read from socket", self.s)
             self.s.settimeout(10)
             self.s.connect((self.HOST, self.PORT_30003))
             time.sleep(0.1)
@@ -49,7 +49,7 @@ class ReadFromRobot:
 
     def disconnect_to_robot(self):
         try:
-            print("disconnecting to UR5.. \nclose read from socket", self.s)
+            # print("disconnecting to UR5.. \nclose read from socket", self.s)
             self.s.detach()
             time.sleep(0.1)
         except socket.error as socketError:

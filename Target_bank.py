@@ -1,16 +1,16 @@
 import numpy as np
 import math
-from sty import fg
-from sty import Style, RgbFg
 from operator import itemgetter, attrgetter
 import g_param
 from math import cos, sin, pi,  radians
 import cv2 as cv
 
 # Define colors for printing
+from sty import fg, Style, RgbFg
 fg.orange = Style(RgbFg(255, 150, 50))
 fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
+fg.yellow = Style(RgbFg(255, 255, 70))
 
 ######################################################
 ################# Parameters to tune #################
@@ -123,7 +123,6 @@ class Target_bank:
         self.wait_another_step = False
         self.corners = simlifay_corners(corners)
         # amount of updates, what iteration was the last update
-
 
     def calc_dist_from_center(x, y):
         return math.sqrt(x * x + y * y)

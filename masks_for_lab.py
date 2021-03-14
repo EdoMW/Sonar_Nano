@@ -503,7 +503,7 @@ def ueye_take_picture_2(image_number):
         # if cv.waitKey(100) or 0xFF == ord('q'):
         frame = frame[:,:,0:3]
         frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-        # print(frame.shape)
+        # TODO make folder_path_for_images a parameter
         folder_path_for_images = r'D:\Users\NanoProject\SonarNano\exp_data_16_2_21\rgb_images'
         img_name = 'num_dt.jpeg'
         img_name = img_name.replace("num", str(image_number))
@@ -511,7 +511,8 @@ def ueye_take_picture_2(image_number):
         image_path = os.path.join(folder_path_for_images, img_name)
 
         plt.imsave(image_path, frame)
-        g_param.read_write_object.save_rgb_image(frame)
+        if g_param.process_type == "record":
+            g_param.read_write_object.save_rgb_image(frame)
         cv.destroyAllWindows()
 
         # print("image_path!!!!!!:", image_path)
@@ -625,12 +626,12 @@ def take_picture_and_run(current_location, image_number):
     # cv.destroyAllWindows()
     rng.seed(12345)
 
-    def fix_angle_to_0_180(w, h, a):
-        if w <= h:
-            a += 90
+    def fix_angle_to_0_180(width, height, ang):
+        if width <= height:
+            ang += 90
         else:
-            a += 180
-        return a
+            ang += 180
+        return ang
 
     def thresh_callback(val):
         threshold = val

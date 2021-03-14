@@ -17,30 +17,31 @@
 #     show_images = True (default) show images
 
 import sys
+import g_param
 import numpy as np
 import cv2 as cv
-import tensorflow as tf
-import time
-import logging
-
-logging.getLogger('tensorflow').disabled = True
-
-
-# from Target_bank import print_grape
-# TODO: uncomment this line and comment next for field exp
-# from mask_rcnn import take_picture_and_run as capture_update_TB, pixel_2_meter
-from masks_for_lab import take_picture_and_run as capture_update_TB, pixel_2_meter, showInMovedWindow, meter_2_pixel
-import write_to_socket
-import read_from_socket
-import Target_bank as TBK
-import transform
-import read_write
 import DAQ_BG
 from test_one_record import test_spec
 from preprocessing_and_adding import preprocess_one_record
 from distance import distance2
-import g_param
+import tensorflow as tf
+import time
+import Target_bank as TBK
+import transform
+import read_write
+from sty import fg, Style, RgbFg
 
+# from Target_bank import print_grape
+# TODO: uncomment this line and comment next for field exp
+# from mask_rcnn import take_picture_and_run as capture_update_TB, pixel_2_meter
+from masks_for_lab import take_picture_and_run as capture_update_TB, showInMovedWindow
+import write_to_socket
+import read_from_socket
+
+fg.orange = Style(RgbFg(255, 150, 50))
+fg.red = Style(RgbFg(247, 31, 0))
+fg.green = Style(RgbFg(31, 177, 31))
+fg.yellow = Style(RgbFg(255, 255, 70))
 
 g_param.read_write_object = read_write.ReadWrite()
 rs_rob = read_from_socket.ReadFromRobot()
@@ -55,15 +56,13 @@ sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 ########################################################################################################################
 # parameters ###########################################################################################################
 ########################################################################################################################
-start_pos = np.array([-0.30741425, -0.24198481, 0.44430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
-# start_pos = np.array([-0.38741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
 # start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255 ])  # Left pos
-# start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255])  # check pos # TODO ORIGINAL
+start_pos = np.array([-0.31741425, -0.24198481, 0.52430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
 # start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
 step_size = 0.25
 # the next two variables are just for the lab
-number_of_steps = 3
+number_of_steps = 1
 steps_counter = 0
 moving_direction = "right"  # right/left
 platform_step_size = 0.5
@@ -133,13 +132,15 @@ def check_connected_successfully():
 
 
 def move2sonar(grape_1):
-    input("Press Enter to to sonar")
+    input("Press Enter to move to sonar")
+    print(fg.yellow + "wait" + fg.rs)
     x_cam, y_cam = grape_1.x_meter, grape_1.y_meter
     tcp = g_param.trans.aim_sonar(x_cam, y_cam)
     new_location = g_param.trans.tcp_base(tcp)
     print(">>>>>new location", new_location)
     ws_rob.move_command(False, new_location, 5)
     check_update_move(new_location)
+    print(fg.green + "continue" + fg.rs, "\n")
 
 
 def move2spray(grape_1):
@@ -152,9 +153,11 @@ def move2spray(grape_1):
     yz_move = np.concatenate([location[0:1], new_location[1:6]])
     print("y_movbe", yz_move)
     input("press enter to move to spray location")
+    print(fg.yellow + "wait" + fg.rs)
     ws_rob.move_command(False, yz_move, 4)
     ws_rob.move_command(True, new_location, 5)
     check_update_move(new_location)
+    print(fg.green + "continue" + fg.rs, "\n")
 
 
 def move2temp(temp_location_1):
@@ -164,9 +167,11 @@ def move2temp(temp_location_1):
     x_move = np.concatenate([temp_location_1[0:1], location[1:3], temp_location_1[3:6]])
     print("x_movbe", x_move)
     input("Press Enter to move to temp location")
+    print(fg.yellow + "wait" + fg.rs)
     ws_rob.move_command(True, x_move, 5)
     ws_rob.move_command(False, temp_location_1, 5)
     check_update_move(temp_location_1)
+    print(fg.green + "continue" + fg.rs, "\n")
 
 
 def check_update_move(location):
@@ -236,6 +241,7 @@ def update_database_sprayed(index_of_grape):
 
 def update_wait_another_round():
     """
+    for future work (already working- tested)
     mark grapes that were not sprayed yet and would be closer to the center of the image in the next
     capture image position (next step).
     :return:
@@ -260,6 +266,18 @@ def count_un_sprayed():
     return amount
 
 
+def intermediates(p1, p2, nb_points=8):
+    """"Return a list of nb_points equally spaced points
+    between p1 and p2"""
+    # If we have 8 intermediate points, we have 8+1=9 spaces
+    # between p1 and p2
+    x_spacing = (p2[0] - p1[0]) / (nb_points + 1)
+    y_spacing = (p2[1] - p1[1]) / (nb_points + 1)
+
+    return [[p1[0] + i * x_spacing, p1[1] + i * y_spacing]
+            for i in range(1, nb_points+1)]
+
+
 # tell me which input you want. I don't think that I need any output,
 # maybe only if there is a problem such as no more spraying material.
 def spray():
@@ -279,7 +297,7 @@ def mark_sprayed_and_display():
         # sprayed and steel should appear in the image #
         if g_param.TB[a].sprayed and abs(g_param.TB[a].grape_world[1] -
                                          cam_0_base[1]) < half_image_left:
-            # print("distance from center of image : ", g_param.TB[a].grape_world[1] - cam_0_base[1])
+            print("distance from center of image : ", g_param.TB[a].grape_world[1] - cam_0_base[1])
             g_param.masks_image = cv.circle(g_param.masks_image, (int(g_param.TB[a].x_p), int(g_param.TB[a].y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
     if g_param.show_images:
@@ -297,8 +315,14 @@ def init_arm_and_platform():
     # move_command(False, start_pos, 5) #TODO: Omer
     # move_platform(platform_step_size) #TODO write the function
     # TODO, check if change to True, or more complex movement (it's moving in a dangerous way)
+
     print_line_sep_time()
-    ws_rob.move_command(False, start_pos, 4)
+
+    if g_param.process_type != "load":
+        ws_rob.move_command(True, start_pos, 4)
+    else:
+        g_param.read_write_object.read_location_from_csv(image_number=g_param.image_number)
+
 
 
 def check_more_than_half_away(x_meter, half_step_size):
@@ -320,7 +344,6 @@ if __name__ == '__main__':
     temp_location = current_location
     g_param.trans.set_pic_tcp(temp_location)
     g_param.trans.update_cam2base(current_location)  # 4
-
     print(">>> Start position: ")
     print_current_location()
 
@@ -333,7 +356,7 @@ if __name__ == '__main__':
                 init_arm_and_platform()  # 3
                 steps_counter = 0
             move_const(step_size, "right", current_location)  # try to move 1 step size
-            if g_param.time_to_move_platform:
+            if g_param.time_to_move_platform:  # TODO- update manually step size for world location to the right.
                 print('issue moving const ')
                 print_current_location()
                 break
@@ -346,20 +369,20 @@ if __name__ == '__main__':
         else:
             first_run = False
 
-        input("Press Enter to take picture")
-        capture_update_TB(current_location, g_param.image_number)  # 5 + 7-12 inside # TODO: add base world location to the input (or inside)
-        g_param.read_write_object.write_target_bank_to_csv(g_param.TB)
-        print("TB after detecting first grape:", "\n", g_param.TB)
+        input("Press Enter to take picture")  # TODO: add base world location to the input (or inside)
+        print(fg.yellow + "wait" + fg.rs)
+        capture_update_TB(current_location, g_param.image_number)  # 5 + 7-12 inside
+        print(fg.green + "continue" + fg.rs, "\n",  "TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TBK.sort_by_and_check_for_grapes('leftest_first')  # 6
         input("press enter for continue to spraying")
         if not first_run:
             mark_sprayed_and_display()
         print(g_param.TB)
         if grape_ready_to_spray:  # 15- yes (change to sorting according to 14, rap the next lines in a function)
-            # update_wait_another_round()  # TODO comment it
+            # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
             for i in range(amount_of_grapes_to_spray):
-
+                # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index), org=(g_param.TB[i].x_p,
                                                                                                      g_param.TB[i].y_p),
                                                  fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
@@ -376,7 +399,6 @@ if __name__ == '__main__':
                 # distance, is_grape = activate_sonar()  # 20 FIXME: Yossi  + Edo
                 sonar_dist, is_grape = g_param.const_dist, True
                 print("distance :", sonar_dist, "is_grape :", is_grape)
-                # move2temp(temp_location) # TODO: Omer, later generate direct movement from sonar to sprayer
                 if is_grape:  # 21 - yes
                     update_distance(i, sonar_dist)  # 23,24 TODO: omer ,Edo- update grape parameters
                     g_param.trans.update_distance(read_position()[0])
@@ -405,6 +427,8 @@ if __name__ == '__main__':
             #         # g_param.trans.update_base2world()
             #     else:  # 21- no
             #         print("Not time to move platform, move arm to take another image")
-        if steps_counter > number_of_steps:
+        if steps_counter >= number_of_steps:
             g_param.time_to_move_platform = True
+            print(print_line_sep_time(), '\n'," Saftey STOP!",'\n')
+            break
             # restart_TB()  # option to restart without initialize

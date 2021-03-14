@@ -27,12 +27,12 @@ class Send2Robot:
         self.rob_init()
 
     def __del__(self):
-        print(' send socket closed')
+        # print(' send socket closed')
         self.disconnect_to_robot()
 
     def connect_to_robot(self):
         try:
-            print("connecting to UR5.. \nopen write to socket", self.s)
+            # print("connecting to UR5.. \nopen write to socket", self.s)
             self.s.settimeout(10)
             self.s.connect((self.HOST, self.PORT_30002))
             time.sleep(0.1)
@@ -41,7 +41,7 @@ class Send2Robot:
 
     def disconnect_to_robot(self):
         try:
-            print("disconnecting to UR5.. \nclose write to socket", self.s)
+            # print("disconnecting to UR5.. \nclose write to socket", self.s)
             self.s.close()
             time.sleep(0.1)
         except socket.error as socketerror:
@@ -88,7 +88,10 @@ class Send2Robot:
                 pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])) + "], a=0.5, v=0.7,r=0)" + "\n").encode(
                 "utf8"))
         time.sleep(tSleep)
-        g_param.read_write_object.write_location_to_csv(pos=pos)
+        if g_param.process_type == "record":
+            g_param.read_write_object.write_location_to_csv(pos=pos)
+
+
 
     def spray_command(self, spray):
         if spray:
