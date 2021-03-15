@@ -51,10 +51,10 @@ class Trans:
         self.t_tcp2base = np.append(self.t_tcp2base, [[cur_location[0]], [cur_location[1]], [cur_location[2]], [1]], axis=1)
         self.t_cam2base = np.matmul(self.t_tcp2base, self.t_cam2tcp)
         self.t_cam2world = np.matmul(self.t_base2world, self.t_cam2base)
-        if g_param.process_type == "record":
-            g_param.read_write_object.write_transformations_to_csv()
-        elif g_param.process_type == "load":
-            g_param.read_write_object.read_transformations_from_csv()
+        # if g_param.process_type == "record":
+        #     g_param.read_write_object.write_transformations_to_csv()
+        # elif g_param.process_type == "load":
+        #     g_param.read_write_object.read_transformations_from_csv()
         time.sleep(0.01)
 
     def grape_world(self, x_cam, y_cam):

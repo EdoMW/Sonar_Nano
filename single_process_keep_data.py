@@ -138,9 +138,13 @@ def move2sonar(grape_1):
     tcp = g_param.trans.aim_sonar(x_cam, y_cam)
     new_location = g_param.trans.tcp_base(tcp)
     print(">>>>>new location", new_location)
-    ws_rob.move_command(False, new_location, 5)
-    check_update_move(new_location)
+    if g_param.process_type != "load":
+        ws_rob.move_command(False, new_location, 5)
+        check_update_move(new_location)
+    else:
+        pass # TODO: do we need to save the spray location and sonar location??
     print(fg.green + "continue" + fg.rs, "\n")
+
 
 
 def move2spray(grape_1):
@@ -154,9 +158,12 @@ def move2spray(grape_1):
     print("y_movbe", yz_move)
     input("press enter to move to spray location")
     print(fg.yellow + "wait" + fg.rs)
-    ws_rob.move_command(False, yz_move, 4)
-    ws_rob.move_command(True, new_location, 5)
-    check_update_move(new_location)
+    if g_param.process_type != "load":
+        ws_rob.move_command(False, yz_move, 4)
+        ws_rob.move_command(True, new_location, 5)
+        check_update_move(new_location)
+    else:
+        pass
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -168,9 +175,12 @@ def move2temp(temp_location_1):
     print("x_movbe", x_move)
     input("Press Enter to move to temp location")
     print(fg.yellow + "wait" + fg.rs)
-    ws_rob.move_command(True, x_move, 5)
-    ws_rob.move_command(False, temp_location_1, 5)
-    check_update_move(temp_location_1)
+    if g_param.process_type != "load":
+        ws_rob.move_command(True, x_move, 5)
+        ws_rob.move_command(False, temp_location_1, 5)
+        check_update_move(temp_location_1)
+    else:
+        pass
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -189,28 +199,32 @@ def move_const(m, direction, location):
     move = advence X cm to the right (arbitrary), not receiving grape as input (not relevant)
     spray - move to spraying position
     sonar - move to sonar position
-    take_picture - move to take_picture from centered position #TODO: not for now
+    take_picture - move to take_picture from centered position #
     :param m:
     :param direction:
     :param location:
     :return:
     """
     print("move const ", step_size, " start at:", location)
-    if direction == "right":
-        location[1] = location[1] + m
-        ws_rob.move_command(True, location, sleep_time)
+    if g_param.process_type != "load":
+        if direction == "right":
+            location[1] = location[1] + m
+            ws_rob.move_command(True, location, sleep_time)
+        else:
+            location[1] = location[1] - m
+            ws_rob.move_command(True, location, sleep_time)
+        check_update_move(location)
+        pos = read_position()[0]
+        if g_param.process_type == "record":
+            g_param.read_write_object.write_location_to_csv(pos=pos)
     else:
-        location[1] = location[1] - m
-        ws_rob.move_command(True, location, sleep_time)
-    check_update_move(location)
-    pos = read_position()[0]
+        pos = g_param.read_write_object.read_location_from_csv()
+    g_param.trans.set_capture_pos(pos)
     if not time_to_move_platform:
         g_param.trans.update_cam2base(pos)
-    if g_param.process_type == "record":
-        g_param.read_write_object.write_location_to_csv(pos=pos)
 
 
-def print_current_location():
+def print_current_location(current_location):
     x_base = "x base: " + str(round(current_location[0], 3)) + " "
     y_base = "y base: " + str(round(current_location[1], 3)) + " "
     z_base = "z base: " + str(round(current_location[2], 3)) + " "
@@ -230,7 +244,7 @@ def update_database_no_grape(index):
 def update_database_sprayed(index_of_grape):
     g_param.TB[index_of_grape].sprayed = True
     print(g_param.TB)
-    print_current_location()
+    print_current_location(current_location)
     g_param.TB[index_of_grape].mask = None  # (to save space in memory)
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (g_param.TB[index_of_grape].x_p, g_param.TB[index_of_grape].y_p),
@@ -325,9 +339,14 @@ def init_arm_and_platform():
         ws_rob.move_command(True, start_pos, 4)
         if g_param.process_type == "record":
             g_param.read_write_object.write_location_to_csv(pos=read_position()[0])
+        current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
+        g_param.trans.set_capture_pos(current_location)
+        g_param.trans.update_cam2base(current_location)  # 4
 
     else:
-        g_param.read_write_object.read_location_from_csv()
+        current_location = g_param.read_write_object.read_location_from_csv()
+        g_param.trans.set_capture_pos(current_location)
+        g_param.trans.update_cam2base(current_location)
 
 
 
@@ -347,12 +366,9 @@ def check_more_than_half_away(x_meter, half_step_size):
 if __name__ == '__main__':
 
     init_arm_and_platform()
-    current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
-    temp_location = current_location
-    g_param.trans.set_capture_pos(temp_location)
-    g_param.trans.update_cam2base(current_location)  # 4
     print(">>> Start position: ")
-    print_current_location()
+    current_location = g_param.trans.capture_pos
+    print_current_location(g_param.trans.capture_pos)
 
     # The main loop:
     while not_finished and no_tech_problem:
@@ -365,11 +381,12 @@ if __name__ == '__main__':
             move_const(step_size, "right", current_location)  # try to move 1 step size
             if g_param.time_to_move_platform:  # TODO- update manually step size for world location to the right.
                 print('issue moving const ')
-                print_current_location()
+                print_current_location(current_location)
                 break
             current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
-            temp_location = current_location
-            g_param.trans.set_capture_pos(temp_location)
+            g_param.trans.set_capture_pos(current_location)
+
+
             steps_counter += 1
         else:
             first_run = False
@@ -412,7 +429,7 @@ if __name__ == '__main__':
                     if time_to_move_platform:  # 27
                         break  #
                     spray()  # 28
-                    move2temp(temp_location)  # TODO: Omer, generate safety movement
+                    move2temp(g_param.trans.capture_pos)  # TODO: Omer, generate safety movement
                     update_database_sprayed(i)  # 28 # TODO Edo: show the image and mark grape sprayed
                     mark_sprayed_and_display()
                 else:

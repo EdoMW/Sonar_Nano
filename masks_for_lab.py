@@ -619,7 +619,10 @@ def take_picture_and_run(current_location, image_number):
     plt.clf()  # clean the canvas
     image_details = f"Picure number {image_number}"
     print(colored(image_details, 'green'))
-    image_path = ueye_take_picture_2(image_number)
+    if g_param.process_type == "record" or g_param.process_type == "work":
+        image_path = ueye_take_picture_2(image_number)
+    else:
+        image_path = g_param.read_write_object.load_image_path()
     # img = cv.imread(image_path)
     # img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     #

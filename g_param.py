@@ -21,7 +21,6 @@ process_type = "load"  # TODO-add save of the TB before ending the program
 read_write_object = None
 safety_dist = 0.16
 time_to_move_platform = False
-
 def calc_image_width():
     """
     :return: calculates the width in meters of half image (center ot edge).
