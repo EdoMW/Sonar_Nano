@@ -308,7 +308,7 @@ if __name__ == '__main__':
     init_arm_and_platform()
     current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
     temp_location = current_location
-    g_param.trans.set_pic_tcp(temp_location)
+    g_param.trans.set_capture_pos(temp_location)
     g_param.trans.update_cam2base(current_location)  # 4
 
     print(">>> Start position: ")
@@ -329,7 +329,7 @@ if __name__ == '__main__':
                 break
             current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
             temp_location = current_location
-            g_param.trans.set_pic_tcp(temp_location)
+            g_param.trans.set_capture_pos(temp_location)
             g_param.trans.update_cam2base(current_location)
             steps_counter += 1
         else:

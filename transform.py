@@ -31,14 +31,14 @@ class Trans:
         self.t_cam2world = np.identity(4)
         self.t_tcp2base = np.identity(4)
         self.ang_vec_tcp = np.array([])
-        self.pic_tcp = np.array([])
+        self.capture_pos = np.array([])
     # Turns axis angles  into rotation matrix
 
-    def set_pic_tcp(self, location):
-        self.pic_tcp = location
+    def set_capture_pos(self, location):
+        self.capture_pos = location
 
     def update_distance(self, sonar_location):
-        g_param.const_dist = g_param.const_dist+abs(sonar_location[0]-self.pic_tcp[0])
+        g_param.const_dist = g_param.const_dist+abs(sonar_location[0] - self.capture_pos[0])
 
 
     def update_base2world(self, mobile_location):

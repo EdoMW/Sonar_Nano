@@ -203,8 +203,11 @@ def move_const(m, direction, location):
         location[1] = location[1] - m
         ws_rob.move_command(True, location, sleep_time)
     check_update_move(location)
+    pos = read_position()[0]
     if not time_to_move_platform:
-        g_param.trans.update_cam2base(read_position()[0])
+        g_param.trans.update_cam2base(pos)
+    if g_param.process_type == "record":
+        g_param.read_write_object.write_location_to_csv(pos=pos)
 
 
 def print_current_location():
@@ -320,8 +323,12 @@ def init_arm_and_platform():
 
     if g_param.process_type != "load":
         ws_rob.move_command(True, start_pos, 4)
+        if g_param.process_type == "record":
+            g_param.read_write_object.write_location_to_csv(pos=read_position()[0])
+
     else:
-        g_param.read_write_object.read_location_from_csv(image_number=g_param.image_number)
+        g_param.read_write_object.read_location_from_csv()
+
 
 
 
@@ -342,15 +349,15 @@ if __name__ == '__main__':
     init_arm_and_platform()
     current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
     temp_location = current_location
-    g_param.trans.set_pic_tcp(temp_location)
+    g_param.trans.set_capture_pos(temp_location)
     g_param.trans.update_cam2base(current_location)  # 4
     print(">>> Start position: ")
     print_current_location()
 
     # The main loop:
     while not_finished and no_tech_problem:
-        g_param.image_number += 1
         if not first_run:
+            g_param.image_number += 1
             print_line_sep_time()
             if g_param.time_to_move_platform:
                 init_arm_and_platform()  # 3
@@ -362,9 +369,7 @@ if __name__ == '__main__':
                 break
             current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
             temp_location = current_location
-            g_param.trans.set_pic_tcp(temp_location)
-            g_param.trans.update_cam2base(current_location)
-            g_param.read_write_object.write_transformations_to_csv()
+            g_param.trans.set_capture_pos(temp_location)
             steps_counter += 1
         else:
             first_run = False

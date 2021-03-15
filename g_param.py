@@ -16,7 +16,7 @@ record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-process_type = "record"  # TODO-add save of the TB before ending the program
+process_type = "load"  # TODO-add save of the TB before ending the program
 
 read_write_object = None
 safety_dist = 0.16

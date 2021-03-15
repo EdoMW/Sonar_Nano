@@ -88,8 +88,7 @@ class Send2Robot:
                 pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])) + "], a=0.5, v=0.7,r=0)" + "\n").encode(
                 "utf8"))
         time.sleep(tSleep)
-        if g_param.process_type == "record":
-            g_param.read_write_object.write_location_to_csv(pos=pos)
+
 
 
 

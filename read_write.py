@@ -5,6 +5,7 @@ import g_param
 from datetime import datetime
 import matplotlib.pyplot as plt
 from datetime import datetime
+import numpy as np
 
 
 def get_local_time_date(): # TODO- make it work
@@ -47,6 +48,7 @@ class ReadWrite:
         self.masks_path = None
         self.sonar_path = None
         self.transformations_path = None
+        self.exp_date_time = 'exp_data_12_32'
 
     def create_directories(self):  # TODO: add Date to the name of the directory
         if g_param.process_type == "work" or g_param.process_type == "load":
@@ -107,14 +109,15 @@ class ReadWrite:
         transformation_data = transformation_data.replace("dt", str(current_time))
         transformation_path = os.path.join(folder_path_for_transformation, transformation_data)
 
-        file = open(transformation_path, 'w+')
-        # writing the data into the file
-        with file:
-            # write = csv.writer(file)
-            # write.writerows(data)
-            out = csv.writer(file)
-            out.writerows(map(lambda x: [x], data))
-            file.close()
+        np.savetxt(transformation_path, data, delimiter=",")
+        # file = open(transformation_path, 'w+')
+        # # writing the data into the file
+        # with file:
+        #     # write = csv.writer(file)
+        #     # write.writerows(data)
+        #     out = csv.writer(file)
+        #     out.writerows(map(lambda x: [x], data))
+        #     file.close()
 
     def write_location_to_csv(self, pos):
         if g_param.process_type == "work" or g_param.process_type == "load":
@@ -143,24 +146,39 @@ class ReadWrite:
             out.writerows(map(lambda x: [x], data))
             file.close()
 
-    def read_location_from_csv(self, image_number):
+########################## read ################################
+
+    def read_location_from_csv(self):
         """
-        :param pos: current position of the robot
+        read location from csv.
+        it takes the location according to the current image number
         :return:
         """
-        # opening the csv file in 'w+' mode
-        current_time = get_local_time_4()
-        folder_path_for_location = self.location_path
-        location_data = 'num_dt.csv'
-        location_data = location_data.replace("num", str(g_param.image_number))
-        location_data = location_data.replace("dt", str(current_time))
-        location_path = os.path.join(folder_path_for_location, location_data)
+        image_number = g_param.image_number
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'transformations')
+        locations_list = os.listdir(path)
+        res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
+        path = os.path.join(path, res[0])
+        pos = np.genfromtxt(path, delimiter=',')
+        return pos
 
-        file = open(location_path, 'w+')
-        # writing the data into the file
-        with file:
-            # write = csv.writer(file)
-            # write.writerows(data)
-            out = csv.writer(file)
-            out.writerows(map(lambda x: [x]))
-            file.close()
+    def read_transformations_from_csv(self):
+        """
+        read location from csv.
+        it takes the location according to the current image number
+        :return:
+        """
+        image_number = g_param.image_number
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'transformations')
+        locations_list = os.listdir(path)
+        res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
+        path = os.path.join(path, res[0])
+        pos = my_data = np.genfromtxt(path, delimiter=",")
+        return pos
+
