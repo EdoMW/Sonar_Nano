@@ -31,7 +31,7 @@ def calc_image_width():
     """
     half_image_width = const_dist * 0.5 * (7.11 / 8)
     half_image_width = round(half_image_width, 2)
-    print("half image size : ", half_image_width)
+    print("half image width : ", half_image_width)
     return half_image_width
 
 
@@ -42,7 +42,7 @@ def calc_image_height():
     """
     half_image_height = const_dist * 0.595 * 0.5
     half_image_height = round(half_image_height, 2)
-    print("image height : ", half_image_height)
+    print("half image height : ", half_image_height)
     return half_image_height
 
 

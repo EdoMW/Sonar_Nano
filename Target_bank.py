@@ -60,7 +60,8 @@ class Target_bank:
         z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
         base_data = x_base + y_base + z_base + '\n'
         angle = f" angle: {self.angle}"
-        return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
+        return ind + sp + wr + world_data + base_data + w + h + angle + '\n'
+        # return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
 
     def __repr__(self):
         params = self.target_to_string()
@@ -178,18 +179,65 @@ def simlifay_corners(corners):
 # add a new detected target to the TB
 # TODO: get as input current_location and use it to calc x,y locaiions
 def check_close_to_edge(target):
+    """
+    checks if target (grape) is too close to one of the edges:
+    upper, lower or the one on the right (assuming moving only to the right).
+    :param target: grape cluster
+    :return: True if the grape is too close to the right edge
+    """
     x_m = target[0]
+    y_m = target[1]
     w_m = target[2] / 2
     h_m = target[3] / 2
     angle = target[4]
+    right = check_close_to_right_edge(x_m, w_m, h_m, angle)
+    lower = check_close_to_lower_edge(y_m, w_m, h_m, angle)
+    upper = check_close_to_upper_edge(y_m, w_m, h_m, angle)
+    return True if True in [right, lower, upper] else False  # True if at least one of them is True
+
+
+def check_close_to_right_edge(x_m, w_m, h_m, angle):
+    """
+    :param x_m: x center coordinate of the grape
+    :param w_m: width of the Bounding box
+    :param h_m: height of the Bounding box
+    :param angle: angle of rotation of the bounding box
+    :return: True if too close to the right edge
+    """
     dist_on_x_from_center_1 = w_m * math.cos(math.radians(angle))
     dist_on_x_from_center_2 = h_m * math.cos(math.radians(angle))
     dist_to_edge_1 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_1))
     dist_to_edge_2 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_2))
-    # print("g_param.half_width_meter :", g_param.half_width_meter)
-    # print("x_m : ", x_m, " dist_on_x_from_center: ", dist_on_x_from_center)
-    # print("dist_to_edge : ", dist_to_edge)
-    # print("dist_to_edge < edge_distance_threshold :", dist_to_edge < edge_distance_threshold)
+    return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+
+
+def check_close_to_lower_edge(y_m, w_m, h_m, angle):
+    """
+    :param y_m: x center coordinate of the grape
+    :param w_m: width of the Bounding box
+    :param h_m: height of the Bounding box
+    :param angle: angle of rotation of the bounding box
+    :return: True if too close to the lower edge
+    """
+    dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
+    dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
+    dist_to_edge_1 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_1))
+    dist_to_edge_2 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_2))
+    return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+
+
+def check_close_to_upper_edge(y_m, w_m, h_m, angle):
+    """
+    :param y_m: x center coordinate of the grape
+    :param w_m: width of the Bounding box
+    :param h_m: height of the Bounding box
+    :param angle: angle of rotation of the bounding box
+    :return: True if too close to the lower edge
+    """
+    dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
+    dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
+    dist_to_edge_1 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_1))
+    dist_to_edge_2 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_2))
     return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
 
 

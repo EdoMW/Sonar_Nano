@@ -4,53 +4,55 @@ import os, re
 import csv
 import cv2 as cv
 
-
-def load_image_path(self):
-    image_number = g_param.image_number
-    directory = self.exp_date_time
-    parent_dir = r'D:\Users\NanoProject'
-    path = os.path.join(parent_dir, directory)
-    path = os.path.join(path, 'rgb_images')
-    locations_list = os.listdir(path)
-    res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
-    path = os.path.join(path, res[0])
-    return path
-
-
-
-
-
-def check_image(image_path):
-    """
-    :param image_path: path to last image taken
-    :return: True if real image was taken (not only black pixels)
-    """
-    x_val = np.random.choice(1024, num_of_pixels, replace=False)
-    y_val = np.random.choice(1024, num_of_pixels, replace=False)
-    combined = np.vstack((x_val, y_val)).T
-    img = cv.imread(image_path)
-    rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-    for i in range(num_of_pixels):
-        ans = np.all(rgb[combined[i]] == (0, 0, 0), axis=-1)
-        if not ans:
-            return True
-    else:
-        return False
-
-
-
-
-
-image_path = ueye_take_picture_2(image_number)
-for i in range(amount_of_tries):
-    image_path = ueye_take_picture_2(image_number)
-    image_taken = check_image(image_path)
-    if image_taken:
-        print(colored("Image taken successfully", 'green'))
-        break
-
-
-
+print("check if true")
+print(True if False in [True, True] else False)
+#
+# def load_image_path(self):
+#     image_number = g_param.image_number
+#     directory = self.exp_date_time
+#     parent_dir = r'D:\Users\NanoProject'
+#     path = os.path.join(parent_dir, directory)
+#     path = os.path.join(path, 'rgb_images')
+#     locations_list = os.listdir(path)
+#     res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
+#     path = os.path.join(path, res[0])
+#     return path
+#
+#
+#
+#
+#
+# def check_image(image_path):
+#     """
+#     :param image_path: path to last image taken
+#     :return: True if real image was taken (not only black pixels)
+#     """
+#     x_val = np.random.choice(1024, num_of_pixels, replace=False)
+#     y_val = np.random.choice(1024, num_of_pixels, replace=False)
+#     combined = np.vstack((x_val, y_val)).T
+#     img = cv.imread(image_path)
+#     rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+#     for i in range(num_of_pixels):
+#         ans = np.all(rgb[combined[i]] == (0, 0, 0), axis=-1)
+#         if not ans:
+#             return True
+#     else:
+#         return False
+#
+#
+#
+#
+#
+# image_path = ueye_take_picture_2(image_number)
+# for i in range(amount_of_tries):
+#     image_path = ueye_take_picture_2(image_number)
+#     image_taken = check_image(image_path)
+#     if image_taken:
+#         print(colored("Image taken successfully", 'green'))
+#         break
+#
+#
+#
 
 
 num_of_pixels = 4
