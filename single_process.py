@@ -1,3 +1,10 @@
+######################################################################
+# Old version before version control
+######################################################################
+
+
+
+
 # grape = ID, mask, pixel center, world center, angle, pixel width
 # , pixel length , sprayed, dist_to_center
 #
@@ -41,7 +48,7 @@ import Target_bank as TBK
 # from Target_bank import print_grape
 # TODO: uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, pixel_2_meter
-from masks_for_lab import take_picture_and_run as TPAR, pixel_2_meter, showInMovedWindow, meter_2_pixel
+from masks_for_lab import take_picture_and_run as TPAR, pixel_2_meter, show_in_moved_window, meter_2_pixel
 from Send2UR5 import read_tcp_pos, move_command, spray_command
 
 g.init()
@@ -161,9 +168,9 @@ def move_component(grape_to_spray, cur_location, component):
         print("move_component, cur_location[3:]", cur_location[3:])
         input("Press enter for move to sonar pos")
         move2Cluster(Vg_TCP, Vs_TCP, T_TCP_B, cur_location[3:]) #TODO Omer: commented to save checking time
-    else:  # spray
+    else:  # spray_procedure
         print("Vm_TCP: ", Vm_TCP)
-        input("Press enter for spray")
+        input("Press enter for spray_procedure")
         move2Cluster(Vg_TCP, Vm_TCP, T_TCP_B, cur_location[3:]) #TODO Omer: commented to save checking time
 
 # FIXME Omer: I changed the input from grape to x,y. also d was in mm and the other units are meters
@@ -208,17 +215,17 @@ def move_const(m, direction, pos):
 # calculate if the new position of the arm is in reach. return the position and boolean.
 # grape1 = the TB object of the grape
 # I assumed that
-# type_of_move = move/ spray/ sonar/ take_picture
+# type_of_move = move/ spray_procedure/ sonar/ take_picture
 # move = advence X cm to the right (arbitrary), not receiving grape as input (not relevant)
-# spray - move to spraying position
+# spray_procedure - move to spraying position
 # sonar - move to sonar position
 # take_picture - move to take_picture from centered position #TODO: not for now
 
 def move_to_next_pos(current_location, grape_to_spray, type_of_move):
     if type_of_move == "move":
         return move_const(step_size, "right", current_location)
-    elif type_of_move == "spray":  # TODO: and return
-        move_component(grape_to_spray, current_location, "spray")
+    elif type_of_move == "spray_procedure":  # TODO: and return
+        move_component(grape_to_spray, current_location, "spray_procedure")
     elif type_of_move == "sonar":
         move_component(grape_to_spray, current_location, "sonar")
     elif type_of_move == "take_picture":
@@ -311,7 +318,7 @@ def mark_sprayed_and_display():
             g.masks_image = cv.circle(g.masks_image, (int(g.TB[i].x_p), int(g.TB[i].y_p)),
                                       radius=4, color=(0, 0, 255), thickness=4)
     if g.show_images:
-        showInMovedWindow("Checking status", g.masks_image)
+        show_in_moved_window("Checking status", g.masks_image)
         cv.waitKey(0)
         cv.destroyAllWindows()
 
@@ -365,11 +372,11 @@ if __name__ == '__main__':
         #     if g.TB[i].sprayed and g.TB[i].x_meter > -0.5: # sprayed and steel should appear in the image
         #         g.masks_image = cv.circle(g.masks_image, (int(g.TB[i].x_p), int(g.TB[i].y_p)),
         #                                   radius=4, color=(0, 0, 255), thickness=4)
-        # showInMovedWindow("Checking status", g.masks_image)
+        # show_in_moved_window("Checking status", g.masks_image)
         # cv.waitKey(0)
         # cv.destroyAllWindows()
         if grape_ready_to_spray is None:  # 13- no
-            print("No more targets to spray. take another picture")
+            print("No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes #TODO: Create function to check external signal
                 not_finished = False
                 print("Finished- external signal all done")
@@ -388,7 +395,7 @@ if __name__ == '__main__':
                                            fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                                            color=(255, 255, 255), thickness=1, lineType=2)
                 if g.show_images:
-                    showInMovedWindow("Checking", g.masks_image)
+                    show_in_moved_window("Checking", g.masks_image)
                     cv.waitKey(0)
                     cv.destroyAllWindows()
                 print(g.TB)
@@ -408,13 +415,13 @@ if __name__ == '__main__':
                     # if time_to_move_platform or g.TB[i].x_meter > (step_size / 2):  # 17. TODO: more complicated logic for later
                     #     continue  # move to 13, select next grape
                     print("Distance: ", distance)
-                    time_to_move_platform = move_to_next_pos(current_location, grape, 'spray') # TODO Omer: check time to move platform
+                    time_to_move_platform = move_to_next_pos(current_location, grape, 'spray_procedure') # TODO Omer: check time to move platform
                     print("temp location", temp_location)
                     input("Press enter for move the robot back to temp location, before spraying")
                     move_command(False, temp_location, sleep_time)  # TODO Omer: moves to much to the right
 
                     # the or is for the case where in the next image the cluster will get closer to center
-                    # spray()  # TODO: omer
+                    # spray_procedure()  # TODO: omer
                     print("current TB:")
                     update_database_sprayed(i)  # 18 # TODO Edo: show the image and mark grape sprayed
                 else:  # 16 - no

@@ -33,8 +33,9 @@ from sty import fg, Style, RgbFg
 
 # from Target_bank import print_grape
 # TODO: uncomment this line and comment next for field exp
-# from mask_rcnn import take_picture_and_run as capture_update_TB, pixel_2_meter
-from masks_for_lab import take_picture_and_run as capture_update_TB, showInMovedWindow
+# from mask_RCNN import take_picture_and_run as capture_update_TB, pixel_2_meter
+from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window
+# from mask_rcnn import take_picture_and_run as capture_update_TB
 import write_to_socket
 import read_from_socket
 
@@ -57,18 +58,19 @@ sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 # parameters ###########################################################################################################
 ########################################################################################################################
 # start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255 ])  # Left pos
-start_pos = np.array([-0.31741425, -0.24198481, 0.52430055, -0.67481487, -1.51019764, 0.5783255])  # check pos
+start_pos = np.array([-0.31741425, -0.24198481, 0.52430055, -0.6474185, -1.44296026,  0.59665296])  # check pos
 # start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
 step_size = 0.25
+platform_step_size = 0.40
 # the next two variables are just for the lab
-number_of_steps = 1
+number_of_steps = int(platform_step_size/step_size)
 steps_counter = 0
 moving_direction = "right"  # right/left
-platform_step_size = 0.5
 sleep_time = 3.1
 g_param.init()
-first_run, g_param.show_images = True, True  # g.show_images: if true, it is visualizes the process
+first_run = True
+g_param.show_images = True  # g.show_images: if true, it is visualizes the process
 time_to_move_platform, external_signal_all_done = False, False
 not_finished, no_tech_problem = True, True  # no_tech_problem will be checked as part of init
 g_param.trans = transform.Trans()
@@ -142,7 +144,7 @@ def move2sonar(grape_1):
         ws_rob.move_command(False, new_location, 5)
         check_update_move(new_location)
     else:
-        pass # TODO: do we need to save the spray location and sonar location??
+        pass # TODO: Sigal - do we need to save the spray_procedure location and sonar location??
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -151,36 +153,39 @@ def move2spray(grape_1):
     tcp = g_param.trans.aim_spray(grape_1.x_meter, grape_1.y_meter, grape_1.distance)
     print("grape dist: ", grape_1.distance)
     new_location = g_param.trans.tcp_base(tcp)
-    print("spray location: ", new_location)
+    print("spray_procedure location: ", new_location)
     location = read_position()[0]
     print("old location ", location)
     yz_move = np.concatenate([location[0:1], new_location[1:6]])
     print("y_movbe", yz_move)
-    input("press enter to move to spray location")
+    input("press enter to move to spray_procedure location")
     print(fg.yellow + "wait" + fg.rs)
     if g_param.process_type != "load":
         ws_rob.move_command(False, yz_move, 4)
         ws_rob.move_command(True, new_location, 5)
         check_update_move(new_location)
     else:
-        pass
+        pass # TODO: Sigal - do we need to save the spray_procedure location and spray_procedure location??
     print(fg.green + "continue" + fg.rs, "\n")
 
 
-def move2temp(temp_location_1):
-    print(temp_location_1)
+def move2capture(capture_location_1):
+    """
+    :param capture_location_1: 1 is to make it clear that it is a local variable.
+    """
+    print(capture_location_1)
     location = read_position()[0]
     print("old location ", location)
-    x_move = np.concatenate([temp_location_1[0:1], location[1:3], temp_location_1[3:6]])
+    x_move = np.concatenate([capture_location_1[0:1], location[1:3], capture_location_1[3:6]])
     print("x_movbe", x_move)
     input("Press Enter to move to temp location")
     print(fg.yellow + "wait" + fg.rs)
     if g_param.process_type != "load":
         ws_rob.move_command(True, x_move, 5)
-        ws_rob.move_command(False, temp_location_1, 5)
-        check_update_move(temp_location_1)
+        ws_rob.move_command(False, capture_location_1, 5)
+        check_update_move(capture_location_1)
     else:
-        pass
+        pass # TODO: Sigal - do we need to save the temp location and spray_procedure location??
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -195,9 +200,9 @@ def move_const(m, direction, location):
     calculate if the new position of the arm is in reach. return the position and boolean.
     grape1 = the TB object of the grape
     I assumed that
-    type_of_move = move/ spray/ sonar/ take_picture
+    type_of_move = move/ spray_procedure/ sonar/ take_picture
     move = advence X cm to the right (arbitrary), not receiving grape as input (not relevant)
-    spray - move to spraying position
+    spray_procedure - move to spraying position
     sonar - move to sonar position
     take_picture - move to take_picture from centered position #
     :param m:
@@ -294,13 +299,60 @@ def intermediates(p1, p2, nb_points=8):
     return [[p1[0] + i * x_spacing, p1[1] + i * y_spacing]
             for i in range(1, nb_points+1)]
 
+def move_and_spray (start,end):
+    ws_rob.move_command(True, start, 5)
+    ws_rob.spray_command(True)
+    ws_rob.move_command(True, end, 5)
+    ws_rob.spray_command(False)
 
 # tell me which input you want. I don't think that I need any output,
 # maybe only if there is a problem such as no more spraying material.
-def spray():
-    ws_rob.spray_command(True)
-    time.sleep(0.2)
-    ws_rob.spray_command(False)
+def spray_procedure(g):
+    curr_location_1 = read_position()[0]
+    curr_location_2 = read_position()[0]
+    print("Robot current location ", curr_location_2)
+    # print(curr_location)
+    p1 = g.corners[0]
+    p2 = g.corners[1]
+    p3 = g.corners[2]
+    p4 = g.corners[3]
+    print("p1", p1)
+    print("p2", p2)
+
+    x_c = g.x_meter
+    y_c = g.y_meter
+
+    bottom_points_1 = intermediates(p1, p2, 1)
+    bottom_points_2 = intermediates(p3, p4, 1)
+    delta_x_1 = x_c - bottom_points_1[0][0]
+    delta_y_1 = y_c - bottom_points_1[0][1]
+    delta_x_2 = x_c - bottom_points_2[0][0]
+    delta_y_2 = y_c - bottom_points_2[0][1]
+
+
+    # print("bottom_points", bottom_points)
+    # b_m = g_param.trans.grape_world(bottom_points[0][0], bottom_points[0][1])
+    # print("b_m", b_m)
+    # b_m = np.concatenate([curr_location[0:1], b_m[1:], curr_location[3:]])
+    # print("b_m", b_m)
+    # top_points = intermediates(p3, p4, 1)
+    # t_m = g_param.trans.grape_world(top_points[0][0], top_points[0][1])
+    # t_m = np.concatenate([curr_location[0:1], t_m[1:], curr_location[3:]])
+    # print("t_m", t_m)
+
+
+    curr_location_1[1] = curr_location_1[1] + delta_x_1
+    curr_location_1[2] = curr_location_1[2] + delta_y_1
+    curr_location_2[1] = curr_location_2[1] + delta_x_2
+    curr_location_2[2] = curr_location_2[2] + delta_y_2
+    print("curr_location_1", curr_location_1)
+    print("curr_location_2", curr_location_2)
+    input("press enter for check spray procedure")
+    move_and_spray(curr_location_2, curr_location_1)
+
+    # left_path_points = intermediates(top_points[0], bottom_points[0], 3)
+    # right_path_points = intermediates(top_points[2], bottom_points[2], 3)
+
 
 
 def mark_sprayed_and_display():
@@ -318,7 +370,7 @@ def mark_sprayed_and_display():
             g_param.masks_image = cv.circle(g_param.masks_image, (int(g_param.TB[a].x_p), int(g_param.TB[a].y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
     if g_param.show_images:
-        showInMovedWindow("Checking status", g_param.masks_image)
+        show_in_moved_window("Checking status", g_param.masks_image)
         cv.waitKey(0)
         cv.destroyAllWindows()
 
@@ -356,7 +408,7 @@ def check_more_than_half_away(x_meter, half_step_size):
     :param x_meter: location of middle of the grape in meter
     :param half_step_size: half step size in meters
     :return:
-    true if  x_meter > half_step_size, then spray only after next image (when grape will be captured when
+    true if  x_meter > half_step_size, then spray_procedure only after next image (when grape will be captured when
     it is closer to the center of the point, which in high probability produce more accurate mask.
     else, return False, meaning that the grape wen't get an image when it is closer to the center.
     """
@@ -364,7 +416,6 @@ def check_more_than_half_away(x_meter, half_step_size):
 
 
 if __name__ == '__main__':
-
     init_arm_and_platform()
     print(">>> Start position: ")
     current_location = g_param.trans.capture_pos
@@ -410,11 +461,12 @@ if __name__ == '__main__':
                                                  fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                                                  color=(255, 255, 255), thickness=1, lineType=2)
                 if g_param.show_images:
-                    showInMovedWindow("Checking", g_param.masks_image)
+                    show_in_moved_window("Checking", g_param.masks_image)
                     cv.waitKey(0)
                     cv.destroyAllWindows()
 
                 grape = g_param.TB[i]  # 16 grape is the the most __ in the least, not sprayed
+                print("check>>>>>>>>>>>>", grape.corners)
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
@@ -424,19 +476,19 @@ if __name__ == '__main__':
                 if is_grape:  # 21 - yes
                     update_distance(i, sonar_dist)  # 23,24 TODO: omer ,Edo- update grape parameters
                     g_param.trans.update_distance(read_position()[0])
-                    print("current location before spray", current_location)
+                    print("current location before spray_procedure", current_location)
                     move2spray(grape)  # 25+26
                     if time_to_move_platform:  # 27
                         break  #
-                    spray()  # 28
-                    move2temp(g_param.trans.capture_pos)  # TODO: Omer, generate safety movement
+                    spray_procedure(grape)  # 28
+                    move2capture(g_param.trans.capture_pos)  # TODO: Omer, generate safety movement
                     update_database_sprayed(i)  # 28 # TODO Edo: show the image and mark grape sprayed
                     mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22
-        else:  # 15- no grapes to spray
+        else:  # 15- no grapes to spray_procedure
 
-            print(print_line_sep_time(), "No more targets to spray. take another picture")
+            print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes #TODO: Create function to check external signal- keyboard press
                 not_finished = False
                 print("Finished- external signal all done")

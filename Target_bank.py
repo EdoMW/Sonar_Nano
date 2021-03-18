@@ -101,6 +101,8 @@ class Target_bank:
         :param mask: a 2D bitmap of the grape.
         :param pixels_data: all data in pixels
         :param grape_world: data in meter #TODO- CHECK if it has a use.
+        :param corners: list of lists. [[x,y],..,[x,y]]. corners[0] is the the lowest one, then it goes clockwise.
+
         """
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
@@ -168,7 +170,7 @@ def simlifay_corners(corners):
     for i in range(4):
         corner_list = corners[i][:2]
         corn = corner_list.tolist()
-        corn = [round(corn[0], 3), round(corn[1],3)]
+        corn = [round(corn[0], 3), round(corn[1], 3)]
         corners_simple.append(corn)
     return corners_simple
 
@@ -227,9 +229,9 @@ def add_to_TB(target):
 
 def sort_by_and_check_for_grapes(sorting_type):
     """
-    Sort the array and return if there are targets to spray
+    Sort the array and return if there are targets to spray_procedure
     :param sorting_type: How to sort the grapes
-    :return: False if the TB is empty or there are no more grapes to spray
+    :return: False if the TB is empty or there are no more grapes to spray_procedure
              True otherwise.
     """
     if sorting_type == 'rect_size':

@@ -5,6 +5,7 @@ import sys
 import cv2 as cv
 import numpy as np
 import argparse
+import g_param
 import random as rng
 import matplotlib.pyplot as plt
 from Target_bank import check_if_in_TB, add_to_TB, sort_by_and_check_for_grapes, sort_by_rect_size
@@ -1080,18 +1081,19 @@ def take_from_omer():
     return d
 
 # im1 = 'path to captured image indside cv2.imageread'
-def take_picture_and_run(d):
-    real_grapes = False
+def take_picture_and_run(current_location, image_number):
+    real_grapes = True
+    d = g_param.const_dist
     box = [0,0,0,0,0]
     i = 0
     plt.clf()  # clean the canvas
     print(f"Picure number {i}")
-    ueye_take_picture_2(i)
+    # ueye_take_picture_2(i)
     # take a picture by pressing a key
     # captured_image = take_picture()
-    # im1 = cv2.imread("captured_image.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
-    # im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2RGB)
-    # img = im1
+    im1 = cv2.imread(r"C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0107.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
+    im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2RGB)
+    img = im1
 
 
     # try_string = try_string.replace("num", str(i))
@@ -1099,8 +1101,8 @@ def take_picture_and_run(d):
     # img = cv.imread('C:/Drive/28_7_20/CDY_2015.jpg')
 
     # cv.imshow('bgrrr', img)
-    img = cv.imread('C:/Drive/28_7_20/try_2.jpeg')
-    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    # img = cv.imread('C:/Drive/28_7_20/try_2.jpeg')
+    # img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
     ######## print to check if needed
 
@@ -1166,6 +1168,16 @@ def take_picture_and_run(d):
         p_convex_hulls, p_npas = masks_to_convex_hulls(predicted_masks_to_mrbb)
         mrbbs_prediction = output_dict(p_npas)
 
+        amount_of_mask_detacted = len(boxes)
+        for i in range(0, amount_of_mask_detacted):
+            x = int(boxes[i][0][0])
+            y = int(boxes[i][0][1])
+            w, h, corners_in_meter = calculate_w_h(d, corner_points[i])
+            a = int(boxes[i][2])
+            box = [x, y, w, h, a, corners_in_meter]
+            predicted_masks_to_mrbb.append(box)
+
+
         det_rotated_boxes = []
         for b in range(0, len(mrbbs_prediction)):
             cen_poi_x_0 = mrbbs_prediction[b]["center_point"][0]
@@ -1176,7 +1188,8 @@ def take_picture_and_run(d):
             det_box = [cen_poi_x_0, cen_poi_y_0, int(width_0), int(height_0), angle_0, predicted_masks_to_mrbb[b]]
             box_in_meter = pixel_2_meter(d, det_box)
             det_rotated_boxes.append(box_in_meter)
-            grape = [box_in_meter[0],box_in_meter[1],box_in_meter[2],box_in_meter[3],box_in_meter[4],predicted_masks_to_mrbb[b],  det_box]
+            grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
+                     predicted_masks_to_mrbb[b],  det_box, pred_masks, None]
             add_to_TB(grape)
 
 
@@ -1375,4 +1388,4 @@ def take_picture_and_run(d):
 
 if __name__ == '__main__':
     d = 520 # comment when running from other moudle (single proccess)
-    take_picture_and_run(d)
+    take_picture_and_run()

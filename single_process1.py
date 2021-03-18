@@ -1,3 +1,10 @@
+######################################################################
+# Old version before version control
+######################################################################
+
+
+
+
 # grape = ID, mask, pixel center, world center, angle, pixel width
 # , pixel length , sprayed, dist_to_center
 #
@@ -32,7 +39,7 @@ import transform
 # from Target_bank import print_grape
 # TODO: uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, pixel_2_meter
-from masks_for_lab import take_picture_and_run as capture_update_TB, pixel_2_meter, showInMovedWindow, meter_2_pixel
+from masks_for_lab import take_picture_and_run as capture_update_TB, pixel_2_meter, show_in_moved_window, meter_2_pixel
 import write_to_socket
 import read_from_socket
 
@@ -136,12 +143,12 @@ def move2spray(grape_1):
     tcp = g_param.trans.aim_spray(grape_1.x_meter, grape_1.y_meter, grape_1.distance)
     print("grape dist: ", grape_1.distance)
     new_location = g_param.trans.tcp_base(tcp)
-    print("spray location: ", new_location)
+    print("spray_procedure location: ", new_location)
     location = read_position()[0]
     print("old location ", location)
     yz_move = np.concatenate([location[0:1], new_location[1:6]])
     print("y_movbe", yz_move)
-    input("press enter to move to spray location")
+    input("press enter to move to spray_procedure location")
     ws_rob.move_command(False, yz_move, 4)
     ws_rob.move_command(True, new_location, 5)
     check_update_move(new_location)
@@ -170,9 +177,9 @@ def move_const(m, direction, location):
     calculate if the new position of the arm is in reach. return the position and boolean.
     grape1 = the TB object of the grape
     I assumed that
-    type_of_move = move/ spray/ sonar/ take_picture
+    type_of_move = move/ spray_procedure/ sonar/ take_picture
     move = advence X cm to the right (arbitrary), not receiving grape as input (not relevant)
-    spray - move to spraying position
+    spray_procedure - move to spraying position
     sonar - move to sonar position
     take_picture - move to take_picture from centered position #TODO: not for now
     :param m:
@@ -273,7 +280,7 @@ def mark_sprayed_and_display():
             g_param.masks_image = cv.circle(g_param.masks_image, (int(g_param.TB[a].x_p), int(g_param.TB[a].y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
     if g_param.show_images:
-        showInMovedWindow("Checking status", g_param.masks_image)
+        show_in_moved_window("Checking status", g_param.masks_image)
         cv.waitKey(0)
         cv.destroyAllWindows()
 
@@ -296,7 +303,7 @@ def check_more_than_half_away(x_meter, half_step_size):
     :param x_meter: location of middle of the grape in meter
     :param half_step_size: half step size in meters
     :return:
-    true if  x_meter > half_step_size, then spray only after next image (when grape will be captured when
+    true if  x_meter > half_step_size, then spray_procedure only after next image (when grape will be captured when
     it is closer to the center of the point, which in high probability produce more accurate mask.
     else, return False, meaning that the grape wen't get an image when it is closer to the center.
     """
@@ -353,7 +360,7 @@ if __name__ == '__main__':
                                                  fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                                                  color=(255, 255, 255), thickness=1, lineType=2)
                 if g_param.show_images:
-                    showInMovedWindow("Checking", g_param.masks_image)
+                    show_in_moved_window("Checking", g_param.masks_image)
                     cv.waitKey(0)
                     cv.destroyAllWindows()
 
@@ -364,11 +371,11 @@ if __name__ == '__main__':
                 # distance, is_grape = activate_sonar()  # 20 FIXME: Yossi  + Edo
                 sonar_dist, is_grape = g_param.const_dist, True
                 print("distance :", sonar_dist, "is_grape :", is_grape)
-                # move2temp(temp_location) # TODO: Omer, later generate direct movement from sonar to sprayer
+                # move2capture(temp_location) # TODO: Omer, later generate direct movement from sonar to sprayer
                 if is_grape:  # 21 - yes
                     update_distance(i, sonar_dist)  # 23,24 TODO: omer ,Edo- update grape parameters
                     g_param.trans.update_distance(read_position()[0])
-                    print("current location before spray", current_location)
+                    print("current location before spray_procedure", current_location)
                     move2spray(grape)  # 25+26
                     if time_to_move_platform:  # 27
                         break  #
@@ -378,9 +385,9 @@ if __name__ == '__main__':
                     mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22
-        else:  # 15- no grapes to spray
+        else:  # 15- no grapes to spray_procedure
 
-            print(print_line_sep_time(), "No more targets to spray. take another picture")
+            print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes #TODO: Create function to check external signal- keyboard press
                 not_finished = False
                 print("Finished- external signal all done")

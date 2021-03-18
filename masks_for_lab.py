@@ -18,47 +18,46 @@ import g_param
 import time
 import os
 
-def image_resize(image, width = None, height = None, inter = cv.INTER_AREA):
+# parameters #
+####################################
+amount_of_tries = 3
+num_of_pixels = 4
+####################################
+
+
+def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
     # initialize the dimensions of the image to be resized and
     # grab the image size
     dim = None
     (h, w) = image.shape[:2]
-
     # if both the width and height are None, then return the
     # original image
     if width is None and height is None:
         return image
-
     # check to see if the width is None
     if width is None:
         # calculate the ratio of the height and construct the
         # dimensions
         r = height / float(h)
         dim = (int(w * r), height)
-
     # otherwise, the height is None
     else:
         # calculate the ratio of the width and construct the
         # dimensions
         r = width / float(w)
         dim = (width, int(h * r))
-
     # resize the image
     resized = cv.resize(image, dim, interpolation = inter)
-
     # return the resized image
     return resized
 
 
-
-
-
-def showInMovedWindow(winname, img, x = 0, y = 0):
-    cv.namedWindow(winname, cv.WINDOW_AUTOSIZE)        # Create a named window
-    cv.moveWindow(winname, x, y)   # Move it to (x,y)
-    # cv.resizeWindow(winname, 400, 512)
+def show_in_moved_window(win_name, img, x=0, y=0):
+    cv.namedWindow(win_name, cv.WINDOW_AUTOSIZE)        # Create a named window
+    cv.moveWindow(win_name, x, y)   # Move it to (x,y)
+    # cv.resizeWindow(win_name, 400, 512)
     # img = cv.resize(img, (800, 1024))
-    cv.imshow(winname,img)
+    cv.imshow(win_name, img)
 
 
 def masks_to_convex_hulls(list_of_masks):
@@ -492,7 +491,7 @@ def ueye_take_picture_2(image_number):
         # ...and finally display it
         # cv.imshow("SimpleLive_Python_uEye_OpenCV", frame)
         time.sleep(0.5)
-        showInMovedWindow("SimpleLive_Python_uEye_OpenCV", frame)
+        show_in_moved_window("SimpleLive_Python_uEye_OpenCV", frame)
         time.sleep(0.5)
 
         t = time.localtime()
@@ -504,7 +503,7 @@ def ueye_take_picture_2(image_number):
         frame = frame[:,:,0:3]
         frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
         # TODO make folder_path_for_images a parameter
-        folder_path_for_images = r'D:\Users\NanoProject\SonarNano\exp_data_16_2_21\rgb_images'
+        folder_path_for_images = r'D:\Users\NanoProject\Images_for_work'
         img_name = 'num_dt.jpeg'
         img_name = img_name.replace("num", str(image_number))
         img_name = img_name.replace("dt", str(current_time))
@@ -588,7 +587,6 @@ def calculate_w_h(d, box_points):
     """
     calculates the width and height of the box.
     I used the same method as the cv.minAreaRect way of calculating H,W
-    TODO: check if make always H>W and change logic acordingly
     :param d: distance to grape
     :param box_points: [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
     :return: w,h in meters
@@ -599,9 +597,10 @@ def calculate_w_h(d, box_points):
     p4 = box_points_to_np_array(d, box_points[3])
     w = np.linalg.norm(p1 - p2)
     h = np.linalg.norm(p2 - p3)
+    if w > h:
+        h, w = w, h
+        p1, p2, p3, p4 = p1, p4, p3, p2
     return w, h, [p1, p2, p3, p4]
-
-
 
 
 def meter_2_pixel(d, i):
@@ -612,15 +611,55 @@ def meter_2_pixel(d, i):
     # y_m = d * (cen_poi_y_0 / 1024) * (1.6 / 16)
 
 
+def print_special():
+    """
+    :return: print red wernning massege if no real image was taken in N iterations
+    """
+
+    print(colored("3 images in a row were not taken succsesfully", 'red'))
+
+
+def check_image(image_path):
+    """
+    TODO - test that it works correctly:
+    it's not- rgb[combined[i]] is the all image. (0,0,0) is just (0,0,0)
+    :param image_path: path to last image taken
+    :return: True if real image was taken (not only black pixels)
+    """
+    x_val = np.random.choice(1024, num_of_pixels, replace=False)
+    y_val = np.random.choice(1024, num_of_pixels, replace=False)
+    combined = np.vstack((x_val, y_val)).T
+    image_path_1 = r'D:\Users\NanoProject\Images_for_work\black.jpg'
+    img = cv.imread(image_path_1)
+    rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    for i in range(num_of_pixels):
+        ans = np.array_equal(rgb[combined[i]], (0, 0, 0))
+        print(rgb[combined[i]], (0, 0, 0))
+        # ans = np.all(rgb[combined[i]] == (0, 0, 0))
+        print("not black? :", ans)
+        if not ans:
+            return True
+    else:
+        return False
+
+
 # im1 = 'path to captured image indside cv2.imageread'
 def take_picture_and_run(current_location, image_number):
     d = g_param.const_dist
     box = [0, 0, 0, 0, 0]
     plt.clf()  # clean the canvas
-    image_details = f"Picure number {image_number}"
+    image_details = f"Picture number {image_number}"
     print(colored(image_details, 'green'))
     if g_param.process_type == "record" or g_param.process_type == "work":
         image_path = ueye_take_picture_2(image_number)
+        for i in range(amount_of_tries):
+            image_path = ueye_take_picture_2(image_number)
+            image_taken = check_image(image_path)
+            if image_taken:
+                print(colored("Image taken successfully", 'green'))
+                break
+        if not image_taken:
+            print_special()
     else:
         image_path = g_param.read_write_object.load_image_path()
     # img = cv.imread(image_path)
@@ -754,11 +793,11 @@ def take_picture_and_run(current_location, image_number):
                      color = (255, 255, 255), thickness = 1,  lineType = 2)
     numpy_horizontal_concat = np.concatenate((img, green), axis=1)
     numpy_horizontal_concat = image_resize(numpy_horizontal_concat, height=950)
-    # cv.imshow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
-    showInMovedWindow("Masks and first Chosen grape cluster to spray", numpy_horizontal_concat)
+    # cv.imshow("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
+    show_in_moved_window("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
     g_param.masks_image = img
 
-    cv.waitKey(0) # TODO: uncomment
+    cv.waitKey(0)
     cv.destroyAllWindows()
 
 
