@@ -2,11 +2,12 @@ import numpy as np
 import math
 from operator import itemgetter, attrgetter
 import g_param
-from math import cos, sin, pi,  radians
+from math import cos, sin, pi, radians
 import cv2 as cv
 
 # Define colors for printing
 from sty import fg, Style, RgbFg
+
 fg.orange = Style(RgbFg(255, 150, 50))
 fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
@@ -29,6 +30,7 @@ def print_by_id():
     print("TB by id: ", "\n")
     for i in range(len(g_param.TB)):
         print(g_param.TB[i].index, end=" ")
+
 
 class Target_bank:
     grape_index = 0
@@ -78,17 +80,19 @@ class Target_bank:
         x_cen, y_cen = self.x_meter, self.y_meter
         w, h = self.w_meter, self.h_meter
         angle = self.angle
-        ninety = pi/2
+        ninety = pi / 2
         alpha = radians(angle)
         beta = ninety - radians(angle)
         # beta = radians(angle)
         # alpha = ninety - radians(angle)
-        w = w/2
-        h = h/2
-        cor_1 = [round(x_cen + (-cos(beta) * h + cos(alpha)*w), 3), round(y_cen + (-sin(beta)*h - w*sin(alpha)), 3)]
+        w = w / 2
+        h = h / 2
+        cor_1 = [round(x_cen + (-cos(beta) * h + cos(alpha) * w), 3),
+                 round(y_cen + (-sin(beta) * h - w * sin(alpha)), 3)]
         cor_2 = [round(x_cen + (cos(beta) * h + cos(alpha) * w), 3), round(y_cen + (sin(beta) * h - w * sin(alpha)), 3)]
         cor_3 = [round(x_cen + (cos(beta) * h - cos(alpha) * w), 3), round(y_cen + (sin(beta) * h + w * sin(alpha)), 3)]
-        cor_4 = [round(x_cen + (-cos(beta) * h - cos(alpha) * w), 3), round(y_cen + (-sin(beta)*h + w * sin(alpha)), 3)]
+        cor_4 = [round(x_cen + (-cos(beta) * h - cos(alpha) * w), 3),
+                 round(y_cen + (-sin(beta) * h + w * sin(alpha)), 3)]
         # auto_corners = cv.boxPoints(box)
         return [cor_1, cor_2, cor_3, cor_4]
 
@@ -146,7 +150,6 @@ def check_if_in_TB(grape_world, target):
             # print("distance : ", np.linalg.norm(grape_world - point_b))
             distance_between_grapes = np.linalg.norm(grape_world - point_b)
             if distance_between_grapes < same_grape_distance_threshold:
-
                 # print("distance between old and new cluster", distance_between_grapes)
                 g_param.TB[i].x_p = int(target[6][0])
                 g_param.TB[i].y_p = int(target[6][1])
@@ -242,7 +245,7 @@ def check_close_to_upper_edge(y_m, w_m, h_m, angle):
 
 
 def round_to_three(arr):
-    for i in range(0,4):
+    for i in range(0, 4):
         arr[i] = round(arr[i], 3)
     return arr
 
@@ -259,7 +262,6 @@ def add_to_TB(target):
                                                                                                               target[1])
         if closer_to_center or too_close:  # not sprayed and closer to center
             g_param.TB[temp_target_index].grape_world = temp_grape_world
-
 
         # if not temp_target.sprayed:
         #     print("why update?: ", g.TB)
@@ -313,3 +315,12 @@ def sort_by_dist_from_current_pos():
 
 def sort_by_mask_size():
     pass
+
+
+def update_distance(grape, sonar_location):
+    """
+    :param grape: the i'th grape
+    :param sonar_location: the location of the sonar in base coordinate
+    """
+    # TODO: call the function that updates g_param.avg_dist with sonar_location
+    grape.distance = g_param.last_grape_dist + abs(sonar_location[0] - g_param.trans.capture_pos[0])

@@ -369,7 +369,7 @@ if __name__ == '__main__':
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
                 # distance, is_grape = activate_sonar()  # 20 FIXME: Yossi  + Edo
-                sonar_dist, is_grape = g_param.const_dist, True
+                sonar_dist, is_grape = g_param.avg_dist, True
                 print("distance :", sonar_dist, "is_grape :", is_grape)
                 # move2capture(temp_location) # TODO: Omer, later generate direct movement from sonar to sprayer
                 if is_grape:  # 21 - yes

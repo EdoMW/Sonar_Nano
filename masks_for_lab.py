@@ -21,7 +21,7 @@ import os
 # parameters #
 ####################################
 amount_of_tries = 3
-num_of_pixels = 4
+num_of_pixels = 40
 ####################################
 
 
@@ -629,14 +629,12 @@ def check_image(image_path):
     x_val = np.random.choice(1024, num_of_pixels, replace=False)
     y_val = np.random.choice(1024, num_of_pixels, replace=False)
     combined = np.vstack((x_val, y_val)).T
-    image_path_1 = r'D:\Users\NanoProject\Images_for_work\black.jpg'
-    img = cv.imread(image_path_1)
+    # image_path_1 = r'D:\Users\NanoProject\Images_for_work\black.jpg'
+    img = cv.imread(image_path)
     rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     for i in range(num_of_pixels):
-        ans = np.array_equal(rgb[combined[i]], (0, 0, 0))
-        print(rgb[combined[i]], (0, 0, 0))
+        ans = np.array_equal(rgb[combined[i][0], combined[i][1]], (0, 0, 0))
         # ans = np.all(rgb[combined[i]] == (0, 0, 0))
-        print("not black? :", ans)
         if not ans:
             return True
     else:
@@ -645,7 +643,7 @@ def check_image(image_path):
 
 # im1 = 'path to captured image indside cv2.imageread'
 def take_picture_and_run(current_location, image_number):
-    d = g_param.const_dist
+    d = g_param.avg_dist
     box = [0, 0, 0, 0, 0]
     plt.clf()  # clean the canvas
     image_details = f"Picture number {image_number}"
@@ -749,7 +747,7 @@ def take_picture_and_run(current_location, image_number):
     boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
     cv.putText(green, 'Grapes detected', org=(500, 85), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                color=(255, 255, 255), thickness=1, lineType=2)
-    cv.waitKey(0)
+    # cv.waitKey(0)
     cv.destroyAllWindows()
 
 
@@ -797,7 +795,7 @@ def take_picture_and_run(current_location, image_number):
     show_in_moved_window("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
     g_param.masks_image = img
 
-    cv.waitKey(0)
+    # cv.waitKey(0)
     cv.destroyAllWindows()
 
 

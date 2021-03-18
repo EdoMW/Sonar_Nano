@@ -15,6 +15,8 @@
 #     distance = 680 # change
 #     same_grape_distance_threshold = 9 cm (0.09m)
 #     show_images = True (default) show images
+#     Vertical/ horizontal step size
+#     amount of horizontal steps before moving the platform
 
 import sys
 import g_param
@@ -67,10 +69,12 @@ platform_step_size = 0.40
 number_of_steps = int(platform_step_size/step_size)
 steps_counter = 0
 moving_direction = "right"  # right/left
-sleep_time = 3.1
+sleep_time = 3.05
+step_direction = ["right", "up", "right", "down"]  # the order of movement
+direction = None
 g_param.init()
 first_run = True
-g_param.show_images = True  # g.show_images: if true, it is visualizes the process
+g_param.show_images = False  # g.show_images: if true, it is visualizes the process
 time_to_move_platform, external_signal_all_done = False, False
 not_finished, no_tech_problem = True, True  # no_tech_problem will be checked as part of init
 g_param.trans = transform.Trans()
@@ -135,7 +139,7 @@ def check_connected_successfully():
 
 def move2sonar(grape_1):
     input("Press Enter to move to sonar")
-    print(fg.yellow + "wait" + fg.rs)
+    print(fg.yellow + "wait" + fg.rs, "\n")
     x_cam, y_cam = grape_1.x_meter, grape_1.y_meter
     tcp = g_param.trans.aim_sonar(x_cam, y_cam)
     new_location = g_param.trans.tcp_base(tcp)
@@ -159,10 +163,10 @@ def move2spray(grape_1):
     yz_move = np.concatenate([location[0:1], new_location[1:6]])
     print("y_movbe", yz_move)
     input("press enter to move to spray_procedure location")
-    print(fg.yellow + "wait" + fg.rs)
+    print(fg.yellow + "wait" + fg.rs, "\n")
     if g_param.process_type != "load":
-        ws_rob.move_command(False, yz_move, 4)
-        ws_rob.move_command(True, new_location, 5)
+        ws_rob.move_command(False, yz_move, 2)
+        ws_rob.move_command(True, new_location, 2)
         check_update_move(new_location)
     else:
         pass # TODO: Sigal - do we need to save the spray_procedure location and spray_procedure location??
@@ -179,7 +183,7 @@ def move2capture(capture_location_1):
     x_move = np.concatenate([capture_location_1[0:1], location[1:3], capture_location_1[3:6]])
     print("x_movbe", x_move)
     input("Press Enter to move to temp location")
-    print(fg.yellow + "wait" + fg.rs)
+    print(fg.yellow + "wait" + fg.rs, "\n")
     if g_param.process_type != "load":
         ws_rob.move_command(True, x_move, 5)
         ws_rob.move_command(False, capture_location_1, 5)
@@ -214,6 +218,12 @@ def move_const(m, direction, location):
     if g_param.process_type != "load":
         if direction == "right":
             location[1] = location[1] + m
+            ws_rob.move_command(True, location, sleep_time)
+        elif direction == "up":
+            location[2] = location[2] + m
+            ws_rob.move_command(True, location, sleep_time)
+        elif direction == "down":
+            location[2] = location[2] - m
             ws_rob.move_command(True, location, sleep_time)
         else:
             location[1] = location[1] - m
@@ -299,11 +309,13 @@ def intermediates(p1, p2, nb_points=8):
     return [[p1[0] + i * x_spacing, p1[1] + i * y_spacing]
             for i in range(1, nb_points+1)]
 
-def move_and_spray (start,end):
+
+def move_and_spray(start, end):
     ws_rob.move_command(True, start, 5)
     ws_rob.spray_command(True)
     ws_rob.move_command(True, end, 5)
     ws_rob.spray_command(False)
+
 
 # tell me which input you want. I don't think that I need any output,
 # maybe only if there is a problem such as no more spraying material.
@@ -348,11 +360,12 @@ def spray_procedure(g):
     print("curr_location_1", curr_location_1)
     print("curr_location_2", curr_location_2)
     input("press enter for check spray procedure")
+    print(fg.yellow + "wait" + fg.rs, "\n")
     move_and_spray(curr_location_2, curr_location_1)
+    print(fg.green + "continue" + fg.rs, "\n")
 
     # left_path_points = intermediates(top_points[0], bottom_points[0], 3)
     # right_path_points = intermediates(top_points[2], bottom_points[2], 3)
-
 
 
 def mark_sprayed_and_display():
@@ -401,8 +414,6 @@ def init_arm_and_platform():
         g_param.trans.update_cam2base(current_location)
 
 
-
-
 def check_more_than_half_away(x_meter, half_step_size):
     """
     :param x_meter: location of middle of the grape in meter
@@ -415,12 +426,12 @@ def check_more_than_half_away(x_meter, half_step_size):
     return x_meter > half_step_size
 
 
+
 if __name__ == '__main__':
     init_arm_and_platform()
     print(">>> Start position: ")
     current_location = g_param.trans.capture_pos
     print_current_location(g_param.trans.capture_pos)
-
     # The main loop:
     while not_finished and no_tech_problem:
         if not first_run:
@@ -429,21 +440,21 @@ if __name__ == '__main__':
             if g_param.time_to_move_platform:
                 init_arm_and_platform()  # 3
                 steps_counter = 0
-            move_const(step_size, "right", current_location)  # try to move 1 step size
+            direction = step_direction[g_param.image_number % 4]
+            move_const(step_size, direction, current_location)
+            # move_const(step_size, "right", current_location)  # try to move 1 step size
             if g_param.time_to_move_platform:  # TODO- update manually step size for world location to the right.
                 print('issue moving const ')
                 print_current_location(current_location)
                 break
             current_location, no_tech_problem = read_position()  # 1 + 2  establish connection with the robot
             g_param.trans.set_capture_pos(current_location)
-
-
-            steps_counter += 1
+            if direction == "right":
+                steps_counter += 1
         else:
             first_run = False
-
         input("Press Enter to take picture")  # TODO: add base world location to the input (or inside)
-        print(fg.yellow + "wait" + fg.rs)
+        print(fg.yellow + "wait" + fg.rs, "\n")
         capture_update_TB(current_location, g_param.image_number)  # 5 + 7-12 inside
         print(fg.green + "continue" + fg.rs, "\n",  "TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TBK.sort_by_and_check_for_grapes('leftest_first')  # 6
@@ -457,25 +468,22 @@ if __name__ == '__main__':
             for i in range(amount_of_grapes_to_spray):
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index), org=(g_param.TB[i].x_p,
-                                                                                                     g_param.TB[i].y_p),
-                                                 fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
+                                                 g_param.TB[i].y_p), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                                                  color=(255, 255, 255), thickness=1, lineType=2)
                 if g_param.show_images:
                     show_in_moved_window("Checking", g_param.masks_image)
                     cv.waitKey(0)
                     cv.destroyAllWindows()
-
                 grape = g_param.TB[i]  # 16 grape is the the most __ in the least, not sprayed
                 print("check>>>>>>>>>>>>", grape.corners)
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
-                # distance, is_grape = activate_sonar()  # 20 FIXME: Yossi  + Edo
-                sonar_dist, is_grape = g_param.const_dist, True
-                print("distance :", sonar_dist, "is_grape :", is_grape)
+                # distance, is_grape = activate_sonar()  # 20 FIXME: Yossi + Edo
+                g_param.last_grape_dist, is_grape = g_param.avg_dist, True
+                print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape:  # 21 - yes
-                    update_distance(i, sonar_dist)  # 23,24 TODO: omer ,Edo- update grape parameters
-                    g_param.trans.update_distance(read_position()[0])
+                    TBK.update_distance(g_param.TB[i], read_position()[0])  # 23,24
                     print("current location before spray_procedure", current_location)
                     move2spray(grape)  # 25+26
                     if time_to_move_platform:  # 27
@@ -487,22 +495,13 @@ if __name__ == '__main__':
                 else:
                     update_database_no_grape(i)  # 22
         else:  # 15- no grapes to spray_procedure
-
             print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes #TODO: Create function to check external signal- keyboard press
                 not_finished = False
                 print("Finished- external signal all done")
                 break  # 23
-            # else:  # 20 - no
-            #     if g_param.time_to_move_platform:  # 21- yes
-            #         input("Time to move platform, Press Enter to move platform")
-            #         # init_arm_and_platform() #TODO: check this function
-            #         # steps_counter = 0
-            #         # g_param.trans.update_base2world()
-            #     else:  # 21- no
-            #         print("Not time to move platform, move arm to take another image")
-        if steps_counter >= number_of_steps:
+        if steps_counter >= number_of_steps and step_direction[(g_param.image_number + 1) % 4] == "right":
             g_param.time_to_move_platform = True
-            print(print_line_sep_time(), '\n'," Saftey STOP!",'\n')
+            print(print_line_sep_time(), '\n', " Safety STOP!", '\n')
             break
             # restart_TB()  # option to restart without initialize

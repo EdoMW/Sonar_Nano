@@ -37,10 +37,6 @@ class Trans:
     def set_capture_pos(self, location):
         self.capture_pos = location
 
-    def update_distance(self, sonar_location):
-        g_param.const_dist = g_param.const_dist+abs(sonar_location[0] - self.capture_pos[0])
-
-
     def update_base2world(self, mobile_location):
         pass
 

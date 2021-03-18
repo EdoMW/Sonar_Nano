@@ -1083,7 +1083,7 @@ def take_from_omer():
 # im1 = 'path to captured image indside cv2.imageread'
 def take_picture_and_run(current_location, image_number):
     real_grapes = True
-    d = g_param.const_dist
+    d = g_param.avg_dist
     box = [0,0,0,0,0]
     i = 0
     plt.clf()  # clean the canvas
