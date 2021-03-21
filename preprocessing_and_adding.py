@@ -99,7 +99,7 @@ def preprocess_one_record(record, counter, adding):
     t_end_recieve = np.max(line_X)
 
     m = (y_up - y_down) / (t_end_recieve - t_start_recieve + eps)
-    b = y_down - m * (t_start_recieve - 0.0012)  # if fs = 500000 so should be b = y_down - m * (t_start_recieve - 0.0012/2)
+    b = y_down - m * (t_start_recieve - 0.0012)  # if fs = 500000 so should be b = y_down - size_of_step * (t_start_recieve - 0.0012/2)
 
     # delete the transmit signal
     min_Sxx = np.min(Sxx)

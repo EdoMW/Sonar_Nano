@@ -53,6 +53,7 @@ class Trans:
         #     g_param.read_write_object.read_transformations_from_csv()
         time.sleep(0.01)
 
+    # TODO- make it world and not just base
     def grape_world(self, x_cam, y_cam):
         grape_cam = np.array([float(x_cam), float(y_cam), 0, 1])
         grape_world = np.matmul(self.t_cam2world, grape_cam)

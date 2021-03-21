@@ -39,16 +39,16 @@ class Target_bank:
         ind = self.index
         ind = " ID : " + str(ind) + " "
         ind = fg.orange + ind + fg.rs
-        a = self.x_meter
-        b = self.y_meter
+        a = self.x_base
+        b = self.y_base
         c = self.x_p
         d = self.y_p
         x = " x:" + str(a) + " "
         y = " y:" + str(b) + " "
         x_c = " x_p:" + str(c) + " "
         y_c = " y_p:" + str(d)
-        w = f" w: {self.w_meter}"
-        h = f" h: {self.h_meter}"
+        w = f" w: {self.w_base}"
+        h = f" h: {self.h_base}"
         if self.sprayed:
             e = fg.green + str(self.sprayed) + fg.rs
         else:
@@ -56,7 +56,7 @@ class Target_bank:
         f = " area: " + str(self.rect_area) + " "
         sp = " sprayed :" + str(e) + " "
         wr = "wait_round: " + str(self.wait_another_step)
-        world_data = " x world " + str(round(self.x_meter, 3)) + " y world " + str(round(self.y_meter, 3)) + " "
+        world_data = " x world " + str(round(self.x_base, 3)) + " y world " + str(round(self.y_base, 3)) + " "
         x_base = "x base: " + str(round(self.grape_world[0], 3)) + " "
         y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
         z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
@@ -77,8 +77,8 @@ class Target_bank:
         Doesn't work when extra process is done to the image.
         :return:
         """
-        x_cen, y_cen = self.x_meter, self.y_meter
-        w, h = self.w_meter, self.h_meter
+        x_cen, y_cen = self.x_base, self.y_base
+        w, h = self.w_base, self.h_base
         angle = self.angle
         ninety = pi / 2
         alpha = radians(angle)
@@ -116,10 +116,10 @@ class Target_bank:
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
         self.h_p = int(pixels_data[3])
-        self.x_meter = round(x, 3)  # TODO: check how to update this 4 parameters as world
-        self.y_meter = round(y, 3)
-        self.w_meter = round(w, 3)
-        self.h_meter = round(h, 3)
+        self.x_base = round(x, 3)  # TODO: check how to update this 4 parameters as world
+        self.y_base = round(y, 3)
+        self.w_base = round(w, 3)
+        self.h_base = round(h, 3)
         self.dist_from_center = Target_bank.calc_dist_from_center(self.x_p, self.y_p)
         self.angle = angle
         self.rect_area = self.w_p * self.h_p
@@ -127,12 +127,16 @@ class Target_bank:
         self.mask = mask
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
+        self.in_range = "ok"
         self.wait_another_step = False
-        self.corners = simlifay_corners(corners)
+        self.corners = simplify_corners(corners)
         # amount of updates, what iteration was the last update
 
     def calc_dist_from_center(x, y):
         return math.sqrt(x * x + y * y)
+
+
+
 
 
 # if distance between centers is smaller than the treshhold
@@ -164,7 +168,7 @@ def check_if_in_TB(grape_world, target):
     return False, None
 
 
-def simlifay_corners(corners):
+def simplify_corners(corners):
     """
     convert corners from np.array to list, round to 3 decimel points.
     :param corners: corners list of np.arrays
@@ -211,6 +215,8 @@ def check_close_to_right_edge(x_m, w_m, h_m, angle):
     dist_on_x_from_center_2 = h_m * math.cos(math.radians(angle))
     dist_to_edge_1 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_1))
     dist_to_edge_2 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_2))
+    if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
+        print("Right to close too edge")
     return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
 
 
@@ -222,11 +228,16 @@ def check_close_to_lower_edge(y_m, w_m, h_m, angle):
     :param angle: angle of rotation of the bounding box
     :return: True if too close to the lower edge
     """
-    dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
-    dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
-    dist_to_edge_1 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_1))
-    dist_to_edge_2 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_2))
-    return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+    if g_param.direction == "down" or g_param.direction == "right":
+        dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
+        dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
+        dist_to_edge_1 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_1))
+        dist_to_edge_2 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_2))
+        if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
+            print("Lower to close too edge")
+        return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+    return False
+
 
 
 def check_close_to_upper_edge(y_m, w_m, h_m, angle):
@@ -241,6 +252,8 @@ def check_close_to_upper_edge(y_m, w_m, h_m, angle):
     dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
     dist_to_edge_1 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_1))
     dist_to_edge_2 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_2))
+    if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
+        print("Upper to close too edge")
     return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
 
 
@@ -250,25 +263,27 @@ def round_to_three(arr):
     return arr
 
 
-def add_to_TB(target):
+def add_to_target_bank(target):
+    """
+    Checks if a new target (grape) already exits.
+    compares the center of the new target to all exiting targets in the last 1m of the Y axis (the one the platform goes
+    along) TO BE DONE! #TODO make experiment to check if it's right to do so.
+    if the center of the new target is lower than the threshold to one of the exiting targets, treat it as the same one.
+    if the target center in this image is closer to the center, update it's world coordinates.
+    else- add new target to the target bank.
+    :param target:
+    :return:
+    """
     target = round_to_three(target)
-    too_close = check_close_to_edge(target)  # FIXME Edo
+    too_close = check_close_to_edge(target)
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
     ans, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if ans:
-        # print("the grape already in TB")
-        # print("true") # TODO check the end condition
         closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[0],
                                                                                                               target[1])
         if closer_to_center or too_close:  # not sprayed and closer to center
             g_param.TB[temp_target_index].grape_world = temp_grape_world
-
-        # if not temp_target.sprayed:
-        #     print("why update?: ", g.TB)
-        #     g.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4], target[5], target[6]))
-        #     print("updated :", g.TB)
     else:
-
         if not too_close:
             # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
@@ -301,7 +316,7 @@ def sort_by_and_check_for_grapes(sorting_type):
 
 
 def sort_by_leftest_first():
-    g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_meter'))
+    g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_base'))
     # g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'y_base'))
 
 

@@ -8,7 +8,7 @@ import argparse
 import g_param
 import random as rng
 import matplotlib.pyplot as plt
-from Target_bank import check_if_in_TB, add_to_TB, sort_by_and_check_for_grapes, sort_by_rect_size
+from Target_bank import check_if_in_TB, add_to_target_bank, sort_by_and_check_for_grapes, sort_by_rect_size
 # import random
 # import math
 # import argparse
@@ -1190,7 +1190,7 @@ def take_picture_and_run(current_location, image_number):
             det_rotated_boxes.append(box_in_meter)
             grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
                      predicted_masks_to_mrbb[b],  det_box, pred_masks, None]
-            add_to_TB(grape)
+            add_to_target_bank(grape)
 
 
         image_det = im1
@@ -1358,7 +1358,7 @@ def take_picture_and_run(current_location, image_number):
             box_in_meter = pixel_2_meter(d, det_box)
             det_rotated_boxes.append(box_in_meter)
             grape = [box_in_meter[0],box_in_meter[1],box_in_meter[2],box_in_meter[3],box_in_meter[4],None,  det_box]
-            add_to_TB(grape)
+            add_to_target_bank(grape)
 
 
 

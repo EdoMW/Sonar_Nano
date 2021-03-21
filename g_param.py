@@ -8,10 +8,12 @@ spray_sonar = True
 trans = None
 avg_dist = 0.71
 last_grape_dist = 0.71
+height_step_size = 0.6  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO: this
 image_number = 0
 read_write_object = None
-safety_dist = 0.40 # distance of spraying (in lab!! needs to be changed)
+direction = None
+safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
 time_to_move_platform = False
 
 """
@@ -21,7 +23,7 @@ record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-process_type = "work"  # TODO-add save of the TB before ending the program
+process_type = "work"  # TODO-add save of the TB before ending the program.
 
 
 
@@ -54,6 +56,6 @@ def init():
     """
     global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform,\
         image_number, safety_dist, half_width_meter, half_height_meter,\
-        read_write_object, process_type, last_grape_dist
+        read_write_object, process_type, last_grape_dist, height_step_size, direction
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()

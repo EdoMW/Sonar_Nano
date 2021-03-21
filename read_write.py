@@ -13,7 +13,7 @@ def get_local_time_date(): # TODO- make it work
     :return: hours_min_sec_millisec
     """
     now = datetime.now()
-    return now.strftime("%m/%d/%Y, %H:%M:%S")
+    return now.strftime("%size_of_step/%d/%Y, %H:%M:%S")
 
 
 def get_local_time_4():
@@ -130,8 +130,6 @@ class ReadWrite:
         folder_path_for_t_cam2world = self.transformations_path_t_cam2world
         folder_path_for_ang_vec_tcp = self.transformations_path_ang_vec_tcp
         folder_path_for_data_t_tcp2base = self.transformations_path_t_tcp2base
-
-
 
         t_cam2base_path = os.path.join(folder_path_for_t_cam2base, transformation_data)
         t_cam2world_path = os.path.join(folder_path_for_t_cam2world, transformation_data)

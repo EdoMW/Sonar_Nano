@@ -348,15 +348,15 @@ class ReadFromRobot:
         packet_60 = codecs.encode(self.packet_60, 'hex_codec')  # convert the data from \x hex notation to plain hex
         xacc = struct.unpack('!d', self.packet_60)[0]
         xaccInString = str(packet_60)
-        # print("X tool accelerometer in m\s^2  = ", xacc)
+        # print("X tool accelerometer in size_of_step\s^2  = ", xacc)
         packet_61 = codecs.encode(self.packet_61, 'hex_codec')  # convert the data from \x hex notation to plain hex
         yaccinString = str(packet_61)
         yacc = struct.unpack('!d', self.packet_61)[0]
-        # print("Y tool accelerometer in m\s^2  = ", yacc)
+        # print("Y tool accelerometer in size_of_step\s^2  = ", yacc)
         packet_62 = codecs.encode(self.packet_62, 'hex_codec')  # convert the data from \x hex notation to plain hex
         zaccInString = str(packet_62)
         zacc = struct.unpack('!d', self.packet_62('hex'))[0]
-        # print("Z tool accelerometer in m\s^2 = ", zacc)
+        # print("Z tool accelerometer in size_of_step\s^2 = ", zacc)
 
     def read_tcp_pos(self):
         self.connect_to_robot()

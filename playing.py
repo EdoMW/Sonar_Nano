@@ -4,6 +4,9 @@ import os, re
 import csv
 import cv2 as cv
 
+
+print(np.linalg.norm(np.array([0, 0, 0]) - np.array([-0.566, -0.087, 0.775])))
+
 num_of_pixels = 4
 x_val = np.random.choice(1024, num_of_pixels, replace=False)
 y_val = np.random.choice(1024, num_of_pixels, replace=False)

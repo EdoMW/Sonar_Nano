@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from termcolor import colored
 import itertools
 
-from Target_bank import check_if_in_TB, add_to_TB, sort_by_and_check_for_grapes, sort_by_rect_size
+from Target_bank import check_if_in_TB, add_to_target_bank, sort_by_and_check_for_grapes, sort_by_rect_size
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from numpy import *
 import math
@@ -747,7 +747,7 @@ def take_picture_and_run(current_location, image_number):
     boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
     cv.putText(green, 'Grapes detected', org=(500, 85), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                color=(255, 255, 255), thickness=1, lineType=2)
-    # cv.waitKey(0)
+    cv.waitKey(0)
     cv.destroyAllWindows()
 
 
@@ -779,7 +779,7 @@ def take_picture_and_run(current_location, image_number):
         det_rotated_boxes.append(box_in_meter)
         grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
                  None,  det_box, None, corners_in_meter]
-        add_to_TB(grape)
+        add_to_target_bank(grape)
 
     print("boxes", boxes)
     # using the TB
@@ -795,7 +795,7 @@ def take_picture_and_run(current_location, image_number):
     show_in_moved_window("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
     g_param.masks_image = img
 
-    # cv.waitKey(0)
+    cv.waitKey(0)
     cv.destroyAllWindows()
 
 
