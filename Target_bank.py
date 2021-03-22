@@ -111,12 +111,11 @@ class Target_bank:
         """
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
-        # self.y_base = str(round(self.grape_world[1], 3))
-        self.x_p = int(pixels_data[0])
+        self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
         self.h_p = int(pixels_data[3])
-        self.x_base = round(x, 3)  # TODO: check how to update this 4 parameters as world
+        self.x_base = round(x, 3)  # base are in meters, relative to the base
         self.y_base = round(y, 3)
         self.w_base = round(w, 3)
         self.h_base = round(h, 3)

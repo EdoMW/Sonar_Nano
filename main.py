@@ -13,7 +13,7 @@ import transform
 import read_write
 from sty import fg, Style, RgbFg
 # from Target_bank import print_grape
-# TODO: uncomment this line and comment next for field exp
+# uncomment this line and comment next for field exp
 # from mask_RCNN import take_picture_and_run as capture_update_TB, pixel_2_meter
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window
 import write_to_socket
@@ -72,6 +72,10 @@ def read_position():
 
 # calling the 2 sonar methods to get distance and validate existence of grapes
 def activate_sonar():
+    """
+    activate sonar- read distance and grape/no grape.
+    :return: distance to grape, grape (yes=1,no =0)
+    """
     counter = 0  # intiate flag
     record = DAQ_BG.rec()
     counter, x_test = preprocess_one_record(record, counter,
@@ -90,7 +94,10 @@ def activate_sonar():
     return dist_from_sonar, preds_2classes[1]  # make sure it converts to True/ False
 
 
-def restart_TB():
+def restart_target_bank():
+    """
+    restart the target bank (empty the list)
+    """
     val = input("Enter 1 to restart the program, or Enter to continue: ")
     if val == 1:
         g_param.TB = []
@@ -100,6 +107,9 @@ def restart_TB():
 
 
 def print_line_sep_time():
+    """
+    prints a line separation of ___ and the current time
+    """
     t = time.localtime()
     current_time = time.strftime("%H:%M:%S", t)
     print('-' * 40, current_time, '-' * 40, '\n')
@@ -112,7 +122,7 @@ def move_platform():
 def move2sonar(grape_1):
     input("Press Enter to move to sonar")
     print(fg.yellow + "wait" + fg.rs, "\n")
-    x_cam, y_cam = grape_1.x_meter, grape_1.y_meter
+    x_cam, y_cam = grape_1.x_base, grape_1.y_base
     tcp = g_param.trans.aim_sonar(x_cam, y_cam)
     new_location = g_param.trans.tcp_base(tcp)
     print(">>>>>new location", new_location)
@@ -126,7 +136,7 @@ def move2sonar(grape_1):
 
 
 def move2spray(grape_1):
-    tcp = g_param.trans.aim_spray(grape_1.x_meter, grape_1.y_meter, grape_1.distance)
+    tcp = g_param.trans.aim_spray(grape_1.x_base, grape_1.y_base, grape_1.distance)
     print("grape dist: ", grape_1.distance)
     new_location = g_param.trans.tcp_base(tcp)
     print("spray_procedure location: ", new_location)
@@ -186,7 +196,7 @@ def possible_move(goal_pos, grape_1):
     euclid_max = 0.95
     euclid_dist = np.linalg.norm(np.array([0, 0, 0]) - goal_pos[0:3])
     print("euclid_dist ", euclid_dist)
-    if abs(goal_pos[1])> y_max:
+    if abs(goal_pos[1]) > y_max:
         print("Target too right, move platform")
         g_param.TB[grape_1.index].in_range = "right"
         g_param.time_to_move_platform = True
@@ -208,18 +218,15 @@ def possible_move(goal_pos, grape_1):
     return True
 
 
-
-
-
-def calc_step_size(m):
+def calc_step_size(step_size_to_move):
     """
-    :param m: step size
+    :param step_size_to_move: step size
     :return: step size- move alpha
     """
     direction_of_move = g_param.direction
     if direction_of_move == "up" or direction_of_move == "down":
-        m = m * g_param.height_step_size
-    return m
+        step_size_to_move = step_size_to_move * g_param.height_step_size
+    return step_size_to_move
 
 
 def move_const(size_of_step, direction, location):
@@ -266,7 +273,7 @@ def move_const(size_of_step, direction, location):
 def print_current_location(cur_location):
     """
     :param cur_location:
-    :return: void, prints current location
+    prints current location
     """
     x_base = "x base: " + str(round(cur_location[0], 3)) + " "
     y_base = "y base: " + str(round(cur_location[1], 3)) + " "
@@ -276,6 +283,10 @@ def print_current_location(cur_location):
 
 # mark that the grape is fake and remove mask (to save space in memory)
 def update_database_no_grape(index):
+    """
+    Update that according to the sonar output, the object detected wasn't a grape.
+    :param index: The index of the grape
+    """
     g_param.TB[index].fake_grape = True
     g_param.TB[index].mask = None
     g_param.TB[index].sprayed = True
@@ -283,8 +294,11 @@ def update_database_no_grape(index):
     # any way, I could just subtract the amount of grapes that are sprayed and not fake_grape
 
 
-# Change the grape to sprayed
 def update_database_sprayed(index_of_grape):
+    """
+    Change the grape to sprayed
+    :param index_of_grape:
+    """
     g_param.TB[index_of_grape].sprayed = True
     print(g_param.TB)
     print_current_location(current_location)
@@ -317,6 +331,9 @@ def update_wait_another_round():
 
 
 def count_un_sprayed():
+    """
+    :return: amount of grapes that hadn't been sprayed yet
+    """
     amount = 0
     if len(g_param.TB) > 0:
         for ind in range(len(g_param.TB)):
@@ -386,19 +403,28 @@ def spray_procedure(g):
 
 
 def mark_sprayed_and_display():
+    """
+    mark all grapes that already been sprayed with a red dot at their center.
+    mark all grapes that are too high/low with orange dot.
+    """
     print_line_sep_time()
     cam_0 = np.array([0, 0, 0, 1])
     cam_0_base = np.matmul(g_param.trans.t_cam2base, cam_0)
     print("cam 0 base >>>>>>>>>>>>>>>>>>>>>", cam_0_base)
     print("TB after sorting \n", g_param.TB)
+    half_image_left = g_param.half_width_meter
     for a in range(len(g_param.TB)):
-        half_image_left = g_param.half_width_meter
+        target = g_param.TB[a]
         # sprayed and steel should appear in the image #
-        if g_param.TB[a].sprayed and abs(g_param.TB[a].grape_world[1] -
-                                         cam_0_base[1]) < half_image_left:
-            print("distance from center of image : ", g_param.TB[a].grape_world[1] - cam_0_base[1])
-            g_param.masks_image = cv.circle(g_param.masks_image, (int(g_param.TB[a].x_p), int(g_param.TB[a].y_p)),
+        if target.sprayed and abs(target.grape_world[1] - cam_0_base[1]) < half_image_left \
+                and target.in_range == "ok":
+            print("distance from center of image : ", target.grape_world[1] - cam_0_base[1])
+            g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
+        # mark orange dot on grapes that are too high/low.
+        if target.in_range == "high" or target.in_range == "low":
+            g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
+                                            radius=4, color=(255, 165, 0), thickness=4)
     if g_param.show_images:
         show_in_moved_window("Checking status", g_param.masks_image)
         cv.waitKey(0)
@@ -507,7 +533,7 @@ if __name__ == '__main__':
                     move2spray(grape)  # 25+26
                     if time_to_move_platform:  # 27
                         break  #
-                    spray_procedure(grape)  # 28
+                    # spray_procedure(grape)  # 28
                     move2capture()  # TODO: Omer, generate safety movement
                     update_database_sprayed(i)  # 28 # TODO Edo: show the image and mark grape sprayed
                     mark_sprayed_and_display()
@@ -523,4 +549,4 @@ if __name__ == '__main__':
             g_param.time_to_move_platform = True
             print(print_line_sep_time(), '\n', " Safety STOP!", '\n')
             break
-            # restart_TB()  # option to restart without initialize
+            # restart_target_bank()  # option to restart without initialize

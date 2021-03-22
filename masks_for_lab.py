@@ -21,11 +21,19 @@ import os
 # parameters #
 ####################################
 amount_of_tries = 3
-num_of_pixels = 40
+num_of_pixels = 60
 ####################################
 
 
 def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
+    """
+    resize image
+    :param image: image
+    :param width: width after resizing
+    :param height: height after resizing
+    :param inter: interpolation method for resizing
+    :return: resized image
+    """
     # initialize the dimensions of the image to be resized and
     # grab the image size
     dim = None
@@ -53,6 +61,13 @@ def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
 
 
 def show_in_moved_window(win_name, img, x=0, y=0):
+    """
+    show image
+    :param win_name: name of the window
+    :param img: image to display
+    :param x: x coordinate of top left corner of the window
+    :param y: y coordinate of top left corner of the window
+    """
     cv.namedWindow(win_name, cv.WINDOW_AUTOSIZE)        # Create a named window
     cv.moveWindow(win_name, x, y)   # Move it to (x,y)
     # cv.resizeWindow(win_name, 400, 512)
@@ -61,6 +76,11 @@ def show_in_moved_window(win_name, img, x=0, y=0):
 
 
 def masks_to_convex_hulls(list_of_masks):
+    """
+    convert masks (list) into convex hull (list of points that construct the convex hull per each image
+    :param list_of_masks: list of masks to convert
+    :return: two lists
+    """
     list_of_npas = []
     list_of_CH = []
     if len(list_of_masks) > 0:
@@ -74,6 +94,12 @@ def masks_to_convex_hulls(list_of_masks):
 
 
 def mask_to_convex_hull(mask):
+    """
+    convert singal mask to convex hull.
+    not efficent!!! find better way.
+    :param mask: mask to convert
+    :return: convex hull
+    """
     arr_to_list = []
     for i in range(0, 1024):  # change it that it won't check
         for j in range(0, 1024):  # the padded by zeros area
@@ -88,8 +114,11 @@ def mask_to_convex_hull(mask):
     return hull, npa
 
 
-# function to change from float vec to int vec
 def two_value_to_int_vec(vec):
+    """
+    :param vec:
+    :return: change from float vec to int vec
+    """
     corner_1 = vec
     corner_1_1 = int(corner_1[0])
     corner_1_2 = int(corner_1[1])
@@ -195,14 +224,13 @@ def minBoundingRect(hull_points_2d):
             corner_points)  # rot_angle, area, width, height, center_point, corner_points
 
 
-'''
-mrbbs (minimum rodated bounding box s ) is a list of dicitnoray 
-that contains the next parameters:
-rot_angle, area, width, height, center_point, corner_points
-'''
-
 
 def output_dict(npas):
+    """
+    mrbbs (minimum rodated bounding box s ) is a list of dicitnoray
+    that contains the next parameters:
+    rot_angle, area, width, height, center_point, corner_points
+    """
     mrbbs = []
     for i in range(0, len(npas)):
         mrbb = minBoundingRect(npas[i])
@@ -336,7 +364,6 @@ def intersection_area(r1, r2):
 # det_rotated_boxes
 # create new compute_overlaps to match rotated Bounding boxes
 class calcs():
-
     def calc_angle_between_boxes(matched_gt_boxes, positive_ids,
                                  GT_rotated_boxes, det_rotated_boxes):
         angles = []
@@ -372,10 +399,6 @@ class calcs():
         return sigma
 
 
-###### TO DO: check hit for second biggest mask and rotated box
-# Libraries
-
-
 def ueye_take_picture_2(image_number):
     # Variables
     hCam = ueye.HIDS(0)  # 0: first available camera;  1-254: The camera with the specified camera ID
@@ -389,55 +412,28 @@ def ueye_take_picture_2(image_number):
     channels = 3  # 3: channels for color mode(RGB); take 1 channel for monochrome
     m_nColorMode = ueye.INT()  # Y8/RGB16/RGB24/REG32
     bytes_per_pixel = int(nBitsPerPixel / 8)
-
     # ---------------------------------------------------------------------------------------------------------------------------------------
     # print("START")
     # print()
-
     # Starts the driver and establishes the connection to the camera
     nRet = ueye.is_InitCamera(hCam, None)
-    # if nRet != ueye.IS_SUCCESS:
-    #     print("is_InitCamera ERROR")
-
     # Reads out the data hard-coded in the non-volatile camera memory and writes it to the data structure that cInfo points to
     nRet = ueye.is_GetCameraInfo(hCam, cInfo)
-    # if nRet != ueye.IS_SUCCESS:
-    #     print("is_GetCameraInfo ERROR")
-
     # You can query additional information about the sensor type used in the camera
     nRet = ueye.is_GetSensorInfo(hCam, sInfo)
-    # if nRet != ueye.IS_SUCCESS:
-    #     print("is_GetSensorInfo ERROR")
-
     # Set display mode to DIB
     nRet = ueye.is_SetDisplayMode(hCam, ueye.IS_SET_DM_DIB)
-    # nRet = ueye.is_SetDisplayMode(hCam, ueye.IS_SET_DM_OPENGL)
-
     # Set the right color mode
     if int.from_bytes(sInfo.nColorMode.value, byteorder='big') == ueye.IS_COLORMODE_BAYER:
         # setup the color depth to the current windows setting
         ueye.is_GetColorDepth(hCam, nBitsPerPixel, m_nColorMode)
         bytes_per_pixel = int(nBitsPerPixel / 8)
-        # print("IS_COLORMODE_BAYER: ", )
-        # print("\tm_nColorMode: \t\t", m_nColorMode)
-        # print("\tnBitsPerPixel: \t\t", nBitsPerPixel)
-        # print("\tbytes_per_pixel: \t\t", bytes_per_pixel)
-        # print()
-
     # Can be used to set the size and position of an "area of interest"(AOI) within an image
     nRet = ueye.is_AOI(hCam, ueye.IS_AOI_IMAGE_GET_AOI, rectAOI, ueye.sizeof(rectAOI))
     # if nRet != ueye.IS_SUCCESS:
     #     print("is_AOI ERROR")
-
     width = rectAOI.s32Width
     height = rectAOI.s32Height
-
-    # Prints out some information about the camera and the sensor
-    # print("Camera model:\t\t", sInfo.strSensorName.decode('utf-8'))
-    # print("Camera serial no.:\t", cInfo.SerNo.decode('utf-8'))
-    # print("Maximum image width:\t", width)
-    # print("Maximum image height:\t", height)
-    # print()
 
     # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -459,16 +455,7 @@ def ueye_take_picture_2(image_number):
     if nRet != ueye.IS_SUCCESS:
         print("is_CaptureVideo ERROR")
 
-    # nRet = ueye.is_FreezeVideo(hCam, ueye.IS_DONT_WAIT)
-    # if nRet != ueye.IS_SUCCESS:
-    #    print("is_CaptureVideo ERROR")
-
-    # Enables the queue mode for existing image memory sequences
     nRet = ueye.is_InquireImageMem(hCam, pcImageMemory, MemID, width, height, nBitsPerPixel, pitch)
-    # if nRet != ueye.IS_SUCCESS:
-    #     print("is_InquireImageMem ERROR")
-    # else:
-    #     print("Press q to leave the programm")
 
     # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -478,7 +465,7 @@ def ueye_take_picture_2(image_number):
         # In order to display the image in an OpenCV window we need to...
         # ...extract the data of our image memory
         pic_array_1 = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
-        time.sleep(1.1)
+        time.sleep(0.4)
         pic_array = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
 
         # ...reshape it in an numpy array...
@@ -490,9 +477,9 @@ def ueye_take_picture_2(image_number):
         # ---------------------------------------------------------------------------------------------------------------------------------------
         # ...and finally display it
         # cv.imshow("SimpleLive_Python_uEye_OpenCV", frame)
-        time.sleep(0.5)
+        time.sleep(0.1)
         show_in_moved_window("SimpleLive_Python_uEye_OpenCV", frame)
-        time.sleep(0.5)
+        time.sleep(0.1)
 
         t = time.localtime()
         current_time = time.strftime("%H_%M_%S", t)
@@ -539,6 +526,11 @@ def ueye_take_picture_2(image_number):
 
 
 def biggest_box(det_rotated_boxes):
+    """
+    calc the biggest rotated box (w * h)
+    :param det_rotated_boxes: detected rotated box
+    :return: index of the biggest box
+    """
     areas = []
     for i in range(len(det_rotated_boxes)):
         area = det_rotated_boxes[i][2] * det_rotated_boxes[i][3]
@@ -641,8 +633,23 @@ def check_image(image_path):
         return False
 
 
+def fix_angle_to_0_180(width, height, ang):
+    if width <= height:
+        ang += 90
+    else:
+        ang += 180
+    return ang
+
+
+
 # im1 = 'path to captured image indside cv2.imageread'
 def take_picture_and_run(current_location, image_number):
+    """
+
+    :param current_location: current location of the TCP
+    :param image_number: number of image to be taken (starts at 0)
+    :return:
+    """
     d = g_param.avg_dist
     box = [0, 0, 0, 0, 0]
     plt.clf()  # clean the canvas
@@ -653,25 +660,17 @@ def take_picture_and_run(current_location, image_number):
         for i in range(amount_of_tries):
             image_path = ueye_take_picture_2(image_number)
             image_taken = check_image(image_path)
+            print("try number: ", i)
             if image_taken:
+                print(i)
                 print(colored("Image taken successfully", 'green'))
                 break
         if not image_taken:
             print_special()
     else:
         image_path = g_param.read_write_object.load_image_path()
-    # img = cv.imread(image_path)
-    # img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-    #
-    # cv.destroyAllWindows()
-    rng.seed(12345)
 
-    def fix_angle_to_0_180(width, height, ang):
-        if width <= height:
-            ang += 90
-        else:
-            ang += 180
-        return ang
+    rng.seed(12345)
 
     def thresh_callback(val):
         threshold = val

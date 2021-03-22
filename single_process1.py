@@ -402,4 +402,4 @@ if __name__ == '__main__':
             #         print("Not time to move platform, move arm to take another image")
         if steps_counter > number_of_steps:
             g_param.time_to_move_platform = True
-            # restart_TB()  # option to restart without initialize
+            # restart_target_bank()  # option to restart without initialize
