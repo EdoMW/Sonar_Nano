@@ -303,7 +303,7 @@ def check_more_than_half_away(x_meter, half_step_size):
     :param x_meter: location of middle of the grape in meter
     :param half_step_size: half step size in meters
     :return:
-    true if  x_base > half_step_size, then spray_procedure only after next image (when grape will be captured when
+    true if  x_center > half_step_size, then spray_procedure only after next image (when grape will be captured when
     it is closer to the center of the point, which in high probability produce more accurate mask.
     else, return False, meaning that the grape wen't get an image when it is closer to the center.
     """

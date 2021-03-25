@@ -57,6 +57,7 @@ class Trans:
     def grape_world(self, x_cam, y_cam):
         grape_cam = np.array([float(x_cam), float(y_cam), 0, 1])
         grape_world = np.matmul(self.t_cam2world, grape_cam)
+        grape_world[1] = grape_world[1] + g_param.sum_platform_steps
         return grape_world[:-1]
 
     def tcp_base(self, tcp):

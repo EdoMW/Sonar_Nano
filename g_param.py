@@ -7,10 +7,13 @@ show_images = None
 spray_sonar = True
 trans = None
 avg_dist = 0.71
+platform_step_size = 0
+sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.71
 height_step_size = 0.6  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO: this
 image_number = 0
+plat_position_step_number = 0
 read_write_object = None
 direction = None
 safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
@@ -54,8 +57,8 @@ def init():
     """
     initializes all global variables.
     """
-    global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform,\
-        image_number, safety_dist, half_width_meter, half_height_meter,\
-        read_write_object, process_type, last_grape_dist, height_step_size, direction
+    global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number,\
+        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps,\
+        read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()

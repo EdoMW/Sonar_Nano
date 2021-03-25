@@ -73,6 +73,7 @@ def show_in_moved_window(win_name, img, x=0, y=0):
     # cv.resizeWindow(win_name, 400, 512)
     # img = cv.resize(img, (800, 1024))
     cv.imshow(win_name, img)
+    # cv.waitKey()
 
 
 def masks_to_convex_hulls(list_of_masks):
@@ -222,7 +223,6 @@ def minBoundingRect(hull_points_2d):
 
     return (angle, min_bbox[1], min_bbox[2], min_bbox[3], center_point,
             corner_points)  # rot_angle, area, width, height, center_point, corner_points
-
 
 
 def output_dict(npas):
@@ -645,7 +645,6 @@ def fix_angle_to_0_180(width, height, ang):
 # im1 = 'path to captured image indside cv2.imageread'
 def take_picture_and_run(current_location, image_number):
     """
-
     :param current_location: current location of the TCP
     :param image_number: number of image to be taken (starts at 0)
     :return:
@@ -759,7 +758,7 @@ def take_picture_and_run(current_location, image_number):
         y = int(boxes[i][0][1])
         w, h, corners_in_meter = calculate_w_h(d, corner_points[i])
         a = int(boxes[i][2])
-        box = [x, y, w, h, a, corners_in_meter]
+        box = [x, y, w, h, a, corners_in_meter, corner_points[i]]
         predicted_masks_to_mrbb.append(box)
 
     det_rotated_boxes = []
@@ -770,6 +769,8 @@ def take_picture_and_run(current_location, image_number):
         width_0 = predicted_masks_to_mrbb[b][2]
         height_0 = predicted_masks_to_mrbb[b][3]
         angle_0 = predicted_masks_to_mrbb[b][4] * -1
+        corners_in_meter = predicted_masks_to_mrbb[b][5]
+        corner_points = predicted_masks_to_mrbb[b][6]
         # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
         # angle_0 = (angle_0*180)/pi
         det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(width_0), int(height_0), angle_0, None]
@@ -777,7 +778,7 @@ def take_picture_and_run(current_location, image_number):
         box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
         det_rotated_boxes.append(box_in_meter)
         grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                 None,  det_box, None, corners_in_meter]
+                 None,  det_box, None, corners_in_meter, corner_points]
         add_to_target_bank(grape)
 
     print("boxes", boxes)
@@ -794,7 +795,7 @@ def take_picture_and_run(current_location, image_number):
     show_in_moved_window("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
     g_param.masks_image = img
 
-    cv.waitKey(0)
+    # cv.waitKey(0)
     cv.destroyAllWindows()
 
 

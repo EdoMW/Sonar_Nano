@@ -48,6 +48,7 @@ class ReadWrite:
         self.masks_path = None
         self.sonar_path = None
         self.transformations_path = None
+        self.platform_path = None
         self.transformations_path_ang_vec_tcp = None
         self.transformations_path_t_tcp2base = None
         self.transformations_path_t_cam2base = None
@@ -67,31 +68,30 @@ class ReadWrite:
         path = os.path.join(parent_dir, directory)
         os.mkdir(path)
         directory_1, directory_2, directory_3 = "locations", "rgb_images", "masks"
-        directory_4, directory_5 = "sonar", "transformations"
+        directory_4, directory_5, directory_6 = "sonar", "transformations", "platform"
         sub_dir_1, sub_dir_2, sub_dir_3, sub_dir_4 = "ang_vec_tcp", "t_tcp2base", "t_cam2base", "t_cam2world"
+
         path_1 = os.path.join(path, directory_1)
         path_2 = os.path.join(path, directory_2)
         path_3 = os.path.join(path, directory_3)
         path_4 = os.path.join(path, directory_4)
         path_5 = os.path.join(path, directory_5)
+        path_6 = os.path.join(path, directory_6)
+
         path_5_1 = os.path.join(path_5, sub_dir_1)
         path_5_2 = os.path.join(path_5, sub_dir_2)
         path_5_3 = os.path.join(path_5, sub_dir_3)
         path_5_4 = os.path.join(path_5, sub_dir_4)
-        os.mkdir(path_1)
-        os.mkdir(path_2)
-        os.mkdir(path_3)
-        os.mkdir(path_4)
-        os.mkdir(path_5)
-        os.mkdir(path_5_1)
-        os.mkdir(path_5_2)
-        os.mkdir(path_5_3)
-        os.mkdir(path_5_4)
+
+        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_5_1, path_5_2, path_5_3, path_5_4]
+        for folder in folders:
+            os.mkdir(folder)
         self.location_path = path_1
         self.rgb_images_path = path_2
         self.masks_path = path_3
         self.sonar_path = path_4
         self.transformations_path = path_5
+        self.platform_path = path_6
         self.transformations_path_ang_vec_tcp = path_5_1
         self.transformations_path_t_tcp2base = path_5_2
         self.transformations_path_t_cam2base = path_5_3
@@ -108,6 +108,33 @@ class ReadWrite:
         plt.imsave(image_path, frame)  # saves frame in image_path
         plt.clf()  # clears figure
         plt.close()  # closes figure
+
+    def write_platform_step(self, step_size):
+        """
+        write current step size in meters to csv
+        :param step_size: current step size in meter
+        """
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        """
+        :param pos: current position of the robot
+        :return:
+        """
+        data = [step_size]
+        # opening the csv file in 'w+' mode
+        current_time = get_local_time_4()
+        folder_path_for_platform = self.platform_path
+        platform_data = 'num_dt.csv'
+        platform_data = platform_data.replace("num", str(g_param.image_number))
+        platform_data = platform_data.replace("dt", str(current_time))
+        platform_path = os.path.join(folder_path_for_platform, platform_data)
+
+        file = open(platform_path, 'w+')
+        # writing the data into the file
+        with file:
+            out = csv.writer(file)
+            out.writerows(map(lambda x: [x], data))
+            file.close()
 
     def write_transformations_to_csv(self):
         if g_param.process_type == "work" or g_param.process_type == "load":
@@ -214,4 +241,21 @@ class ReadWrite:
         path = os.path.join(path, res[0])
         pos = my_data = np.genfromtxt(path, delimiter=",")
         return pos
+
+    def read_platform_step_size_from_csv(self):
+        """
+        read platform step size from csv.
+        it takes the platform according to the current image number
+        :return:
+        """
+        image_number = g_param.image_number
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'platform')
+        locations_list = os.listdir(path)
+        res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
+        path = os.path.join(path, res[0])
+        step_size = np.genfromtxt(path, delimiter=',')
+        return step_size
 

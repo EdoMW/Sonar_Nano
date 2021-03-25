@@ -5,25 +5,28 @@ import csv
 import cv2 as cv
 
 
-print(np.linalg.norm(np.array([0, 0, 0]) - np.array([-0.566, -0.087, 0.775])))
-
-num_of_pixels = 4
-x_val = np.random.choice(1024, num_of_pixels, replace=False)
-y_val = np.random.choice(1024, num_of_pixels, replace=False)
-combined = np.vstack((x_val, y_val)).T
-image_path_1 = r'D:\Users\NanoProject\Images_for_work\black.jpg'
-# image_path_1 = r'D:\Users\NanoProject\Images_for_work\1_13_06_16.jpeg'
-
-img = cv.imread(image_path_1)
-rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-black = True
-for i in range(num_of_pixels):
-    ans = np.array_equal(rgb[combined[i][0], combined[i][1]], (0, 0, 0))
-    if not ans:
-        black = False
-        break
-
-
+a = 0.4
+a = [a]
+print(a)
+# print(np.linalg.norm(np.array([0, 0, 0]) - np.array([-0.566, -0.087, 0.775])))
+#
+# num_of_pixels = 4
+# x_val = np.random.choice(1024, num_of_pixels, replace=False)
+# y_val = np.random.choice(1024, num_of_pixels, replace=False)
+# combined = np.vstack((x_val, y_val)).T
+# image_path_1 = r'D:\Users\NanoProject\Images_for_work\black.jpg'
+# # image_path_1 = r'D:\Users\NanoProject\Images_for_work\1_13_06_16.jpeg'
+#
+# img = cv.imread(image_path_1)
+# rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+# black = True
+# for i in range(num_of_pixels):
+#     ans = np.array_equal(rgb[combined[i][0], combined[i][1]], (0, 0, 0))
+#     if not ans:
+#         black = False
+#         break
+#
+#
 
 #
 #
