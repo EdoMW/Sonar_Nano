@@ -3,6 +3,7 @@ import cv2 as cv
 import argparse
 import random as rng
 import matplotlib.pyplot as plt
+import scipy as scipy
 from termcolor import colored
 import itertools
 
@@ -17,6 +18,351 @@ import numpy as np
 import g_param
 import time
 import os
+import scipy
+
+import imutils
+from PIL import Image, ImageDraw, ImageDraw
+import scipy.misc
+# import matplotlib
+
+
+
+
+#
+#
+#
+# # Root directory of the project
+# ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master/")
+#
+# import warnings
+#
+# warnings.filterwarnings("ignore")
+#
+# # Import Mask RCNN
+# sys.path.append(ROOT_DIR)  # To find local version of the library
+# from mrcnn import utils
+# from mrcnn.config import Config
+# import mrcnn.model as modellib
+# from mrcnn import visualize
+# from mrcnn.model import log
+#
+# # Import COCO config
+# sys.path.append(os.path.join(ROOT_DIR, "samples/coco"))  # To find local version
+# import coco
+#
+# # Directory to save logs and trained model
+# MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+#
+# # Local path to trained weights file
+# COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
+#
+# if not os.path.exists(COCO_MODEL_PATH):
+#     utils.download_trained_weights(COCO_MODEL_PATH)
+#
+#
+# # Root directory of the project
+# ROOT_DIR = os.getcwd()
+# if ROOT_DIR.endswith("C:\Drive\Mask_RCNN-master"):
+#     # Go up two levels to the repo root
+#     ROOT_DIR = os.path.dirname(os.path.dirname(ROOT_DIR))
+#
+# # Import Mask RCNN
+# sys.path.append(ROOT_DIR)
+#
+# # Path to trained weights file
+# COCO_WEIGHTS_PATH = os.path.join("C:\Drive\Mask_RCNN-master", "mask_rcnn_coco.h5")
+#
+# # Directory to save logs and model checkpoints, if not provided
+# # through the command line argument --logs
+# DEFAULT_LOGS_DIR = MODEL_DIR
+#
+#
+# ############################################################
+# #  Configurations
+# ############################################################
+#
+#
+# class GrapeConfig(Config):
+#     """Configuration for training on the toy dataset.
+#     Derives from the base Config class and overrides some values.
+#     """
+#     # Give the configuration a recognizable name
+#     NAME = "grape"
+#
+#     # We use a GPU with 12GB memory, which can fit two images.
+#     # Adjust down if you use a smaller GPU.
+#     IMAGES_PER_GPU = 2
+#
+#     # Number of classes (including background)
+#     NUM_CLASSES = 1 + 1  # Background + grape
+#
+#     # Number of training steps per epoch
+#     STEPS_PER_EPOCH = 30
+#
+#     # Skip detections with < 90% confidence
+#     DETECTION_MIN_CONFIDENCE = 0.9
+#
+#     DETECTION_MAX_INSTANCES = 40
+#
+#     MASK_SHAPE = [28, 28]
+#     # very importent to defince corect!!!!!
+#     BACKBONE = "resnet101"
+#
+#     BACKBONE_STRIDES = [4, 8, 16, 32, 64]
+#
+#     RPN_ANCHOR_RATIOS = [0.5, 1, 2]
+#
+#
+# ############################################################
+# #  Dataset
+# ############################################################
+#
+# class GrapeDataset(utils.Dataset):
+#
+#     def load_grape(self, dataset_dir, subset):
+#         """Load a subset of the grape dataset.
+#         dataset_dir: Root directory of the dataset.
+#         subset: Subset to load: train or val
+#         """
+#         # Add classes. We have only one class to add.
+#         self.add_class("grape", 1, "grape_cluster")
+#
+#         # Train or validation dataset?
+#         assert subset in ["train", "val", "test"]
+#         dataset_dir = os.path.join("C:\Drive\Mask_RCNN-master\samples\grape\dataset", subset)
+#         dataset = os.listdir(dataset_dir)
+#
+#         # Add images
+#         import ntpath
+#         for image_id in dataset:
+#             img_path = os.path.join(dataset_dir, image_id)
+#             img_name = os.path.splitext(ntpath.basename(img_path))[0]
+#             self.add_image(
+#                 "grape",
+#                 image_id=str(img_name),
+#                 path=img_path)
+#
+#     def load_mask(self, image_id):
+#         import numpy as np
+#         """Generate instance masks for an image.
+#        Returns:
+#         masks: A bool array of shape [height, width, instance count] with
+#             one mask per instance.
+#         class_ids: a 1D array of class IDs of the instance masks.
+#         """
+#         # get mask directory from image id
+#         mask_dir = self.mask_reference(image_id)
+#         mask = np.load(mask_dir)
+#         # Return mask, and array of class IDs of each instance. Since we have
+#         # one class ID only, we return an array of 1s
+#         return mask, np.ones([mask.shape[-1]], dtype=np.int32)
+#
+#     def image_reference(self, image_id):
+#         """Return the path of the image."""
+#         info = self.image_info[image_id]
+#         if info["source"] == "grape":
+#             return info["path"]
+#         else:
+#             super(self.__class__, self).image_reference(image_id)
+#
+#     def mask_reference(self, image_id):
+#         """Return the mask directory of the image."""
+#         info = self.image_info[image_id]
+#         image_name = info["id"]
+#         mask_name = image_name + ".npy"
+#         mask_dir = os.path.join("C:/Drive/Mask_RCNN-master/samples/grape/anew_masks/" + mask_name)
+#         return mask_dir
+#
+#
+# ############################ trainig  1  #######################################
+#
+# def train(model):
+#     import imgaug
+#     """Train the model."""
+#     # Training dataset.
+#     dataset_train = GrapeDataset()
+#     dataset_train.load_grape('C:/Drive/Mask_RCNN-master/samples/grape/dataset', "train")
+#     dataset_train.prepare()
+#
+#     # Validation dataset
+#     dataset_val = GrapeDataset()
+#     dataset_val.load_grape('C:/Drive/Mask_RCNN-master/samples/grape/dataset', "val")
+#     dataset_val.prepare()
+#
+#     # *** This training schedule is an example. Update to your needs ***
+#     # Since we're using a very small dataset, and starting from
+#     # COCO trained weights, we don't need to train too long. Also,
+#     # no need to train all layers, just the heads should do it.
+#     # augmentation_1 = imgaug.augmenters.Sequential([
+#     # imgaug.augmenters.Fliplr(0.5),
+#     # imgaug.augmenters.GaussianBlur(sigma=(0.0, 5.0)),
+#     # imgaug.augmenters.Crop(percent=(0, 0.1)),
+#     # imgaug.augmenters.LinearContrast((0.75, 1.5))],
+#     #                                          random_order=True)
+#     model.train(dataset_train, dataset_val,
+#                 learning_rate=config.LEARNING_RATE,
+#                 epochs=70,
+#                 # augmentation = augmentation_1,
+#                 layers='all')
+#
+#
+# ############################################################
+# # Training 2
+# ############################################################
+#
+# # if __name__ == '__main__':
+# #     config = GrapeConfig()
+# #     config.display()
+# #     logs_dir = 'C:\Drive\Mask_RCNN-master/logs'
+# #     model = modellib.MaskRCNN(mode="training", config=config,
+# #                               model_dir=logs_dir)
+# #     # weights_path = '/content/gdrive/My Drive/grapes data/Mask_RCNN-master/mask_rcnn_coco.h5'
+# #     # weights_path = model.find_last()
+# #     # print(weights_path)
+# #     model.load_weights('C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5')
+# #     # train (model)
+#
+#
+# config = GrapeConfig()
+# config.display()
+# logs_dir = 'C:\Drive\Mask_RCNN-master/logs'
+# model = modellib.MaskRCNN(mode="training", config=config,
+#                           model_dir=logs_dir)
+# # weights_path = '/content/gdrive/My Drive/grapes data/Mask_RCNN-master/mask_rcnn_coco.h5'
+# # weights_path = model.find_last()
+# # print(weights_path)
+# model.load_weights('C:\Drive\Mask_RCNN-master\logs_to_import\with_santos\la\mask_rcnn_grape_0080.h5')
+# # train (model)
+#
+#
+# class InferenceConfig(config.__class__):
+#     # Run detection on one image at a time
+#     GPU_COUNT = 1
+#     IMAGES_PER_GPU = 1
+#
+#
+# config = InferenceConfig()
+# config.display()
+#
+# # Device to load the neural network on.
+# # Useful if you're training a model on the same
+# # machine, in which case use CPU and leave the
+# # GPU for training.
+# # DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
+# DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
+# # Inspect the model in training or inference modes
+# # values: 'inference' or 'training'
+# # TODO: code for 'training' test mode not ready yet
+# TEST_MODE = "inference"
+#
+#
+# def get_ax(rows=1, cols=1, size=16):
+#     """Return a Matplotlib Axes array to be used in
+#     all visualizations in the notebook. Provide a
+#     central point to control graph sizes.
+#
+#     Adjust the size attribute to control how big to render images
+#     """
+#     _, ax = plt.subplots(rows, cols, figsize=(size * cols, size * rows))
+#     return ax
+#
+#
+# dataset_val = GrapeDataset()
+# dataset_val.load_grape('C:\Drive\Mask_RCNN-master\samples\grape\dataset', "val")
+# dataset_val.prepare()
+#
+# print("Images: {}\nClasses: {}".format(len(dataset_val.image_ids), dataset_val.class_names))
+# classes = []
+# classes.append('BG')
+# classes.append('grape_cluster')
+#
+# import tensorflow as tf
+#
+# with tf.device("/cpu:0"):
+#     model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
+#
+# # Set path to balloon weights file
+#
+# # Download file from the Releases page and set its path
+# # https://github.com/matterport/Mask_RCNN/releases
+# # weights_path = "/path/to/mask_rcnn_balloon.h5"
+#
+# # Or, load the last model you trained
+# # weights_path = model.find_last()
+# weights_path = 'C:\Drive\Mask_RCNN-master\logs_to_import\with_santos\la\mask_rcnn_grape_0080.h5'
+#
+# # Load weights
+# print("Loading weights ", weights_path)
+# model.load_weights(weights_path, by_name=True)
+#
+# dataset_test = GrapeDataset()
+# dataset_test.load_grape('C:\Drive\Mask_RCNN-master\samples\grape\dataset', "test")
+# dataset_test.prepare()
+#
+# from scipy.spatial import ConvexHull, convex_hull_plot_2d
+# from numpy import *
+# import sys
+# import math
+# from math import pi, cos, sin
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # parameters #
 ####################################
@@ -641,6 +987,13 @@ def fix_angle_to_0_180(width, height, ang):
     return ang
 
 
+def arrange_data(width_0, height_0, corner_points):
+    p1, p2, p3, p4 = corner_points
+    if width_0 > height_0:
+        height_0, width_0 = width_0, height_0
+        p1, p2, p3, p4 = p1, p4, p3, p2
+    return width_0, height_0, [p1, p2, p3, p4]
+
 
 # im1 = 'path to captured image indside cv2.imageread'
 def take_picture_and_run(current_location, image_number):
@@ -669,8 +1022,26 @@ def take_picture_and_run(current_location, image_number):
     else:
         image_path = g_param.read_write_object.load_image_path()
 
-    rng.seed(12345)
+    parser = argparse.ArgumentParser(
+        description='Code for Creating Bounding rotated boxes and ellipses for contours tutorial.')
+    parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
+    args = parser.parse_args()
 
+    # fOR FIELD
+    # image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0119.JPG'
+
+    img = cv.imread(image_path)
+    # img = cv.resize(img, (1024, 692))  # Resize image
+    RGB = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+
+
+
+
+
+
+
+    # for lab # TODO; for lab use without net
+    rng.seed(12345)
     def thresh_callback(val):
         threshold = val
         ret, thresh = cv.threshold(src_gray, 50, 255, cv.THRESH_BINARY)
@@ -709,13 +1080,7 @@ def take_picture_and_run(current_location, image_number):
                 color_index += 20
         # cv.imshow('mask__', green)
 
-    parser = argparse.ArgumentParser(
-        description='Code for Creating Bounding rotated boxes and ellipses for contours tutorial.')
-    parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
-    args = parser.parse_args()
-    img = cv.imread(image_path)
-    # img = cv.resize(img, (1024, 692))  # Resize image
-    RGB = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+
     ## mask of green (36,25,25) ~ (86, 255,255)q
     mask = cv.inRange(RGB, (40,40,50), (255, 255, 255))
     ## slice the green
@@ -743,6 +1108,147 @@ def take_picture_and_run(current_location, image_number):
     boxes = set(boxes)  # remove duplicates
     boxes = list(boxes)
     boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
+
+
+
+
+
+
+
+
+    # for lab # TODO; for field use with net
+    # im0 = RGB
+    # im0, window, scale, padding, crop = utils.resize_image(
+    #     im0,
+    #     min_dim=config.IMAGE_MIN_DIM,
+    #     min_scale=config.IMAGE_MIN_SCALE,
+    #     max_dim=config.IMAGE_MAX_DIM,
+    #     mode=config.IMAGE_RESIZE_MODE)
+    # img = im0
+    # arr = [im0]
+    # # use THE MASK R-CNN for real grapes: next 93 lines
+    # results = model.detect(arr, verbose=1)
+    # r = results[0]
+    # pred_masks = r["masks"]
+    # print("amount of grapes :", len(pred_masks[0][0]))
+    # if len(pred_masks[0][0]) > 0:
+    #     im1 = im0
+    # else:
+    #     print("There was no grapes detected in the capturd image.")
+    #     im1 = cv.imread('C:/Drive/28_7_20/DSC_0210.JPG')
+    #     im1 = cv.cvtColor(im1, cv.COLOR_BGR2RGB)
+    #     im1, window, scale, padding, crop = utils.resize_image(
+    #         im1,
+    #         min_dim=config.IMAGE_MIN_DIM,
+    #         min_scale=config.IMAGE_MIN_SCALE,
+    #         max_dim=config.IMAGE_MAX_DIM,
+    #         mode=config.IMAGE_RESIZE_MODE)
+    #     arr = [im1]
+    #     results = model.detect(arr, verbose=1)
+    # r = results[0]
+    # ax = get_ax(1)
+    # bbox = utils.extract_bboxes(r['masks'])
+    # bbox = bbox.astype('int32')
+    # pred_boxes = r["rois"]
+    # pred_class_ids = r["class_ids"]
+    # pred_scores = r["scores"]
+    # pred_masks = r["masks"]
+    # amount_of_mask_detacted = len(pred_masks[0][0])
+    #
+    #
+    #
+    # boxes = []
+    # mini_boxes = []
+    # coms = []
+    # pixels = []
+    #
+    # images = []
+    # for i in range(3):
+    #     a = f'id_{i}'
+    #     images.append(a)
+    #
+    # for i in range(amount_of_mask_detacted):
+    #     com = scipy.ndimage.measurements.center_of_mass(pred_masks[:, :, i])  # TODO- add to TB
+    #     coms.append(com)
+    #     # load the image, convert it to grayscale, and blur it slightly
+    #     im = Image.fromarray(pred_masks[:, :, i])
+    #     im.save("your_file.jpeg")
+    #     image = cv.imread("your_file.jpeg")
+    #     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    #
+    #     # threshold the image,
+    #     thresh = cv.threshold(gray, 200, 255, cv.THRESH_BINARY)[1]
+    #     # find contours in thresholded image, then grab the largest
+    #
+    #     cnts = cv.findContours(thresh.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    #     cnts = imutils.grab_contours(cnts)
+    #     c = max(cnts, key=cv.contourArea)
+    #
+    #     hull = cv.convexHull(c)
+    #     aaa = cv.minAreaRect(hull)
+    #     boxes.append(aaa)
+    #     box_min = cv.boxPoints(aaa)
+    #     box_min = np.int0(box_min)
+    #     mini_boxes.append(box_min)
+    #     mask = np.zeros(image.shape, dtype=np.uint8)
+    #     cv.fillPoly(mask, [c], [255, 255, 255])
+    #     mask = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
+    #     pixels_count = cv.countNonZero(mask)
+    #     pixels.append(pixels_count)  # TODO- add to TB
+    #
+    #
+    #
+    # image_orig = RGB.copy()
+    #
+    #
+    #
+    # for i in range(0, amount_of_mask_detacted):
+    #     cor_1 = mini_boxes[i][0]
+    #     cor_2 = mini_boxes[i][1]
+    #     cor_3 = mini_boxes[i][2]
+    #     cor_4 = mini_boxes[i][3]
+    #     # coms[i] = tuple(tuple(map(int, tup)) for tup in coms)
+    #
+    #     image_orig = cv.line(image_orig, tuple(cor_1), tuple(cor_2), (0, (255), 0), thickness=3)
+    #     image_orig = cv.line(image_orig, tuple(cor_2), tuple(cor_3), (0, (255), 0), thickness=3)
+    #     image_orig = cv.line(image_orig, tuple(cor_3), tuple(cor_4), (0, (255), 0), thickness=3)
+    #     image_orig = cv.line(image_orig, tuple(cor_4), tuple(cor_1), (0, (255), 0), thickness=3)
+    #
+    #     # image_orig = cv2.circle(image, int(coms[i][0],, radius=2, color="red", thickness=4)
+    #
+    #     text = str(i) + " " + str(pixels[i])
+    #     image_orig = cv.putText(image_orig, text, org=(int(boxes[i][0][0]),
+    #                                                     int(boxes[i][0][1])), fontFace=cv.FONT_HERSHEY_COMPLEX,
+    #                              fontScale=0.5,
+    #                              color=(255, 255, 255), thickness=1, lineType=1)
+    #
+    # fig = matplotlib.pyplot.gcf()  # for changing the size of the image displayied #FIXME Edo
+    # fig.set_size_inches(18.5, 12.5)
+    # plt.imshow(image_orig)
+    # print("check")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     cv.putText(green, 'Grapes detected', org=(500, 85), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                color=(255, 255, 255), thickness=1, lineType=2)
     cv.waitKey(0)
@@ -761,6 +1267,7 @@ def take_picture_and_run(current_location, image_number):
         box = [x, y, w, h, a, corners_in_meter, corner_points[i]]
         predicted_masks_to_mrbb.append(box)
 
+
     det_rotated_boxes = []
     # for the new function
     for b in range(0, len(predicted_masks_to_mrbb)):
@@ -771,9 +1278,10 @@ def take_picture_and_run(current_location, image_number):
         angle_0 = predicted_masks_to_mrbb[b][4] * -1
         corners_in_meter = predicted_masks_to_mrbb[b][5]
         corner_points = predicted_masks_to_mrbb[b][6]
+        width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
         # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
         # angle_0 = (angle_0*180)/pi
-        det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(width_0), int(height_0), angle_0, None]
+        det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
         x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
         box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
         det_rotated_boxes.append(box_in_meter)

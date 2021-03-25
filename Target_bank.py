@@ -3,6 +3,7 @@ import math
 from operator import itemgetter, attrgetter
 import g_param
 from math import cos, sin, pi, radians
+import scipy
 import cv2 as cv
 
 # Define colors for printing
@@ -96,7 +97,16 @@ class Target_bank:
         # auto_corners = cv.boxPoints(box)
         return [cor_1, cor_2, cor_3, cor_4]
 
-    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world, corners, p_corners):
+    def calc_center_of_mass(self):
+        if self.mask is not None:
+            return scipy.ndimage.measurements.center_of_mass(self.mask)
+        return None
+
+    def calc_mask_size_pixels(self):
+        # Take it from "grapes ready"
+        pass
+
+    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world, corners, p_corners, grape_base):
         """
         :param x: x center coordinate in meters
         :param y: y center coordinate in meters
@@ -111,6 +121,8 @@ class Target_bank:
         """
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
+        self.grape_base = grape_base
+        self.center_of_mass = Target_bank.calc_center_of_mass(self)
         self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
@@ -124,6 +136,7 @@ class Target_bank:
         self.rect_area = self.w_p * self.h_p
         self.sprayed = False
         self.mask = mask
+        self.mask_size_pixels = Target_bank.calc_mask_size_pixels(self)
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.in_range = "ok"
@@ -134,6 +147,7 @@ class Target_bank:
 
     def calc_dist_from_center(x, y):
         return math.sqrt(x * x + y * y)
+
 
 
 
@@ -277,17 +291,20 @@ def add_to_target_bank(target):
     target = round_to_three(target)
     too_close = check_close_to_edge(target)
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
+    grape_base = g_param.trans.grape_base(target[0], target[1])
     ans, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if ans:
         closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[0],
                                                                                                               target[1])
         if closer_to_center or too_close:  # not sprayed and closer to center
             g_param.TB[temp_target_index].grape_world = temp_grape_world
+            g_param.TB[temp_target_index].grape_base = grape_base
+
     else:
         if not too_close:
             # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
-                                          target[5], target[6], temp_grape_world, target[8], target[9]))
+                                          target[5], target[6], temp_grape_world, target[8], target[9], grape_base))
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")
 

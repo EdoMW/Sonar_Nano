@@ -3,11 +3,14 @@ import itertools
 import os, re
 import csv
 import cv2 as cv
-
-
-a = 0.4
-a = [a]
+a = np.array([1,2,3])
+a = np.concatenate([a, [0]], axis=0)
 print(a)
+p1, p2 ,p3 = a
+print(p1, p3, p2)
+
+
+# print(a)
 # print(np.linalg.norm(np.array([0, 0, 0]) - np.array([-0.566, -0.087, 0.775])))
 #
 # num_of_pixels = 4

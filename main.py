@@ -40,8 +40,8 @@ start_pos = np.array([-0.252, -0.24198481, 0.52430055, -0.6474185, -1.44296026, 
 # start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
 step_size = 0.25
-# the next two variables are just for the lab
-number_of_steps = 0  # TODO: think of better way to calculate the amount of steps based on range of the movement
+# TODO: think of better way to calculate the amount of steps based on range of the movement
+number_of_steps = 1  # amount of steps before plat move
 steps_counter = 0
 moving_direction = "right"  # right/left
 sleep_time = 3.05
@@ -143,7 +143,7 @@ def move2sonar(grape_1):
     if g_param.process_type != "load":
         if possible_move(new_location, grape_1):
             ws_rob.move_command(False, new_location, 5)
-            check_update_move(new_location)
+            # check_update_move(new_location)
     else:
         pass # TODO: Sigal - do we need to save the spray_procedure location and sonar location??
     print(fg.green + "continue" + fg.rs, "\n")
@@ -164,7 +164,7 @@ def move2spray(grape_1):
         if possible_move(new_location, grape_1):
             ws_rob.move_command(False, yz_move, 4)
             ws_rob.move_command(True, new_location, 2)
-            check_update_move(new_location)
+            # check_update_move(new_location)
     else:
         pass # TODO: Sigal - do we need to save the spray_procedure location and spray_procedure location??
     print(fg.green + "continue" + fg.rs, "\n")
@@ -276,7 +276,7 @@ def move_const(size_of_step, direction, location):
         else:
             location[1] = location[1] - size_of_step
             ws_rob.move_command(True, location, sleep_time)
-        check_update_move(location) # FIXME: omer
+        # check_update_move(location) # FIXME: omer
         pos = read_position()
         if g_param.process_type == "record":
             g_param.read_write_object.write_location_to_csv(pos=pos)
@@ -423,6 +423,38 @@ def spray_procedure(g, k):
     # print(fg.green + "continue" + fg.rs, "\n")
 
 
+def spray_procedure_pixels(g):
+    """
+    display the path of spraying.
+    :param g:
+    :return:
+    """
+
+    p1 = g.p_corners[0]
+    p2 = g.p_corners[1]
+    p3 = g.p_corners[2]
+    p4 = g.p_corners[3]
+
+    p1 = np.concatenate([p1, [0]], axis=0)
+    p2 = np.concatenate([p2, [0]], axis=0)
+    p3 = np.concatenate([p3, [0]], axis=0)
+    p4 = np.concatenate([p4, [0]], axis=0)
+
+    w = np.linalg.norm(p1 - p2)
+    h = np.linalg.norm(p2 - p3)
+    if w > h:
+        p1, p2, p3, p4 = p1, p4, p3, p2
+
+    bottom_points = line_division(p1, p2, 0.5)
+    top_points = line_division(p3, p4, 0.5)
+
+    display_points_spray(g, bottom_points, top_points)
+
+
+
+
+
+
 def mark_sprayed_and_display():
     """
     mark all grapes that already been sprayed with a red dot at their center.
@@ -470,6 +502,29 @@ def display_points(g_to_display):
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (int(g_to_display.p_corners[3][0]), int(g_to_display.p_corners[3][1])),
                                     radius=2, color=(0, 0, 255), thickness=2)
+
+
+def display_points_spray(grape_spray, bottom, top):
+    """
+    display 4 points
+    :param top:
+    :param bottom:
+    :param grape_spray: grape to display
+    :return:
+    """
+    top = [int(top[0]), int(top[1])]
+    bottom = [int(bottom[0]), int(bottom[1])]
+    g_param.masks_image = cv.circle(g_param.masks_image,
+                                    (bottom[0], bottom[1]),
+                                    radius=2, color=(0, 0, 255), thickness=2)
+    g_param.masks_image = cv.circle(g_param.masks_image,
+                                    (top[0], top[1]),
+                                    radius=2, color=(0, 0, 255), thickness=2)
+    g_param.masks_image = cv.arrowedLine(g_param.masks_image, tuple(top), tuple(bottom), (0, 0, 255), thickness=2)
+    if g_param.show_images:
+        show_in_moved_window("Checking", g_param.masks_image)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
 
 
 def init_arm_and_platform():
@@ -522,7 +577,7 @@ if __name__ == '__main__':
             if g_param.time_to_move_platform:
                 init_arm_and_platform()  # 3
                 first_run = True
-                steps_counter, g_param.plat_position_step_number = 0, 1
+                steps_counter, g_param.plat_position_step_number = 0, 0
                 direction = "stay"
             g_param.direction = direction
             move_const(step_size, direction, current_location)
@@ -573,6 +628,7 @@ if __name__ == '__main__':
                     move2spray(grape)  # 25+26
                     if time_to_move_platform:  # 27
                         break  #
+                    spray_procedure_pixels(grape)
                     spray_procedure(grape, 0.05)  # 28
                     move2capture()  # TODO: Omer, generate safety movement
                     update_database_sprayed(i)  # 28 # TODO Edo: show the image and mark grape sprayed
