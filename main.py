@@ -15,9 +15,11 @@ from sty import fg, Style, RgbFg
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, show_in_moved_window
-from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window
+from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window,\
+    point_meter_2_pixel, image_resize
 import write_to_socket
 import read_from_socket
+
 
 ########################################################################################################################
 # parameters ###########################################################################################################
@@ -58,6 +60,124 @@ g_param.read_write_object.create_directories()
 ########################################################################################################################
 
 
+def line_division(p1, p2,  ratio):
+    x = p1[0] + ratio * (p2[0]-p1[0])
+    y = p1[1] + ratio * (p2[1]-p1[1])
+    return np.array([x, y])
+
+
+def move_and_spray(start, end, target_grape):
+    if possible_move(start, target_grape) and possible_move(end, target_grape):
+        ws_rob.move_command(True, start, 5)
+        ws_rob.spray_command(True)
+        ws_rob.move_command(True, end, 5)
+        ws_rob.spray_command(False)
+    else:
+        pass
+
+
+def calc_path_points(pos, x_c, y_c, p):
+    pos[1] = pos[1] + (p[0] - x_c)
+    pos[2] = pos[2] + (y_c - p[1])
+    return pos
+
+
+# tell me which input you want. I don't think that I need any output,
+# maybe only if there is a problem such as no more spraying material.
+
+def spray_procedure(g, d, k):
+    """
+    :param g: The target grape for spraying
+    :param d: The nozzle diameter
+    :param k:
+    """
+    # s = g.w_meter * g.h_meter
+    # a = k * (g.mask/s)
+    a = 0.8
+    center = read_position()
+    p1 = g.corners[0]
+    p2 = g.corners[1]
+    p3 = g.corners[2]
+    p4 = g.corners[3]
+    x_c = g.x_center
+    y_c = g.y_center
+    print("target's width: ", g.w_meter)
+    r = (g.w_meter / 2 + d) / g.w_meter
+    print("ratio", r)
+    if r < 1:
+        bottom_point = line_division(p1, p2, 0.5)
+        top_point = line_division(p3, p4, 0.5)
+        pixel_path = point_meter_2_pixel(g.distance, [bottom_point, top_point])
+        display_path_of_spray(g, pixel_path)
+
+        end_p = calc_path_points(np.copy(center), x_c, y_c, bottom_point)
+        start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
+        print("end_p", end_p)
+        print("start_p", start_p)
+        # input("press enter for check spray procedure")
+        print(fg.yellow + "wait" + fg.rs, "\n")
+        move_and_spray(start_p, end_p, g)
+        print(fg.green + "continue" + fg.rs, "\n")
+    else:
+        r = 0.33
+
+    # secondary paths
+    bottom_point = line_division(p1, p2, r)
+    top_point = line_division(p4, p3, r)
+    bottom_point = line_division(top_point, bottom_point, a)
+    pixel_path = point_meter_2_pixel(g.distance, [bottom_point, top_point])
+    display_path_of_spray(g, pixel_path)
+    end_p = calc_path_points(np.copy(center), x_c, y_c, bottom_point)
+    start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
+    print("end_p", end_p)
+    print("start_p", start_p)
+    input("press enter for check spray procedure")
+    print(fg.yellow + "wait" + fg.rs, "\n")
+    move_and_spray(start_p, end_p, g)
+    print(fg.green + "continue" + fg.rs, "\n")
+    bottom_point = line_division(p1, p2, 1 - r)
+    top_point = line_division(p4, p3, 1 - r)
+    bottom_point = line_division(top_point, bottom_point, a)
+    pixel_path = point_meter_2_pixel(g.distance, [bottom_point, top_point])
+    display_path_of_spray(g, pixel_path)
+    end_p = calc_path_points(np.copy(center), x_c, y_c, bottom_point)
+    start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
+    print("end_p", end_p)
+    print("start_p", start_p)
+    input("press enter for check spray procedure")
+    print(fg.yellow + "wait" + fg.rs, "\n")
+    move_and_spray(start_p, end_p, g)
+    print(fg.green + "continue" + fg.rs, "\n")
+
+
+def spray_procedure_pixels(g):
+    """
+    display the path of spraying.
+    :param g:
+    :return: not in used for now
+    """
+
+    p1 = g.p_corners[0]
+    p2 = g.p_corners[1]
+    p3 = g.p_corners[2]
+    p4 = g.p_corners[3]
+
+    p1 = np.concatenate([p1, [0]], axis=0)
+    p2 = np.concatenate([p2, [0]], axis=0)
+    p3 = np.concatenate([p3, [0]], axis=0)
+    p4 = np.concatenate([p4, [0]], axis=0)
+
+    w = np.linalg.norm(p1 - p2)
+    h = np.linalg.norm(p2 - p3)
+    if w > h:
+        p1, p2, p3, p4 = p1, p4, p3, p2
+
+    bottom_points = line_division(p1, p2, 0.5)
+    top_points = line_division(p3, p4, 0.5)
+
+    # display_points_spray(g, bottom_points, top_points)
+
+
 def update_distance(*args):
     pass
 
@@ -67,70 +187,6 @@ def read_position():
     cl = rs_rob.read_tcp_pos()  # cl = current_location, type: tuple
     cur_location = np.asarray(cl)
     return cur_location
-
-
-# calling the 2 sonar methods to get distance and validate existence of grapes
-def activate_sonar():
-    """
-    activate sonar- read distance and grape/no grape.
-    :return: distance to grape, grape (yes=1,no =0)
-    """
-    counter = 0  # intiate flag
-    record = DAQ_BG.rec()
-    counter, x_test = preprocess_one_record(record, counter,
-                                            adding='noise')  # if counter == 1 means new acquisition # adding (way of preprocess) - gets 'noise' or 'zero_cols'
-    preds_3classes, no_grapes = test_spec(x_test,
-                                          weight_file_name)  # there are 2 weights files, each one suits to other preprocess way (adding)
-    # pred[0] - no grape, pred[1] - 1-5 bunches, pred[2] - 6-10 bunches
-    # no grapes - True if there are no grapes (pred[0]> 0.5)
-    preds_2classes = [preds_3classes[0][0], preds_3classes[0][1] + preds_3classes[0][2]]
-    print("classes", preds_2classes)
-    # Sonar distance prediction
-    transmition_Chirp = DAQ_BG.chirp_gen(DAQ_BG.chirpAmp, DAQ_BG.chirpTime, DAQ_BG.f0, DAQ_BG.f_end,
-                                         DAQ_BG.update_freq, DAQ_BG.trapRel)
-    # D = correlation_dist(transmition_Chirp, record)
-    dist_from_sonar = distance2(record)
-    return dist_from_sonar, preds_2classes[1]  # make sure it converts to True/ False
-
-
-def restart_target_bank():
-    """
-    restart the target bank (empty the list)
-    """
-    val = input("Enter 1 to restart the program, or Enter to continue: ")
-    if val == 1:
-        g_param.TB = []
-        print("restarted")
-    else:
-        print("continue the program")
-
-
-def print_line_sep_time():
-    """
-    prints a line separation of ___ and the current time
-    """
-    t = time.localtime()
-    current_time = time.strftime("%H:%M:%S", t)
-    print('-' * 40, current_time, '-' * 40, '\n')
-
-
-def move_platform():
-    """
-    For moving the platform manually.
-    """
-    print_line_sep_time()
-    temp_step_size = g_param.platform_step_size
-    if g_param.process_type == "record" or g_param.process_type == "work":
-        print("Current platform step size: ", g_param.platform_step_size, '\n',
-              "insert number in CM to change it or press Enter to continue")
-        temp_step_size = input("Enter platform step size")
-        if temp_step_size != "":
-            temp_step_size = int(temp_step_size)/100
-            g_param.platform_step_size = temp_step_size
-        g_param.read_write_object.write_platform_step(g_param.platform_step_size)
-    else:
-        g_param.platform_step_size = g_param.read_write_object.read_platform_step_size_from_csv()
-    g_param.sum_platform_steps += g_param.platform_step_size
 
 
 def move2sonar(grape_1):
@@ -171,9 +227,6 @@ def move2spray(grape_1):
 
 
 def move2capture():
-    """
-    :param capture_location_1: 1 is to make it clear that it is a local variable.
-    """
     print(g_param.trans.capture_pos)
     location = read_position()
     print("old location ", location)
@@ -233,17 +286,6 @@ def possible_move(goal_pos, grape_1):
     return True
 
 
-def calc_step_size(step_size_to_move):
-    """
-    :param step_size_to_move: step size
-    :return: step size- move alpha
-    """
-    direction_of_move = g_param.direction
-    if direction_of_move == "up" or direction_of_move == "down":
-        step_size_to_move = step_size_to_move * g_param.height_step_size
-    return step_size_to_move
-
-
 def move_const(size_of_step, direction, location):
     """
     calculate if the new position of the arm is in reach. return the position and boolean.
@@ -298,6 +340,164 @@ def print_current_location(cur_location):
     print("current location : ", x_base + y_base + z_base)
 
 
+def init_arm_and_platform():
+    """
+    move arm before platform movement
+    platform movement step size
+    move arm after platform movement for first picture position
+    """
+    print_line_sep_time()
+    if g_param.process_type != "load":
+        ws_rob.move_command(True, start_pos, 4)
+        move_platform()# TODO:Edo - record and load platform movements,platform_step_size
+        if external_signal_all_done is True:
+            return
+        g_param.time_to_move_platform = False
+        if g_param.process_type == "record":
+            g_param.read_write_object.write_location_to_csv(pos=read_position())
+        current_location = read_position()  # 1 + 2  establish connection with the robot
+        g_param.trans.set_capture_pos(current_location)
+        g_param.trans.update_cam2base(current_location)  # 4
+    else:
+        current_location = g_param.read_write_object.read_location_from_csv()
+        g_param.trans.set_capture_pos(current_location)
+        g_param.trans.update_cam2base(current_location)
+
+
+def display_path_of_spray(grape_spray, path_points):
+    """
+    :param grape_spray: grape to draw the spraying path on top of it
+    :param path_points:  points that are the edges of the spraying route
+    :return: display image if g_param.show_images is True: show the image and zoomed in image of the path
+    """
+    for index in range(0, len(path_points) - 1):
+        start = path_points[index]
+        end = path_points[index + 1]
+        display_points_spray(start, end)
+    if g_param.show_images:
+        zoomed_in = g_param.masks_image.copy()
+        cornes_to_crop = grape_spray.p_corners
+        result_min = list(map(min, zip(*cornes_to_crop)))
+        result_max = list(map(max, zip(*cornes_to_crop)))
+        min_left_corner = 0
+        max_right_corner = 1024
+        space_from_end = 20
+        result_min = [max(result_min[0] - space_from_end, min_left_corner),
+                      max(result_min[1] - space_from_end, min_left_corner)]
+        result_max = [min(result_max[0] + space_from_end, max_right_corner),
+                      min(result_max[1] + space_from_end, max_right_corner)]
+        x = result_min[0]
+        y = result_min[1]
+        w = result_max[0] - result_min[0]
+        h = result_max[1] - result_min[1]
+        crop_img = zoomed_in[y:y+h, x:x+w]
+        new_x = g_param.masks_image.shape[1]
+        new_y = g_param.masks_image.shape[0]
+        crop_img = cv.resize(crop_img, (new_x, new_y))
+        numpy_horizontal_concat = np.concatenate((g_param.masks_image, crop_img), axis=1)
+        numpy_horizontal_concat = image_resize(numpy_horizontal_concat, height=945)
+        show_in_moved_window("masks, mask zoomed in", numpy_horizontal_concat)
+        cv.waitKey()
+        cv.destroyAllWindows()
+
+
+def display_points_spray(start, end):
+    """
+    display 4 points
+    :param end:
+    :param start:
+    :return:
+    """
+    end = [int(end[0]), int(end[1])]
+    start = [int(start[0]), int(start[1])]
+    g_param.masks_image = cv.circle(g_param.masks_image,
+                                    (start[0], start[1]),
+                                    radius=2, color=(0, 0, 255), thickness=2)
+    g_param.masks_image = cv.circle(g_param.masks_image,
+                                    (end[0], end[1]),
+                                    radius=2, color=(0, 0, 255), thickness=2)
+    g_param.masks_image = cv.arrowedLine(g_param.masks_image, tuple(end), tuple(start), (0, 0, 255), thickness=2)
+
+
+# calling the 2 sonar methods to get distance and validate existence of grapes
+def activate_sonar():
+    """
+    activate sonar- read distance and grape/no grape.
+    :return: distance to grape, grape (yes=1,no =0)
+    """
+    counter = 0  # intiate flag
+    record = DAQ_BG.rec()
+    counter, x_test = preprocess_one_record(record, counter,
+                                            adding='noise')  # if counter == 1 means new acquisition # adding (way of preprocess) - gets 'noise' or 'zero_cols'
+    preds_3classes, no_grapes = test_spec(x_test,
+                                          weight_file_name)  # there are 2 weights files, each one suits to other preprocess way (adding)
+    # pred[0] - no grape, pred[1] - 1-5 bunches, pred[2] - 6-10 bunches
+    # no grapes - True if there are no grapes (pred[0]> 0.5)
+    preds_2classes = [preds_3classes[0][0], preds_3classes[0][1] + preds_3classes[0][2]]
+    print("classes", preds_2classes)
+    # Sonar distance prediction
+    transmition_Chirp = DAQ_BG.chirp_gen(DAQ_BG.chirpAmp, DAQ_BG.chirpTime, DAQ_BG.f0, DAQ_BG.f_end,
+                                         DAQ_BG.update_freq, DAQ_BG.trapRel)
+    # D = correlation_dist(transmition_Chirp, record)
+    dist_from_sonar = distance2(record)
+    return dist_from_sonar, preds_2classes[1]  # make sure it converts to True/ False
+
+
+def restart_target_bank():
+    """
+    restart the target bank (empty the list)
+    """
+    val = input("Enter 1 to restart the program, or Enter to continue: ")
+    if val == 1:
+        g_param.TB = []
+        print("restarted")
+    else:
+        print("continue the program")
+
+
+def print_line_sep_time():
+    """
+    prints a line separation of ___ and the current time
+    """
+    t = time.localtime()
+    current_time = time.strftime("%H:%M:%S", t)
+    print('-' * 40, current_time, '-' * 40, '\n')
+
+
+def move_platform():
+    """
+    For moving the platform manually.
+    """
+    print_line_sep_time()
+    temp_step_size = g_param.platform_step_size
+    if g_param.process_type == "record" or g_param.process_type == "work":
+        print("Current platform step size: ", g_param.platform_step_size, '\n',
+              "insert number in CM to change it or press Enter to continue")
+        temp_step_size = input("Enter platform step size") #TODO : UNCOMMENT
+        if temp_step_size == 'end':
+            external_signal_all_done = True
+            return
+        temp_step_size = ""
+        if temp_step_size != "":
+            temp_step_size = int(temp_step_size)/100
+            g_param.platform_step_size = temp_step_size
+        g_param.read_write_object.write_platform_step(g_param.platform_step_size)
+    else:
+        g_param.platform_step_size = g_param.read_write_object.read_platform_step_size_from_csv()
+    g_param.sum_platform_steps += g_param.platform_step_size
+
+
+def calc_step_size(step_size_to_move):
+    """
+    :param step_size_to_move: step size
+    :return: step size- move alpha
+    """
+    direction_of_move = g_param.direction
+    if direction_of_move == "up" or direction_of_move == "down":
+        step_size_to_move = step_size_to_move * g_param.height_step_size
+    return step_size_to_move
+
+
 # mark that the grape is fake and remove mask (to save space in memory)
 def update_database_no_grape(index):
     """
@@ -323,11 +523,6 @@ def update_database_sprayed(index_of_grape):
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (g_param.TB[index_of_grape].x_p, g_param.TB[index_of_grape].y_p),
                                     radius=4, color=(0, 0, 255), thickness=4)
-
-    # cv.putText(g_param.masks_image, str(g_param.TB[i].index), org=(g_param.TB[i].x_p + 30,
-    #                                                                g_param.TB[i].y_p + 30),
-    #            fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=4,
-    #            color=(255, 50, 255), thickness=1, lineType=2)
 
 
 def update_wait_another_round():
@@ -360,101 +555,6 @@ def count_un_sprayed():
     return amount
 
 
-def line_division(p1, p2,  ratio):
-    x = p1[0] + ratio * (p2[0]-p1[0])
-    y = p1[1] + ratio * (p2[1]-p1[1])
-    return np.array([x, y])
-
-
-def move_and_spray(start, end):
-    ws_rob.move_command(True, start, 5)
-    ws_rob.spray_command(True)
-    ws_rob.move_command(True, end, 5)
-    ws_rob.spray_command(False)
-
-
-# tell me which input you want. I don't think that I need any output,
-# maybe only if there is a problem such as no more spraying material.
-def spray_procedure(g, k):
-    curr_location = read_position()
-    end_p = np.copy(curr_location)
-    start_p = np.copy(curr_location)
-    print("Robot current location ", start_p)
-    # print(curr_location)
-    p1 = g.corners[0]
-    p2 = g.corners[1]
-    p3 = g.corners[2]
-    p4 = g.corners[3]
-    print("p1", p1)
-    print("p2", p2)
-
-    x_c = g.x_center
-    y_c = g.y_center
-
-    bottom_points = line_division(p1, p2, 0.5)
-    top_points = line_division(p3, p4, 0.5)
-
-    end_p[1] = end_p[1] + (bottom_points[0] - x_c)
-    end_p[2] = end_p[2] + (y_c - bottom_points[1])
-    start_p[1] = start_p[1] + (top_points[0] - x_c)
-    start_p[2] = start_p[2] + (y_c - top_points[1])
-    print("end_p", end_p)
-    print("start_p", start_p)
-    # input("press enter for check spray procedure")
-    print(fg.yellow + "wait" + fg.rs, "\n")
-    move_and_spray(start_p, end_p)
-    print(fg.green + "continue" + fg.rs, "\n")
-
-    # # secondary path
-    # print(g.w_meter)
-    # r = (g.w_meter/2+k/2)/g.w_meter
-    # print("ratio", r)
-    # bottom_points = line_division(p1, p2, r)
-    # top_points = line_division(p1, p2, r)
-    # end_p[1] = end_p[1] + (x_c - bottom_points[0])
-    # end_p[2] = end_p[2] + (y_c - bottom_points[1])
-    # start_p[1] = start_p[1] + (x_c - top_points[0])
-    # start_p[2] = start_p[2] + (y_c - top_points[1])
-    # print("end_p", end_p)
-    # print("start_p", start_p)
-    # input("press enter for check spray procedure")
-    # print(fg.yellow + "wait" + fg.rs, "\n")
-    # move_and_spray(start_p, end_p)
-    # print(fg.green + "continue" + fg.rs, "\n")
-
-
-def spray_procedure_pixels(g):
-    """
-    display the path of spraying.
-    :param g:
-    :return:
-    """
-
-    p1 = g.p_corners[0]
-    p2 = g.p_corners[1]
-    p3 = g.p_corners[2]
-    p4 = g.p_corners[3]
-
-    p1 = np.concatenate([p1, [0]], axis=0)
-    p2 = np.concatenate([p2, [0]], axis=0)
-    p3 = np.concatenate([p3, [0]], axis=0)
-    p4 = np.concatenate([p4, [0]], axis=0)
-
-    w = np.linalg.norm(p1 - p2)
-    h = np.linalg.norm(p2 - p3)
-    if w > h:
-        p1, p2, p3, p4 = p1, p4, p3, p2
-
-    bottom_points = line_division(p1, p2, 0.5)
-    top_points = line_division(p3, p4, 0.5)
-
-    display_points_spray(g, bottom_points, top_points)
-
-
-
-
-
-
 def mark_sprayed_and_display():
     """
     mark all grapes that already been sprayed with a red dot at their center.
@@ -480,7 +580,7 @@ def mark_sprayed_and_display():
                                             radius=4, color=(255, 165, 0), thickness=4)
     if g_param.show_images:
         show_in_moved_window("Checking status", g_param.masks_image)
-        cv.waitKey(0)
+        cv.waitKey()
         cv.destroyAllWindows()
 
 
@@ -502,51 +602,6 @@ def display_points(g_to_display):
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (int(g_to_display.p_corners[3][0]), int(g_to_display.p_corners[3][1])),
                                     radius=2, color=(0, 0, 255), thickness=2)
-
-
-def display_points_spray(grape_spray, bottom, top):
-    """
-    display 4 points
-    :param top:
-    :param bottom:
-    :param grape_spray: grape to display
-    :return:
-    """
-    top = [int(top[0]), int(top[1])]
-    bottom = [int(bottom[0]), int(bottom[1])]
-    g_param.masks_image = cv.circle(g_param.masks_image,
-                                    (bottom[0], bottom[1]),
-                                    radius=2, color=(0, 0, 255), thickness=2)
-    g_param.masks_image = cv.circle(g_param.masks_image,
-                                    (top[0], top[1]),
-                                    radius=2, color=(0, 0, 255), thickness=2)
-    g_param.masks_image = cv.arrowedLine(g_param.masks_image, tuple(top), tuple(bottom), (0, 0, 255), thickness=2)
-    if g_param.show_images:
-        show_in_moved_window("Checking", g_param.masks_image)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
-
-
-def init_arm_and_platform():
-    """
-    move arm before platform movement
-    platform movement step size
-    move arm after platform movement for first picture position
-    """
-    print_line_sep_time()
-    if g_param.process_type != "load":
-        ws_rob.move_command(True, start_pos, 4)
-        move_platform()  # TODO:Edo - record and load platform movements,platform_step_size
-        g_param.time_to_move_platform = False
-        if g_param.process_type == "record":
-            g_param.read_write_object.write_location_to_csv(pos=read_position())
-        current_location = read_position()  # 1 + 2  establish connection with the robot
-        g_param.trans.set_capture_pos(current_location)
-        g_param.trans.update_cam2base(current_location)  # 4
-    else:
-        current_location = g_param.read_write_object.read_location_from_csv()
-        g_param.trans.set_capture_pos(current_location)
-        g_param.trans.update_cam2base(current_location)
 
 
 def check_more_than_half_away(x_center, half_step_size):
@@ -576,6 +631,7 @@ if __name__ == '__main__':
             direction = step_direction[g_param.plat_position_step_number % 4]
             if g_param.time_to_move_platform:
                 init_arm_and_platform()  # 3
+
                 first_run = True
                 steps_counter, g_param.plat_position_step_number = 0, 0
                 direction = "stay"
@@ -594,7 +650,7 @@ if __name__ == '__main__':
             first_run = False
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
-        capture_update_TB(current_location, g_param.image_number)  # 5 + 7-12 inside
+        capture_update_TB()  # 5 + 7-12 inside
         print(fg.green + "continue" + fg.rs, "\n",  "TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         input("press enter for continue to spraying")
@@ -605,6 +661,7 @@ if __name__ == '__main__':
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
             for i in range(amount_of_grapes_to_spray):
+
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index), org=(g_param.TB[i].x_p,
                                                  g_param.TB[i].y_p), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
@@ -612,10 +669,10 @@ if __name__ == '__main__':
                 display_points(g_to_display=g_param.TB[i])
                 if g_param.show_images:
                     show_in_moved_window("Checking", g_param.masks_image)
-                    cv.waitKey(0)
+                    cv.waitKey()
                     cv.destroyAllWindows()
+
                 grape = g_param.TB[i]  # 16 grape is the the most __ in the least, not sprayed
-                print("check>>>>>>>>>>>>", grape.corners)
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
@@ -628,16 +685,16 @@ if __name__ == '__main__':
                     move2spray(grape)  # 25+26
                     if time_to_move_platform:  # 27
                         break  #
-                    spray_procedure_pixels(grape)
-                    spray_procedure(grape, 0.05)  # 28
-                    move2capture()  # TODO: Omer, generate safety movement
+                    # spray_procedure_pixels(grape)
+                    spray_procedure(grape, d=0.05, k=1)  # 28 # TODO: Omer, generate safety movement
+                    move2capture()
                     update_database_sprayed(i)  # 28 # TODO Edo: show the image and mark grape sprayed
                     mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22
         else:  # 15- no grapes to spray_procedure
             print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
-            if external_signal_all_done:  # 20- yes #TODO: Create function to check external signal- keyboard press
+            if external_signal_all_done:  # 20- yes #TODO: check external signal- keyboard press. not possible with pycharm + windoes.
                 not_finished = False
                 print("Finished- external signal all done")
                 break  # 23

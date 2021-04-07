@@ -325,8 +325,8 @@ def show_in_moved_window(win_name, img, x=0, y=0):
     show image
     :param win_name: name of the window
     :param img: image to display
-    :param x: x coordinate of top left corner of the window
-    :param y: y coordinate of top left corner of the window
+    :param x: x coordinate of end left corner of the window
+    :param y: y coordinate of end left corner of the window
     """
     cv.namedWindow(win_name, cv.WINDOW_AUTOSIZE)        # Create a named window
     cv.moveWindow(win_name, x, y)   # Move it to (x,y)
@@ -1146,7 +1146,7 @@ def take_picture_and_run(current_location, image_number):
     # ueye_take_picture_2(i)
     # take a picture by pressing a key
     # captured_image = take_picture()
-    im1 = cv2.imread(r"C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0107.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
+    im1 = cv2.imread(d"C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0107.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
     im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2RGB)
     img = im1
 

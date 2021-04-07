@@ -20,15 +20,16 @@ safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
 time_to_move_platform = False
 
 """
+work_place: lab/field
 process_type: work/record/load
 work- don't save any data except the Final TB 
 record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-process_type = "work"  # TODO-add save of the TB before ending the program.
 
-
+process_type = "record"  # TODO-add save of the TB before ending the program. also descriptive statistic
+work_place = "field"  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():
@@ -58,7 +59,7 @@ def init():
     initializes all global variables.
     """
     global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number,\
-        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps,\
+        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place,\
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()

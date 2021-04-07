@@ -36,7 +36,7 @@ from distance import distance2
 from operator import itemgetter, attrgetter
 import matplotlib.pyplot as plt
 import tensorflow as tf
-weight_file_name = r'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
+weight_file_name = d'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -133,7 +133,7 @@ def angVec2Rot(RV):
     t = np.linalg.norm(RV)
     # print("t ", t)
     k = RV / t
-    # print("k ", k)
+    # print("d ", d)
     ct = math.cos(t)
     st = math.sin(t)
     R = rotation_matrix(k, ct, st)

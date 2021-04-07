@@ -221,8 +221,8 @@ class CNN_Classifier():
         sgd = SGD(lr=0.01, decay=1e-6, momentum=0.5, nesterov=True)
         # adam_opt = Adam(learning_rate=0.0005, beta_1=0.9, beta_2=0.999, amsgrad=True)
         # Compile the model
-        # for k in range(len(prev_model.layers)):
-        #     model.layers[k].trainable = False
+        # for d in range(len(prev_model.layers)):
+        #     model.layers[d].trainable = False
         model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
         model.summary()
         self.model = model

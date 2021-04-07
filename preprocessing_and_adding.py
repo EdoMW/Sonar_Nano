@@ -13,10 +13,10 @@ import cv2 as cv
 
 def preprocess_one_record(record, counter, adding):
     X_test_per_rec = []
-    # mat = scipy.io.loadmat(os.path.join(r, file))['records']
-    # if 'leaves' in r:
+    # mat = scipy.io.loadmat(os.path.join(d, file))['records']
+    # if 'leaves' in d:
     #     y_int = 0
-    # elif 'fruit' in r:
+    # elif 'fruit' in d:
     #     y_int = 1
     # y_binary = to_categorical(y_int, num_classes=2)
     # for channel in range(mat.shape[1]):

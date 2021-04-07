@@ -84,7 +84,7 @@ if __name__ == '__main__':
     z_TCP = zR
 
     # move = ("movej(p[" + (
-    #         "%f,%f,%f,%f,%f,%f" % (x_TCP, y_TCP, z_TCP, RxR, RyR, RzR)) + "], a=0.5, v=0.7,r=0)" + "\n").encode(
+    #         "%f,%f,%f,%f,%f,%f" % (x_TCP, y_TCP, z_TCP, RxR, RyR, RzR)) + "], a=0.5, v=0.7,d=0)" + "\n").encode(
     #     "utf8")
     # s.send(move)
     # time.sleep(5)

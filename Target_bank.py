@@ -103,10 +103,9 @@ class Target_bank:
         return None
 
     def calc_mask_size_pixels(self):
-        # Take it from "grapes ready"
         pass
 
-    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world, corners, p_corners, grape_base):
+    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world, corners, p_corners, grape_base, pixels_count):
         """
         :param x: x center coordinate in meters
         :param y: y center coordinate in meters
@@ -122,7 +121,7 @@ class Target_bank:
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
         self.grape_base = grape_base
-        self.center_of_mass = Target_bank.calc_center_of_mass(self)
+
         self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
@@ -133,10 +132,11 @@ class Target_bank:
         self.h_meter = round(h, 3)
         self.dist_from_center = Target_bank.calc_dist_from_center(self.x_p, self.y_p)
         self.angle = angle
-        self.rect_area = self.w_p * self.h_p
+        self.rect_area = self.w_p * self.h_p # in pixels
         self.sprayed = False
         self.mask = mask
-        self.mask_size_pixels = Target_bank.calc_mask_size_pixels(self)
+        self.center_of_mass = Target_bank.calc_center_of_mass(self)
+        self.pixels_count = pixels_count
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.in_range = "ok"
@@ -253,7 +253,6 @@ def check_close_to_lower_edge(y_m, w_m, h_m, angle):
     return False
 
 
-
 def check_close_to_upper_edge(y_m, w_m, h_m, angle):
     """
     :param y_m: x center coordinate of the grape
@@ -304,7 +303,7 @@ def add_to_target_bank(target):
         if not too_close:
             # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
-                                          target[5], target[6], temp_grape_world, target[8], target[9], grape_base))
+                                          target[5], target[6], temp_grape_world, target[8], target[9], grape_base, 0))
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")
 

@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import numpy as np
 
+take_last_exp = True  # take the exp that was conducted the latest
+
 
 def get_local_time_date(): # TODO- make it work
     """
@@ -38,6 +40,18 @@ def get_local_time_2():
     return datetime.now().strftime("%H_%M")
 
 
+def get_latest_dir():
+    """
+    if take_last_exp = True (default) it will return the last exp dir.
+    :return: dir path of the exp to be analysed
+    """
+    if take_last_exp:
+        directory = r'D:\Users\NanoProject\experiments'
+        return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
+    else:
+        return 'exp_data_10_53'
+
+
 class ReadWrite:
     """
     For read and write functions. save the exp data in real time to be redone later.
@@ -49,11 +63,12 @@ class ReadWrite:
         self.sonar_path = None
         self.transformations_path = None
         self.platform_path = None
+        self.TB_path = None
         self.transformations_path_ang_vec_tcp = None
         self.transformations_path_t_tcp2base = None
         self.transformations_path_t_cam2base = None
         self.transformations_path_t_cam2world = None
-        self.exp_date_time = 'exp_data_18_09'
+        self.exp_date_time = get_latest_dir()
 
     def create_directories(self):  # TODO: add Date to the name of the directory
         if g_param.process_type == "work" or g_param.process_type == "load":
@@ -64,11 +79,11 @@ class ReadWrite:
         # Directory
         directory = "exp_data_dataTime"
         directory = directory.replace("dataTime", get_local_time_2())
-        parent_dir = r'D:\Users\NanoProject'
+        parent_dir = r'D:\Users\NanoProject\experiments'
         path = os.path.join(parent_dir, directory)
         os.mkdir(path)
         directory_1, directory_2, directory_3 = "locations", "rgb_images", "masks"
-        directory_4, directory_5, directory_6 = "sonar", "transformations", "platform"
+        directory_4, directory_5, directory_6, directory_7 = "sonar", "transformations", "platform", "TB"
         sub_dir_1, sub_dir_2, sub_dir_3, sub_dir_4 = "ang_vec_tcp", "t_tcp2base", "t_cam2base", "t_cam2world"
 
         path_1 = os.path.join(path, directory_1)
@@ -77,13 +92,14 @@ class ReadWrite:
         path_4 = os.path.join(path, directory_4)
         path_5 = os.path.join(path, directory_5)
         path_6 = os.path.join(path, directory_6)
+        path_7 = os.path.join(path, directory_7)
 
         path_5_1 = os.path.join(path_5, sub_dir_1)
         path_5_2 = os.path.join(path_5, sub_dir_2)
         path_5_3 = os.path.join(path_5, sub_dir_3)
         path_5_4 = os.path.join(path_5, sub_dir_4)
 
-        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_5_1, path_5_2, path_5_3, path_5_4]
+        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7, path_5_1, path_5_2, path_5_3, path_5_4]
         for folder in folders:
             os.mkdir(folder)
         self.location_path = path_1
@@ -92,6 +108,7 @@ class ReadWrite:
         self.sonar_path = path_4
         self.transformations_path = path_5
         self.platform_path = path_6
+        self.TB_path = path_7
         self.transformations_path_ang_vec_tcp = path_5_1
         self.transformations_path_t_tcp2base = path_5_2
         self.transformations_path_t_cam2base = path_5_3
@@ -194,6 +211,23 @@ class ReadWrite:
             out = csv.writer(file)
             out.writerows(map(lambda x: [x], data))
             file.close()
+
+    def write_tb(self):
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        folder_path_TB = self.TB_path
+        tb_path = os.path.join(folder_path_TB, 'TB.csv')
+        for i in range(0,len(g_param.TB)):
+            g_param.TB[i].mask = None  # TODO - make that it will receive the mask path as it was saved to exp_data
+        file = open(tb_path, 'w+')
+        # writing the data into the file
+        with file:
+            # write = csv.writer(file)
+            # write.writerows(data)
+            out = csv.writer(file)
+            out.writerows(map(lambda x: [x], g_param.TB))
+            file.close()
+
 
 ########################## read ################################
 

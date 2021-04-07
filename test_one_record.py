@@ -28,9 +28,9 @@ def test_spec(spec_imgs, weight_file_name):
 if __name__ == '__main__':
     sys.setrecursionlimit(500000)
     # paths
-    # r = r'C:\Users\Administrator\PycharmProjects\SonarNano\data'
+    # d = d'C:\Users\Administrator\PycharmProjects\SonarNano\data'
     # file = '8.mat'
-    #weight_file_name = r'\saved_CNN_clasifier_with_zero_columns_learn123_test4_3classes_71_2classes_83.7.h5'
+    #weight_file_name = d'\saved_CNN_clasifier_with_zero_columns_learn123_test4_3classes_71_2classes_83.7.h5'
     weight_file_name = r'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
 
 

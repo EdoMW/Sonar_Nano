@@ -1,13 +1,23 @@
-import numpy as np
-import itertools
-import os, re
-import csv
-import cv2 as cv
-a = np.array([1,2,3])
-a = np.concatenate([a, [0]], axis=0)
-print(a)
-p1, p2 ,p3 = a
-print(p1, p3, p2)
+import numpy as npr
+corner_points = [[[1.0,4.0],[1.0,2.0]],[[1,4],[1,2]]]
+
+# new_corner_points = []
+# for elem in corner_points:
+#     if elem not in new_corner_points:
+#         new_corner_points.append(elem)
+# corner_points = new_corner_points
+
+# a = np.array([[1,2,3],[2,4,2]])
+# print(len(a[0]))
+# import itertools
+# import os, re
+# import csv
+# import cv2 as cv
+# a = np.array([1,2,3])
+# a = np.concatenate([a, [0]], axis=0)
+# print(a)
+# p1, p2 ,p3 = a
+# print(p1, p3, p2)
 
 
 # print(a)
@@ -17,8 +27,8 @@ print(p1, p3, p2)
 # x_val = np.random.choice(1024, num_of_pixels, replace=False)
 # y_val = np.random.choice(1024, num_of_pixels, replace=False)
 # combined = np.vstack((x_val, y_val)).T
-# image_path_1 = r'D:\Users\NanoProject\Images_for_work\black.jpg'
-# # image_path_1 = r'D:\Users\NanoProject\Images_for_work\1_13_06_16.jpeg'
+# image_path_1 = d'D:\Users\NanoProject\Images_for_work\black.jpg'
+# # image_path_1 = d'D:\Users\NanoProject\Images_for_work\1_13_06_16.jpeg'
 #
 # img = cv.imread(image_path_1)
 # rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -39,7 +49,7 @@ print(p1, p3, p2)
 # # def load_image_path(self):
 # #     image_number = g_param.image_number
 # #     directory = self.exp_date_time
-# #     parent_dir = r'D:\Users\NanoProject'
+# #     parent_dir = d'D:\Users\NanoProject'
 # #     path = os.path.join(parent_dir, directory)
 # #     path = os.path.join(path, 'rgb_images')
 # #     locations_list = os.listdir(path)
@@ -128,7 +138,7 @@ print(p1, p3, p2)
 #         return False
 #
 #
-# image_path = r'D:\Users\NanoProject\Images_for_work\0_15_22_13.jpeg'
+# image_path = d'D:\Users\NanoProject\Images_for_work\0_15_22_13.jpeg'
 # # print(check_image(image_path))
 #
 #
@@ -165,7 +175,7 @@ print(p1, p3, p2)
 #
 # #
 # # directory = 'exp_data_12_32'
-# # parent_dir = r'D:\Users\NanoProject'
+# # parent_dir = d'D:\Users\NanoProject'
 # # path = os.path.join(parent_dir, directory)
 # # path = os.path.join(path, 'transformations')
 # # print(path)
