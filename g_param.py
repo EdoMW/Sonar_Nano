@@ -11,7 +11,7 @@ platform_step_size = 0
 sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.71
 height_step_size = 0.6  # parameter to_tune
-# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO: this
+# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO: ask Sigal
 image_number = 0
 plat_position_step_number = 0
 read_write_object = None
@@ -28,8 +28,8 @@ load- load all the date that was recorded.
 change parameters if necessary.
 """
 
-process_type = "work"  # TODO-add save of the TB before ending the program. also descriptive statistic
-work_place = "field"  # lab. to know which function of image processing to use.
+process_type = "record"  # TODO-add save of the TB before ending the program. also descriptive statistic
+work_place = "lab"  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():

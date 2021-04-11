@@ -1,5 +1,48 @@
-import numpy as npr
-corner_points = [[[1.0,4.0],[1.0,2.0]],[[1,4],[1,2]]]
+import cv2
+import sys
+import os
+import warnings
+import numpy as np
+
+"""
+1) make sure loading process works by mask!!!
+2) make all sonar functions
+"""
+
+ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master/")
+warnings.filterwarnings("ignore")
+sys.path.append(ROOT_DIR)  # To find local version of the library
+
+
+
+image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0214.JPG'
+from mrcnn import utils
+img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+
+
+
+# resized = cv2.resize(img, (1024,1024), interpolation=cv2.INTER_AREA)
+# print('Resized Dimensions : ', resized.shape)
+# cv2.imshow("Resized image", resized)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+
+
+print(img.shape)
+resized = utils.resize_image(img, max_dim = 1024, mode="square")
+print(len(resized[0]), len(resized[0][0]), len(resized))
+print('Resized Dimensions : ', len(resized))
+resized, *_ = np.asarray(resized)
+print(type(resized))
+print('Resized Dimensions : ', resized.shape)
+
+cv2.imshow("Resized image", resized)
+cv2.waitKey()
+cv2.destroyAllWindows()
+#
+resized = utils.resize_image(img, max_dim = 1024, mode="square")
+resized, *_ = np.asarray(resized)
+
 
 # new_corner_points = []
 # for elem in corner_points:

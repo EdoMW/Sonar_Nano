@@ -15,11 +15,10 @@ from sty import fg, Style, RgbFg
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, show_in_moved_window
-from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window,\
+from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
     point_meter_2_pixel, image_resize
 import write_to_socket
 import read_from_socket
-
 
 ########################################################################################################################
 # parameters ###########################################################################################################
@@ -38,7 +37,7 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 # start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255 ])  # Left pos
-start_pos = np.array([-0.252, -0.24198481, 0.52430055, -0.6474185, -1.44296026,  0.59665296])  # check pos
+start_pos = np.array([-0.252, -0.24198481, 0.52430055, -0.6474185, -1.44296026, 0.59665296])  # check pos
 # start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
 step_size = 0.25
@@ -57,12 +56,13 @@ not_finished = True
 g_param.trans = transform.Trans()
 g_param.read_write_object.create_directories()
 
+
 ########################################################################################################################
 
 
-def line_division(p1, p2,  ratio):
-    x = p1[0] + ratio * (p2[0]-p1[0])
-    y = p1[1] + ratio * (p2[1]-p1[1])
+def line_division(p1, p2, ratio):
+    x = p1[0] + ratio * (p2[0] - p1[0])
+    y = p1[1] + ratio * (p2[1] - p1[1])
     return np.array([x, y])
 
 
@@ -201,7 +201,7 @@ def move2sonar(grape_1):
             ws_rob.move_command(False, new_location, 5)
             # check_update_move(new_location)
     else:
-        pass # TODO: Sigal - do we need to save the spray_procedure location and sonar location??
+        pass  # TODO: Sigal - do we need to save the spray_procedure location and sonar location??
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -222,7 +222,7 @@ def move2spray(grape_1):
             ws_rob.move_command(True, new_location, 2)
             # check_update_move(new_location)
     else:
-        pass # TODO: Sigal - do we need to save the spray_procedure location and spray_procedure location??
+        pass  # TODO: Sigal - do we need to save the spray_procedure location and spray_procedure location??
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -238,7 +238,7 @@ def move2capture():
         ws_rob.move_command(True, x_move, 5)
         ws_rob.move_command(False, g_param.trans.capture_pos, 5)
     else:
-        pass # TODO: Sigal - do we need to save the temp location and spray_procedure location??
+        pass  # TODO: Sigal - do we need to save the temp location and spray_procedure location??
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -349,7 +349,7 @@ def init_arm_and_platform():
     print_line_sep_time()
     if g_param.process_type != "load":
         ws_rob.move_command(True, start_pos, 4)
-        move_platform()# TODO:Edo - record and load platform movements,platform_step_size
+        move_platform()  # TODO:Edo - record and load platform movements,platform_step_size
         if external_signal_all_done is True:
             return
         g_param.time_to_move_platform = False
@@ -390,7 +390,7 @@ def display_path_of_spray(grape_spray, path_points):
         y = result_min[1]
         w = result_max[0] - result_min[0]
         h = result_max[1] - result_min[1]
-        crop_img = zoomed_in[y:y+h, x:x+w]
+        crop_img = zoomed_in[y:y + h, x:x + w]
         new_x = g_param.masks_image.shape[1]
         new_y = g_param.masks_image.shape[0]
         crop_img = cv.resize(crop_img, (new_x, new_y))
@@ -419,18 +419,50 @@ def display_points_spray(start, end):
     g_param.masks_image = cv.arrowedLine(g_param.masks_image, tuple(end), tuple(start), (0, 0, 255), thickness=2)
 
 
+def get_class_record(mask_id):
+    if g_param.process_type == "record" or g_param.process_type == "work":
+        record_class = DAQ_BG.rec()
+        if g_param.process_type == "record":
+            g_param.read_write_object.write_sonar_class_to_csv(record_class, mask_id)
+    else:
+        record_class = g_param.read_write_object.read_sonar_class_from_csv(mask_id)
+    return record_class
+
+
+def write_distances(mask_id, dist_from_sonar, dist_confirm):
+    if g_param.process_type != "record":
+        return
+    if dist_confirm == "":
+        distances = [dist_from_sonar, dist_from_sonar]
+    else:
+        distances = [dist_from_sonar, float(dist_confirm)]
+    g_param.read_write_object.write_sonar_distances(mask_id, distances)
+
+
+def get_distances(mask_id, dist_from_sonar, real_dist):
+    if g_param.process_type == "record":
+        write_distances(mask_id, dist_from_sonar, real_dist)
+    if g_param.process_type == "load":
+        meas, real = g_param.read_write_object.read_sonar_distances(mask_id)
+        print(f'Real distance to grape {real} will be used. value measured by sonar is {meas}')
+        return real
+    return dist_from_sonar
+
+
 # calling the 2 sonar methods to get distance and validate existence of grapes
-def activate_sonar():
+
+
+def activate_sonar(mask_id):
     """
     activate sonar- read distance and grape/no grape.
     :return: distance to grape, grape (yes=1,no =0)
     """
-    counter = 0  # intiate flag
-    record = DAQ_BG.rec()
-    counter, x_test = preprocess_one_record(record, counter,
-                                            adding='noise')  # if counter == 1 means new acquisition # adding (way of preprocess) - gets 'noise' or 'zero_cols'
-    preds_3classes, no_grapes = test_spec(x_test,
-                                          weight_file_name)  # there are 2 weights files, each one suits to other preprocess way (adding)
+    counter = 0  # initiate flag
+    record = get_class_record(mask_id)
+    # if counter == 1 means new acquisition # adding (way of pre-process) - gets 'noise' or 'zero_cols'
+    counter, x_test = preprocess_one_record(record, counter, adding='noise')
+    # there are 2 weights files, each one suits to other pre-process way (adding)
+    preds_3classes, no_grapes = test_spec(x_test, weight_file_name)
     # pred[0] - no grape, pred[1] - 1-5 bunches, pred[2] - 6-10 bunches
     # no grapes - True if there are no grapes (pred[0]> 0.5)
     preds_2classes = [preds_3classes[0][0], preds_3classes[0][1] + preds_3classes[0][2]]
@@ -439,8 +471,18 @@ def activate_sonar():
     transmition_Chirp = DAQ_BG.chirp_gen(DAQ_BG.chirpAmp, DAQ_BG.chirpTime, DAQ_BG.f0, DAQ_BG.f_end,
                                          DAQ_BG.update_freq, DAQ_BG.trapRel)
     # D = correlation_dist(transmition_Chirp, record)
-    dist_from_sonar = distance2(record)
-    return dist_from_sonar, preds_2classes[1]  # make sure it converts to True/ False
+    dist_from_sonar = distance2(record, mask_id)
+    # real dist, real distance measured
+    real_dist = input(f'Distance measured by the sonar is :{dist_from_sonar}meters.'
+                      f' press enter to confirm, or enter real distance (in meters)')
+    if real_dist != "":
+        real_dist = float(real_dist)
+    else:
+        real_dist = dist_from_sonar
+        # make it more efficent in 1 line ?
+    # real_dist = float(real_dist) if real_dist != "" else dist_from_sonar
+    distance = get_distances(mask_id, dist_from_sonar, real_dist)
+    return distance, preds_2classes[1]  # make sure it converts to True/ False
 
 
 def restart_target_bank():
@@ -479,7 +521,7 @@ def move_platform():
             return
         temp_step_size = ""
         if temp_step_size != "":
-            temp_step_size = int(temp_step_size)/100
+            temp_step_size = int(temp_step_size) / 100
             g_param.platform_step_size = temp_step_size
         g_param.read_write_object.write_platform_step(g_param.platform_step_size)
     else:
@@ -651,7 +693,7 @@ if __name__ == '__main__':
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         capture_update_TB()  # 5 + 7-12 inside
-        print(fg.green + "continue" + fg.rs, "\n",  "TB after detecting first grape:", "\n", g_param.TB)
+        print(fg.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         input("press enter for continue to spraying")
         g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
@@ -665,7 +707,8 @@ if __name__ == '__main__':
 
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index), org=(g_param.TB[i].x_p,
-                                                 g_param.TB[i].y_p), fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
+                                                                                                     g_param.TB[i].y_p),
+                                                 fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                                                  color=(255, 255, 255), thickness=1, lineType=2)
                 display_points(g_to_display=g_param.TB[i])
                 if g_param.show_images:
@@ -677,8 +720,8 @@ if __name__ == '__main__':
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
-                # distance, is_grape = activate_sonar()  # 20 FIXME: Yossi + Edo
-                g_param.last_grape_dist, is_grape = g_param.avg_dist, True
+                # g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20 # FIXME- WORKING WITH SONAR
+                g_param.last_grape_dist, is_grape = g_param.avg_dist, True # without sonar usage
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
                     TB_class.update_distance(g_param.TB[i], read_position())  # 23,24
@@ -695,7 +738,7 @@ if __name__ == '__main__':
                     update_database_no_grape(i)  # 22
         else:  # 15- no grapes to spray_procedure
             print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
-            if external_signal_all_done:  # 20- yes #TODO: check external signal- keyboard press. not possible with pycharm + windoes.
+            if external_signal_all_done:  # 20- yes #TODO: change external signal- keyboard press.
                 not_finished = False
                 print("Finished- external signal all done")
                 break  # 23

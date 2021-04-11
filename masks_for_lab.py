@@ -102,7 +102,9 @@ if g_param.work_place == "field":
         STEPS_PER_EPOCH = 30
 
         # Skip detections with < 90% confidence
-        DETECTION_MIN_CONFIDENCE = 0.7
+        DETECTION_MIN_CONFIDENCE = 0.8
+
+        DETECTION_NMS_THRESHOLD = 0.1
 
         DETECTION_MAX_INSTANCES = 40
 
@@ -120,7 +122,6 @@ if g_param.work_place == "field":
     ############################################################
 
     class GrapeDataset(utils.Dataset):
-
         def load_grape(self, dataset_dir, subset):
             """Load a subset of the grape dataset.
             dataset_dir: Root directory of the dataset.
@@ -266,33 +267,21 @@ if g_param.work_place == "field":
         _, ax = plt.subplots(rows, cols, figsize=(size * cols, size * rows))
         return ax
 
-
-    # dataset_val = GrapeDataset()
-    # dataset_val.load_grape('C:\Drive\Mask_RCNN-master\samples\grape\dataset', "val")
-    # dataset_val.prepare()
-
-    # print("Images: {}\nClasses: {}".format(len(dataset_val.image_ids), dataset_val.class_names))
     classes = []
     classes.append('BG')
     classes.append('grape_cluster')
 
     import tensorflow as tf
-    with tf.device("/cpu:0"):
+    with tf.device("/gpu:0"):
         model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
-    weights_path = 'C:\Drive\Mask_RCNN-master\logs_to_import\with_santos\la\mask_rcnn_grape_0080.h5'
+    weights_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
     print("Loading weights ", weights_path)
     model.load_weights(weights_path, by_name=True)
 
     dataset_test = GrapeDataset()
     dataset_test.load_grape('C:\Drive\Mask_RCNN-master\samples\grape\dataset', "test")
     dataset_test.prepare()
-
-    # from scipy.spatial import ConvexHull, convex_hull_plot_2d
-    # from numpy import *
-    # import sys
-    # import math
-    # from math import pi, cos, sin
 
 
 
@@ -1073,7 +1062,7 @@ def take_picture_and_run():
 
     # fOR FIELD simulation in lab
     if g_param.work_place == "field":
-        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0217.JPG'
+        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0348.JPG'
 
     img = cv.imread(image_path)
     # img = cv.resize(img, (1024, 692))  # Resize image if needed
@@ -1163,7 +1152,7 @@ def take_picture_and_run():
         # boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
         predicted_masks_to_mrbb, det_rotated_boxes = [], []
         amount_of_mask_detacted = len(boxes)
-        for i in range(0, amount_of_mask_detacted):
+        for i in range(0, len(corner_points)):
             x = int(boxes[i][0][0])
             y = int(boxes[i][0][1])
             w, h, corners_in_meter = calculate_w_h(d, corner_points[i])
@@ -1194,20 +1183,13 @@ def take_picture_and_run():
     if g_param.work_place == "field":
         config.display()
         im0 = rgb
-        im0, window, scale, padding, crop = utils.resize_image(
-            im0,
-            min_dim=config.IMAGE_MIN_DIM,
-            min_scale=config.IMAGE_MIN_SCALE,
-            max_dim=config.IMAGE_MAX_DIM,
-            mode=config.IMAGE_RESIZE_MODE)
-        print("shape of im0: ", im0.shape)
+        im0 = utils.resize_image(im0, max_dim=1024, mode="square")
+        im0, *_ = np.asarray(im0)
         if g_param.process_type == "record":
             g_param.read_write_object.save_rgb_image(im0)
         img = im0
         arr = [im0]
         show_in_moved_window("check image", img)
-        # cv.imshow("check image", img)
-        # cv.waitKey()
         cv.destroyAllWindows()
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)
@@ -1225,24 +1207,13 @@ def take_picture_and_run():
                                         title="Predictions")
         else:
             print("There was no grapes detected in the capturd image.")
-            im1 = cv.imread(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0161.JPG')
-            im1 = cv.cvtColor(im1, cv.COLOR_BGR2RGB)
-            im1, window, scale, padding, crop = utils.resize_image(
-                im1,
-                min_dim=config.IMAGE_MIN_DIM,
-                min_scale=config.IMAGE_MIN_SCALE,
-                max_dim=config.IMAGE_MAX_DIM,
-                mode=config.IMAGE_RESIZE_MODE)
+            im1 = cv.imread(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0348.JPG')
+            im1 = utils.resize_image(im1, max_dim=1024, mode="square")
+            im1, *_ = np.asarray(im1)
             arr = [im1]
             results = model.detect(arr, verbose=1)
         r = results[0]
-        ax = get_ax(1)
-        bbox = utils.extract_bboxes(r['masks'])
-        bbox = bbox.astype('int32')
-        pred_boxes = r["rois"]
-        pred_class_ids = r["class_ids"]
-        pred_scores = r["scores"]
-        pred_masks = r["masks"]
+
         amount_of_mask_detacted = len(pred_masks[0][0])
         boxes = []
         mini_boxes = []

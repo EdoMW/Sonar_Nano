@@ -2,14 +2,16 @@ from DAQ_BG import chirp_gen
 from scipy.signal import find_peaks
 from scipy import signal, io
 import numpy as np
+import g_param
 
 
-def correlation_dist(sig,chirp):
+def correlation_dist(sig, chirp):
     # correlation = np.correlate(chirp,sig[int((chirp.size)*1.3):])
     correlation = np.correlate(chirp, sig)
     Pick = np.min(np.argsort(correlation)[0:2])
     dist = abs(correlation.size-Pick)*340/(5e5*2)
     return dist,abs(correlation.size-Pick)
+
 
 def distance():
     chirp = chirpAmp = 1
@@ -35,14 +37,60 @@ def distance():
     return dist
 
 
-def distance2(sig):
-    f, t, s = signal.spectrogram(sig, fs=5e5, nfft=256, noverlap=200, mode='magnitude')
+def load_sonar_dist(mask_id):
+    """
+    loading the sonar distance parameters t,s
+    :param mask_id: id of the grape
+    :return: f (1), t, s
+    """
+    t = g_param.read_write_object.read_sonar_dist_t_to_csv(mask_id)
+    s = g_param.read_write_object.read_sonar_dist_s_to_csv(mask_id)
+    return 1, t, s  # 1 (first argument) has no use for now.
+
+
+def write_sonar_dist(t, s, mask_id):
+    """
+    writing the sonar distance parameters t,s
+    :param t: t of distance reading
+    :param s: s of distance reading
+    :param mask_id: id of the grape
+    """
+    t = g_param.read_write_object.write_sonar_dist_t_to_csv(t, mask_id)
+    s = g_param.read_write_object.write_sonar_dist_s_to_csv(s, mask_id)
+
+
+def get_t_s(sig, mask_id):
+    if g_param.process_type == "load":
+        f, t, s = load_sonar_dist(mask_id)
+    else:
+        f, t, s = signal.spectrogram(sig, fs=5e5, nfft=256, noverlap=200, mode='magnitude')
+        if g_param.process_type == "record":
+            write_sonar_dist(t, s, mask_id)
+    return f, t, s
+
+
+def distance2(sig, mask_id):
+    """
+    calc distance to grape
+    :param sig: signal
+    :param mask_id: id of the grape
+    :return: distance to grape in Meters
+    """
+    f, t, s = get_t_s(sig, mask_id)
     new_s = np.sum(s[15:40], axis=0)
     peaks, heights = find_peaks(new_s, height=0.003, distance=5)
-    new_peaks = peaks[1:]
-    peak_ix = np.argmax(new_peaks)
-    dist = abs((t[peaks[0]] - t[peaks[1]])) * 340 / 2
+
+    try:
+        dist = abs((t[peaks[0]] - t[peaks[1]])) * 340 / 2
+    except IndexError:
+        dist = float(input("Please enter distance to grape in Meters"))
+
+    # Old version: Edo 11.4.21 changed to try,catch + input
+    # new_peaks = peaks[1:]
+    # peak_ix = np.argmax(new_peaks)
+    # dist = abs((t[peaks[0]] - t[peaks[1]])) * 340 / 2
     return dist
+
 
 if __name__ == '__main__':
     distance2()

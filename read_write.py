@@ -10,7 +10,7 @@ import numpy as np
 take_last_exp = True  # take the exp that was conducted the latest
 
 
-def get_local_time_date(): # TODO- make it work
+def get_local_time_date():  # TODO- make it work
     """
     :return: hours_min_sec_millisec
     """
@@ -56,11 +56,17 @@ class ReadWrite:
     """
     For read and write functions. save the exp data in real time to be redone later.
     """
+
     def __init__(self):
         self.location_path = None
         self.rgb_images_path = None
         self.masks_path = None
         self.sonar_path = None
+        self.distances = None
+        self.class_sonar_path = None
+        self.dist_sonar_path = None
+        self.s_dist_sonar_path = None
+        self.t_dist_sonar_path = None
         self.transformations_path = None
         self.platform_path = None
         self.TB_path = None
@@ -83,6 +89,8 @@ class ReadWrite:
         path = os.path.join(parent_dir, directory)
         os.mkdir(path)
         directory_1, directory_2, directory_3 = "locations", "rgb_images", "masks"
+        sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3  = "class_sonar", "dist_sonar", "distances"
+        sub_dir_sonar_2_1, sub_dir_sonar_2_2 = "s_dist_sonar", "t_dist_sonar"
         directory_4, directory_5, directory_6, directory_7 = "sonar", "transformations", "platform", "TB"
         sub_dir_1, sub_dir_2, sub_dir_3, sub_dir_4 = "ang_vec_tcp", "t_tcp2base", "t_cam2base", "t_cam2world"
 
@@ -94,21 +102,36 @@ class ReadWrite:
         path_6 = os.path.join(path, directory_6)
         path_7 = os.path.join(path, directory_7)
 
+        path_4_1 = os.path.join(path_4, sub_dir_sonar_1)
+
+        path_4_2 = os.path.join(path_4, sub_dir_sonar_2)
+        path_4_2_1 = os.path.join(path_4_2, sub_dir_sonar_2_1) #s
+        path_4_2_2 = os.path.join(path_4_2, sub_dir_sonar_2_2) #t
+        path_4_3 = os.path.join(path_4, sub_dir_sonar_3)  # distance and real distance
+
         path_5_1 = os.path.join(path_5, sub_dir_1)
         path_5_2 = os.path.join(path_5, sub_dir_2)
         path_5_3 = os.path.join(path_5, sub_dir_3)
         path_5_4 = os.path.join(path_5, sub_dir_4)
 
-        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7, path_5_1, path_5_2, path_5_3, path_5_4]
+        path_distances = os.path.join(path_5, sub_dir_4)
+
+        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7,
+                   path_4_1, path_4_2, path_4_3, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3, path_5_4]
         for folder in folders:
             os.mkdir(folder)
         self.location_path = path_1
         self.rgb_images_path = path_2
         self.masks_path = path_3
         self.sonar_path = path_4
+        self.distances = path_4_3
         self.transformations_path = path_5
         self.platform_path = path_6
         self.TB_path = path_7
+        self.class_sonar_path = path_4_1
+        self.dist_sonar_path = path_4_2
+        self.s_dist_sonar_path = path_4_2_1
+        self.t_dist_sonar_path = path_4_2_2
         self.transformations_path_ang_vec_tcp = path_5_1
         self.transformations_path_t_tcp2base = path_5_2
         self.transformations_path_t_cam2base = path_5_3
@@ -212,24 +235,112 @@ class ReadWrite:
             out.writerows(map(lambda x: [x], data))
             file.close()
 
-    def write_tb(self):
+    def write_sonar_class_to_csv(self, record, mask_id):
+        """
+        :param record: recording of the sonar
+        :param mask_id: id of the mask that the recording refers to.
+        """
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
-        folder_path_TB = self.TB_path
-        tb_path = os.path.join(folder_path_TB, 'TB.csv')
-        for i in range(0,len(g_param.TB)):
-            g_param.TB[i].mask = None  # TODO - make that it will receive the mask path as it was saved to exp_data
-        file = open(tb_path, 'w+')
+        # opening the csv file in 'w+' mode
+        current_time = get_local_time_3()
+        folder_path_for_sonar_class = self.class_sonar_path
+        sonar_class_data = 'num_maskNum_dt.csv'
+        sonar_class_data = sonar_class_data.replace("num", str(g_param.image_number))
+        sonar_class_data = sonar_class_data.replace("maskNum", str(mask_id))
+        sonar_class_data = sonar_class_data.replace("dt", str(current_time))
+        sonar_class_data = os.path.join(folder_path_for_sonar_class, sonar_class_data)
+
+        file = open(sonar_class_data, 'w+')
         # writing the data into the file
         with file:
             # write = csv.writer(file)
             # write.writerows(data)
             out = csv.writer(file)
+            out.writerows(map(lambda x: [x], record))
+            file.close()
+
+    def write_sonar_dist_s_to_csv(self, s, mask_id):
+        """
+        :param s: s recording of the sonar
+        :param mask_id: id of the mask that the recording refers to.
+        """
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        # opening the csv file in 'w+' mode
+        current_time = get_local_time_3()
+        folder_path_for_sonar_dist_s = self.s_dist_sonar_path
+        sonar_dist_s_data = 'num_maskNum_dt.csv'
+        sonar_dist_s_data = sonar_dist_s_data.replace("num", str(g_param.image_number))
+        sonar_dist_s_data = sonar_dist_s_data.replace("maskNum", str(mask_id))
+        sonar_dist_s_data = sonar_dist_s_data.replace("dt", str(current_time))
+        sonar_dist_s_data = os.path.join(folder_path_for_sonar_dist_s, sonar_dist_s_data)
+        file = open(sonar_dist_s_data, 'w+')
+        # writing the data into the file
+        with file:
+            # write = csv.writer(file)
+            # write.writerows(data)
+            out = csv.writer(file)
+            out.writerows(map(lambda x: [x], s))
+            file.close()
+
+    def write_sonar_dist_t_to_csv(self, t, mask_id):
+        """
+        :param t: t recording of the sonar
+        :param mask_id: id of the mask that the recording refers to.
+        """
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        current_time = get_local_time_3()
+        folder_path_for_sonar_class = self.t_dist_sonar_path
+        sonar_dist_t_data = 'num_maskNum_dt.csv'
+        sonar_dist_t_data = sonar_dist_t_data.replace("num", str(g_param.image_number))
+        sonar_dist_t_data = sonar_dist_t_data.replace("maskNum", str(mask_id))
+        sonar_dist_t_data = sonar_dist_t_data.replace("dt", str(current_time))
+        sonar_dist_t_data = os.path.join(folder_path_for_sonar_class, sonar_dist_t_data)
+        file = open(sonar_dist_t_data, 'w+')
+        with file:
+            out = csv.writer(file)
+            out.writerows(map(lambda x: [x], t))
+            file.close()
+
+    def write_sonar_distances(self, mask_id, distances):
+        """
+        write the measured distance and the real distance.
+        :param mask_id: id of the grape
+        :param distances: measured, real distance from sonar to grape
+        """
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        current_time = get_local_time_3()
+        folder_path_for_sonar_dist_s = self.distances
+        distances_data = 'num_maskNum_dt.csv'
+        distances_data = distances_data.replace("num", str(g_param.image_number))
+        distances_data = distances_data.replace("maskNum", str(mask_id))
+        distances_data = distances_data.replace("dt", str(current_time))
+        distances_data = os.path.join(folder_path_for_sonar_dist_s, distances_data)
+        file = open(distances_data, 'w+')
+        with file:
+            out = csv.writer(file)
+            out.writerows(map(lambda x: [x], distances))
+            file.close()
+
+    def write_tb(self):
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        folder_path_TB = self.TB_path
+        tb_path = os.path.join(folder_path_TB, 'TB.csv')
+        for i in range(0, len(g_param.TB)):
+            g_param.TB[i].mask = None  # TODO - make that it will receive the mask path as it was saved to exp_data
+        file = open(tb_path, 'w+')
+        with file:
+            out = csv.writer(file)
             out.writerows(map(lambda x: [x], g_param.TB))
             file.close()
 
-
-########################## read ################################
+    # ------------------------------------------------------------------
+    # -----------------------------read---------------------------------
+    # ------------------------------------------------------------------
 
     def load_image_path(self):
         image_number = g_param.image_number
@@ -273,7 +384,7 @@ class ReadWrite:
         locations_list = os.listdir(path)
         res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
         path = os.path.join(path, res[0])
-        pos = my_data = np.genfromtxt(path, delimiter=",")
+        pos = np.genfromtxt(path, delimiter=",")
         return pos
 
     def read_platform_step_size_from_csv(self):
@@ -292,4 +403,71 @@ class ReadWrite:
         path = os.path.join(path, res[0])
         step_size = np.genfromtxt(path, delimiter=',')
         return step_size
+
+    def read_sonar_class_from_csv(self, mask_id):
+        """
+        reads sonar recording by image+mask_id
+        :param mask_id: id of the mask
+        :return: recording of class
+        """
+        image_number = g_param.image_number
+        directory = self.class_sonar_path
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'sonar')
+        records_list = os.listdir(path)
+        res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
+        path = os.path.join(path, res[0])
+        rec = np.genfromtxt(path, delimiter=",")
+        return rec
+
+    def read_sonar_dist_t_to_csv(self, mask_id):
+        """
+
+        :param mask_id: id of the mask
+        :return:
+        """
+        image_number = g_param.image_number
+        directory = self.dist_sonar_path
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'sonar')
+        records_list = os.listdir(path)
+        res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
+        path = os.path.join(path, res[0])
+        t = np.genfromtxt(path, delimiter=",")
+        return t
+
+    def read_sonar_dist_s_to_csv(self, mask_id):
+        """
+        :param mask_id: id of the mask
+        :return: the s of the dist activation
+        """
+        image_number = g_param.image_number
+        directory = self.dist_sonar_path
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'sonar')
+        records_list = os.listdir(path)
+        res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
+        path = os.path.join(path, res[0])
+        s = np.genfromtxt(path, delimiter=",")
+        return s
+
+    def read_sonar_distances(self, mask_id):
+        """
+        :param mask_id: id of the mask
+        :return: measured distance by sonar, real distance
+        """
+        image_number = g_param.image_number
+        directory = self.dist_sonar_path
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'sonar')
+        records_list = os.listdir(path)
+        res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
+        path = os.path.join(path, res[0])
+        distances = np.genfromtxt(path, delimiter=",")
+        return distances[0], distances[1]
+
 
