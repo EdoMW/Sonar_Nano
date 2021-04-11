@@ -32,3 +32,7 @@ list of parameters to tune:
     Vertical/ horizontal step size
     
     amount of horizontal steps before moving the platform
+    
+    DETECTION_MIN_CONFIDENCE = 0.8
+
+    DETECTION_NMS_THRESHOLD = 0.1
