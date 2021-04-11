@@ -102,13 +102,13 @@ if g_param.work_place == "field":
         STEPS_PER_EPOCH = 30
 
         # Skip detections with < 90% confidence
-        DETECTION_MIN_CONFIDENCE = 0.9
+        DETECTION_MIN_CONFIDENCE = 0.7
 
         DETECTION_MAX_INSTANCES = 40
 
         MASK_SHAPE = [28, 28]
-        # very importent to defince corect!!!!!
-        BACKBONE = "resnet101"
+        # very important to define correctly!!!!!
+        BACKBONE = "resnet50"
 
         BACKBONE_STRIDES = [4, 8, 16, 32, 64]
 
@@ -231,7 +231,7 @@ if g_param.work_place == "field":
     # weights_path = '/content/gdrive/My Drive/grapes data/Mask_RCNN-master/mask_rcnn_coco.h5'
     # weights_path = model.find_last()
     # print(weights_path)
-    model.load_weights('C:\Drive\Mask_RCNN-master\logs_to_import\with_santos\la\mask_rcnn_grape_0080.h5')
+    model.load_weights(r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5')
     # train (model)
 
 
@@ -267,31 +267,20 @@ if g_param.work_place == "field":
         return ax
 
 
-    dataset_val = GrapeDataset()
-    dataset_val.load_grape('C:\Drive\Mask_RCNN-master\samples\grape\dataset', "val")
-    dataset_val.prepare()
+    # dataset_val = GrapeDataset()
+    # dataset_val.load_grape('C:\Drive\Mask_RCNN-master\samples\grape\dataset', "val")
+    # dataset_val.prepare()
 
-    print("Images: {}\nClasses: {}".format(len(dataset_val.image_ids), dataset_val.class_names))
+    # print("Images: {}\nClasses: {}".format(len(dataset_val.image_ids), dataset_val.class_names))
     classes = []
     classes.append('BG')
     classes.append('grape_cluster')
 
     import tensorflow as tf
-
     with tf.device("/cpu:0"):
         model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
-    # Set path to balloon weights file
-
-    # Download file from the Releases page and set its path
-    # https://github.com/matterport/Mask_RCNN/releases
-    # weights_path = "/path/to/mask_rcnn_balloon.h5"
-
-    # Or, load the last model you trained
-    # weights_path = model.find_last()
     weights_path = 'C:\Drive\Mask_RCNN-master\logs_to_import\with_santos\la\mask_rcnn_grape_0080.h5'
-
-    # Load weights
     print("Loading weights ", weights_path)
     model.load_weights(weights_path, by_name=True)
 
@@ -800,10 +789,8 @@ def ueye_take_picture_2(image_number):
     nRet = ueye.is_InquireImageMem(hCam, pcImageMemory, MemID, width, height, nBitsPerPixel, pitch)
 
     # ---------------------------------------------------------------------------------------------------------------------------------------
-
     # Continuous image display
-    if (nRet == ueye.IS_SUCCESS):
-
+    if nRet == ueye.IS_SUCCESS:
         # In order to display the image in an OpenCV window we need to...
         # ...extract the data of our image memory
         pic_array_1 = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
@@ -852,7 +839,8 @@ def ueye_take_picture_2(image_number):
         # plt.imsave(a_string, frame)
         # break
     # ---------------------------------------------------------------------------------------------------------------------------------------
-
+    else:
+        print("no image was taken")
     # Releases an image memory that was allocated using is_AllocImageMem() and removes it from the driver management
     ueye.is_FreeImageMem(hCam, pcImageMemory, MemID)
 
@@ -967,7 +955,7 @@ def meter_2_pixel(d, i):
 
 def print_special():
     """
-    :return: print red wernning massege if no real image was taken in N iterations
+    :return: print red warnning massege if no real image was taken in N iterations
     """
 
     print(colored("3 images in a row were not taken succsesfully", 'red'))
@@ -1085,7 +1073,7 @@ def take_picture_and_run():
 
     # fOR FIELD simulation in lab
     if g_param.work_place == "field":
-        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0159.JPG'
+        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0217.JPG'
 
     img = cv.imread(image_path)
     # img = cv.resize(img, (1024, 692))  # Resize image if needed
@@ -1204,6 +1192,7 @@ def take_picture_and_run():
 
     # for field usage with net
     if g_param.work_place == "field":
+        config.display()
         im0 = rgb
         im0, window, scale, padding, crop = utils.resize_image(
             im0,
@@ -1216,8 +1205,9 @@ def take_picture_and_run():
             g_param.read_write_object.save_rgb_image(im0)
         img = im0
         arr = [im0]
-        cv.imshow("check image", img)
-        cv.waitKey()
+        show_in_moved_window("check image", img)
+        # cv.imshow("check image", img)
+        # cv.waitKey()
         cv.destroyAllWindows()
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)
@@ -1235,7 +1225,7 @@ def take_picture_and_run():
                                         title="Predictions")
         else:
             print("There was no grapes detected in the capturd image.")
-            im1 = cv.imread('C:/Drive/28_7_20/DSC_0159.JPG')
+            im1 = cv.imread(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0161.JPG')
             im1 = cv.cvtColor(im1, cv.COLOR_BGR2RGB)
             im1, window, scale, padding, crop = utils.resize_image(
                 im1,
@@ -1344,10 +1334,10 @@ def take_picture_and_run():
 
     if g_param.work_place == "lab":
         display_image_with_masks(green)
-        print("boxes", boxes)
+        # print("boxes", boxes)
         # using the TB
         box_index = sort_by_and_check_for_grapes('rect_size')
-        print("box_index", box_index)
+        # print("box_index", box_index)
         add_circle_and_index(img, green)
         cv.waitKey(0)
         cv.destroyAllWindows()
@@ -1355,8 +1345,6 @@ def take_picture_and_run():
     else:
         g_param.masks_image = img
     g_param.read_write_object.write_tb()
-
-
 
 
 if __name__ == '__main__':

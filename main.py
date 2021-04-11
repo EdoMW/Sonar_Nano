@@ -473,7 +473,7 @@ def move_platform():
     if g_param.process_type == "record" or g_param.process_type == "work":
         print("Current platform step size: ", g_param.platform_step_size, '\n',
               "insert number in CM to change it or press Enter to continue")
-        temp_step_size = input("Enter platform step size") #TODO : UNCOMMENT
+        # temp_step_size = input("Enter platform step size") #TODO : UNCOMMENT
         if temp_step_size == 'end':
             external_signal_all_done = True
             return
@@ -654,6 +654,7 @@ if __name__ == '__main__':
         print(fg.green + "continue" + fg.rs, "\n",  "TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         input("press enter for continue to spraying")
+        g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
         if not first_run:
             mark_sprayed_and_display()
         print(g_param.TB)

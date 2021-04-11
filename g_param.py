@@ -28,7 +28,7 @@ load- load all the date that was recorded.
 change parameters if necessary.
 """
 
-process_type = "record"  # TODO-add save of the TB before ending the program. also descriptive statistic
+process_type = "work"  # TODO-add save of the TB before ending the program. also descriptive statistic
 work_place = "field"  # lab. to know which function of image processing to use.
 
 
