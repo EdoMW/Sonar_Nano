@@ -19,7 +19,7 @@ import numpy as np
 import g_param
 import time
 import os
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import imutils
 from PIL import Image, ImageDraw, ImageDraw
 import scipy.misc

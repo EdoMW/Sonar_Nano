@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import numpy as np
 import shutil
+from time import sleep
 from pprint import pprint
 
 take_last_exp = True  # take the exp that was conducted the latest
@@ -101,32 +102,33 @@ def write_txt_config(sim_directory_path):
     create a txt file with the name: 'Working in lab- no masks'
     :param sim_directory_path: path to save the txt file
     """
-
+    path = sim_directory_path + r'\config.csv'
     avg_dist = g_param.avg_dist
     height_step_size = g_param.height_step_size
     platform_step_size = g_param.platform_step_size
     resolution = g_param.platform_step_size
     image_cnn_path = g_param.image_cnn_path
     cnn_config = g_param.cnn_config
-    param_list = [avg_dist, height_step_size, platform_step_size, resolution, image_cnn_path, cnn_config]
-
-    def flattener(alist):
-        flatten = []
-        for i in alist:
-            if isinstance(i, dict):
-                for j in sorted(i):  # Sort by keys.
-                    yield i[j]
-            elif isinstance(i, str):
-                yield i
-
-    param_list = [i for i in flattener(param_list)]
-
-    # mask_directory_path = mask_directory_path + r'\Working in lab- no masks.txt'
-    path = str(sim_directory_path + r'\config.csv')
-    with open(path, "w") as file:
-        out = csv.writer(file)
-        out.writerows(map(lambda x: [x], param_list))
-        file.close()
+    horizontal_step_size = g_param.step_size
+    param_list = [avg_dist, horizontal_step_size, str(round(height_step_size*horizontal_step_size, 2)),
+                  platform_step_size, resolution, image_cnn_path]
+    param_list_name = ["avg_dist", "horizontal_step_size", "height_step_size",
+                       "platform_step_size", "resolution", "image_cnn_path"]
+    headlines = ["Network configuration", "Running configuration"]
+    with open(path, 'w') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow([headlines[0]])
+        for key, value in cnn_config.items():
+            writer.writerow([key, value])
+        writer.writerow([headlines[1]])
+        writer.writerows(zip(param_list_name, param_list))
+        csv_file.close()
+    text = open(path, "r")
+    text = ''.join([i for i in text]).replace(", ", ": ")
+    text = ''.join([i for i in text]).replace(",", ": ")
+    x = open(path, "w")
+    x.writelines(text)
+    x.close()
 
 
 def write_np_csv(mask_path, mask):
@@ -140,6 +142,14 @@ def write_np_csv(mask_path, mask):
     np.save(mask_path, mask)
     npz_path = mask_path[:-1] + 'z'
     np.savez_compressed(npz_path, mask)
+
+
+def calc_image_number():
+    image_number = g_param.image_number
+    skip = g_param.steps_gap
+    if image_number % 4 == 2 or image_number % 4 == 3:
+        pass
+
 
 
 def move_old_directory():
@@ -189,6 +199,7 @@ class ReadWrite:
         if g_param.process_type == "load":
             self.create_sim_directory()
             return
+        return
 
     def create_sim_directory(self):
         move_old_directory()
@@ -439,6 +450,7 @@ class ReadWrite:
 
     def load_image_path(self):
         image_number = g_param.image_number
+        # calc_image_number()
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)

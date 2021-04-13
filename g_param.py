@@ -9,6 +9,7 @@ avg_dist = 0.71
 platform_step_size = 0
 sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.71
+step_size = 0.25
 height_step_size = 0.6  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO: ask Sigal
 image_number = 0
@@ -17,9 +18,16 @@ read_write_object = None
 direction = None
 safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
 time_to_move_platform = False
-
 image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
 cnn_config = None
+
+
+"""
+steps_gap: determines how many horizontal steps should be done.
+for example, if step size is 0.1m and we want to keep it that wat (default) than steps_gap = 1.
+if an experiment wants to test step size of 0.2m, than steps_gap should be equal to 2.
+"""
+steps_gap = 1
 
 """
 work_place: lab/field
@@ -30,8 +38,8 @@ load- load all the date that was recorded.
 change parameters if necessary.
 """
 
-process_type = "load"  # TODO-add save of the TB before ending the program. also descriptive statistic
-work_place = "field"  # lab. to know which function of image processing to use.
+process_type = "work"  # TODO-add save of the TB before ending the program. also descriptive statistic
+work_place = "lab"  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():
@@ -75,8 +83,8 @@ def init():
     initializes all global variables.
     """
     global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number, \
-        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, \
+        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size,\
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
-        image_cnn_path, cnn_config
+        image_cnn_path, cnn_config, steps_gap
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()

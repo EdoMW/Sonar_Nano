@@ -12,6 +12,7 @@ import Target_bank as TB_class
 import transform
 import read_write
 from sty import fg, Style, RgbFg
+
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, show_in_moved_window
@@ -30,7 +31,7 @@ fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
 fg.yellow = Style(RgbFg(255, 255, 70))
 g_param.read_write_object = read_write.ReadWrite()
-rs_rob = read_from_socket.ReadFromRobot()
+rs_rob = read_from_socket.ReadFromRobot()  # FIXME: make it possible to run on "load" when robot is turned off
 ws_rob = write_to_socket.Send2Robot()
 weight_file_name = r'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
 config = tf.ConfigProto()
@@ -69,7 +70,8 @@ def init_variables():
 
 def read_write_init():
     g_param.read_write_object.create_directory()
-    g_param.read_write_object.create_simulation_config_file()
+    if g_param.process_type == "load":
+        g_param.read_write_object.create_simulation_config_file()
 
 
 def line_division(p1, p2, ratio):
@@ -555,7 +557,12 @@ def move_platform():
 def calc_step_size(step_size_to_move):
     """
     :param step_size_to_move: step size
-    :return: step size- move alpha
+    :return: step size to move:
+    if direction is up/down:
+        move g_param.height_step_size * step_size_to_move.
+        for example: default is to move 0.6 * horizontal_step_size.
+    else:
+        move step_size_to_move to the right.
     """
     direction_of_move = g_param.direction
     if direction_of_move == "up" or direction_of_move == "down":
@@ -688,9 +695,16 @@ def check_more_than_half_away(x_center, half_step_size):
     return x_center > half_step_size
 
 
-if __name__ == '__main__':
+def init_program():
+    """
+    init the program
+    """
     init_variables()
     init_arm_and_platform()
+
+
+if __name__ == '__main__':
+    init_program()
     print(">>> Start position: ")
     current_location = g_param.trans.capture_pos
     print_current_location(g_param.trans.capture_pos)
@@ -709,8 +723,8 @@ if __name__ == '__main__':
                 steps_counter, g_param.plat_position_step_number = 0, 0
                 direction = "stay"
             g_param.direction = direction
-            move_const(step_size, direction, current_location)
-            # move_const(step_size, "right", current_location)  # try to move 1 step size
+            move_const(g_param.step_size, direction, current_location)
+            # move_const(g_param.step_size, "right", current_location)  # try to move 1 step size
             if g_param.time_to_move_platform:  # TODO- update manually step size for world location to the right.
                 print('issue moving const ')
                 print_current_location(current_location)

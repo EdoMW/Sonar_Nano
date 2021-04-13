@@ -5,17 +5,31 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 
-# image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG' # FIXME- grape 3
+# image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG' #
+# img = np.load(r'D:\Users\NanoProject\experiments\exp_data_10_46\masks\0_2_10_4.npy')
+print(img.shape)
+resized = utils.resize_image(img, max_dim = 1024, mode="square")
+print(len(resized[0]), len(resized[0][0]), len(resized))
+print('Resized Dimensions : ', len(resized))
+resized, *_ = np.asarray(resized)
+print(type(resized))
+print('Resized Dimensions : ', resized.shape)
+
+cv2.imshow("Resized image", resized)
+cv2.waitKey()
+cv2.destroyAllWindows()
+
+
 
 """
 1) make sure loading process works by mask!!!
 2) make all sonar functions
 """
-img = np.load(r'D:\Users\NanoProject\experiments\exp_data_10_46\masks\0_2_10_4.npy')
-print(img.shape)
-# for i in range(3):
-plt.imshow(img[:, :], cmap="gray")
-plt.show()
+# img = np.load(r'D:\Users\NanoProject\experiments\exp_data_10_46\masks\0_2_10_4.npy')
+# print(img.shape)
+# # for i in range(3):
+# plt.imshow(img[:, :], cmap="gray")
+# plt.show()
 
 
 #
@@ -37,21 +51,21 @@ plt.show()
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-
-print(img.shape)
-resized = utils.resize_image(img, max_dim = 1024, mode="square")
-print(len(resized[0]), len(resized[0][0]), len(resized))
-print('Resized Dimensions : ', len(resized))
-resized, *_ = np.asarray(resized)
-print(type(resized))
-print('Resized Dimensions : ', resized.shape)
-
-cv2.imshow("Resized image", resized)
-cv2.waitKey()
-cv2.destroyAllWindows()
 #
-resized = utils.resize_image(img, max_dim = 1024, mode="square")
-resized, *_ = np.asarray(resized)
+# print(img.shape)
+# resized = utils.resize_image(img, max_dim = 1024, mode="square")
+# print(len(resized[0]), len(resized[0][0]), len(resized))
+# print('Resized Dimensions : ', len(resized))
+# resized, *_ = np.asarray(resized)
+# print(type(resized))
+# print('Resized Dimensions : ', resized.shape)
+#
+# cv2.imshow("Resized image", resized)
+# cv2.waitKey()
+# cv2.destroyAllWindows()
+# #
+# resized = utils.resize_image(img, max_dim = 1024, mode="square")
+# resized, *_ = np.asarray(resized)
 
 
 # new_corner_points = []
