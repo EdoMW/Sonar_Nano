@@ -1,4 +1,3 @@
-
 TB = []
 masks_image = None
 half_width_meter = 0.34
@@ -19,6 +18,9 @@ direction = None
 safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
 time_to_move_platform = False
 
+image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
+cnn_config = None
+
 """
 work_place: lab/field
 process_type: work/record/load
@@ -28,8 +30,8 @@ load- load all the date that was recorded.
 change parameters if necessary.
 """
 
-process_type = "record"  # TODO-add save of the TB before ending the program. also descriptive statistic
-work_place = "lab"  # lab. to know which function of image processing to use.
+process_type = "load"  # TODO-add save of the TB before ending the program. also descriptive statistic
+work_place = "field"  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():
@@ -54,12 +56,27 @@ def calc_image_height():
     return half_image_height
 
 
+def get_cnn_config(train_config_obj):
+    cnn_config = {"BACKBONE": train_config_obj.BACKBONE,
+                  "DETECTION_MIN_CONFIDENCE": train_config_obj.DETECTION_MIN_CONFIDENCE,
+                  "DETECTION_NMS_THRESHOLD": train_config_obj.DETECTION_NMS_THRESHOLD,
+                  "GPU_COUNT": train_config_obj.GPU_COUNT,
+                  "IMAGES_PER_GPU": train_config_obj.IMAGES_PER_GPU,
+                  "LEARNING_MOMENTUM": train_config_obj.LEARNING_MOMENTUM,
+                  "LEARNING_RATE": train_config_obj.LEARNING_RATE,
+                  "STEPS_PER_EPOCH": train_config_obj.STEPS_PER_EPOCH,
+                  "WEIGHT_DECAY": train_config_obj.WEIGHT_DECAY
+                  }
+    return cnn_config
+
+
 def init():
     """
     initializes all global variables.
     """
-    global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number,\
-        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place,\
-        read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size
+    global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number, \
+        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, \
+        read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
+        image_cnn_path, cnn_config
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()

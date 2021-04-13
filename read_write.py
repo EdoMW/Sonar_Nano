@@ -1,11 +1,11 @@
-import time
 import csv
 import os
 import g_param
-from datetime import datetime
 import matplotlib.pyplot as plt
 from datetime import datetime
 import numpy as np
+import shutil
+from pprint import pprint
 
 take_last_exp = True  # take the exp that was conducted the latest
 
@@ -42,23 +42,129 @@ def get_local_time_2():
 
 def get_latest_dir():
     """
-    if take_last_exp = True (default) it will return the last exp dir.
+    if take_last_exp = True (default) it will return the last exp dir. AND
     :return: dir path of the exp to be analysed
     """
-    if take_last_exp:
+    if take_last_exp and g_param.process_type == "record":
         directory = r'D:\Users\NanoProject\experiments'
         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
     else:
-        return 'exp_data_10_53'
+        print("Experiments dir is empty. taking last exp from old experiments")
+        directory = r'D:\Users\NanoProject\old_experiments'
+        return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
+        # return 'exp_data_10_53'
+    # if g_param.process_type == "load":
+    #     if take_last_exp:
+    #         directory = r'D:\Users\NanoProject\experiments'
+    #         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
+    #     else:
+    #         print("Simulations dir is empty. taking last exp from old simulations")
+    #         directory = r'D:\Users\NanoProject\old_simulations'
+    #         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
+
+
+def generate_str_num_mask_dt(mask_id):
+    current_time = get_local_time_3()
+    path = 'num_maskNum_dt.csv'
+    path = path.replace("num", str(g_param.image_number))
+    path = path.replace("maskNum", str(mask_id))
+    path = path.replace("dt", str(current_time))
+    return path
+
+
+def write_to_csv(path, data):
+    """
+    write data to csv file
+    :param path: where to save the data
+    :param data: data to be saved
+    :return:
+    """
+    file = open(path, 'w+')
+    with file:
+        out = csv.writer(file)
+        out.writerows(map(lambda x: [x], data))
+        file.close()
+
+
+def write_txt(mask_directory_path):
+    """
+    create a txt file with the name: 'Working in lab- no masks'
+    :param mask_directory_path: path to save the txt file
+    """
+    mask_directory_path = mask_directory_path + r'\Working in lab- no masks.txt'
+    with open(mask_directory_path, "w") as file:
+        file.write("")
+
+
+def write_txt_config(sim_directory_path):
+    """
+    create a txt file with the name: 'Working in lab- no masks'
+    :param sim_directory_path: path to save the txt file
+    """
+
+    avg_dist = g_param.avg_dist
+    height_step_size = g_param.height_step_size
+    platform_step_size = g_param.platform_step_size
+    resolution = g_param.platform_step_size
+    image_cnn_path = g_param.image_cnn_path
+    cnn_config = g_param.cnn_config
+    param_list = [avg_dist, height_step_size, platform_step_size, resolution, image_cnn_path, cnn_config]
+
+    def flattener(alist):
+        flatten = []
+        for i in alist:
+            if isinstance(i, dict):
+                for j in sorted(i):  # Sort by keys.
+                    yield i[j]
+            elif isinstance(i, str):
+                yield i
+
+    param_list = [i for i in flattener(param_list)]
+
+    # mask_directory_path = mask_directory_path + r'\Working in lab- no masks.txt'
+    path = str(sim_directory_path + r'\config.csv')
+    with open(path, "w") as file:
+        out = csv.writer(file)
+        out.writerows(map(lambda x: [x], param_list))
+        file.close()
+
+
+def write_np_csv(mask_path, mask):
+    """
+    saves both npy, npz files of the mask
+    :param mask_path: path to save the masks at
+    :param mask: np nd
+    :return:
+    """
+    mask_path = mask_path[0:-8] + '.npy'
+    np.save(mask_path, mask)
+    npz_path = mask_path[:-1] + 'z'
+    np.savez_compressed(npz_path, mask)
+
+
+def move_old_directory():
+    """
+    Empty experiments, simulations directories
+    """
+    source_dir = r'D:\Users\NanoProject\experiments'
+    target_dir = r'D:\Users\NanoProject\old_experiments'
+    file_names = os.listdir(source_dir)
+    for file_name in file_names:
+        shutil.move(os.path.join(source_dir, file_name), target_dir)
+    source_dir = r'D:\Users\NanoProject\simulations'
+    target_dir = r'D:\Users\NanoProject\old_simulations'
+    file_names = os.listdir(source_dir)
+    for file_name in file_names:
+        shutil.move(os.path.join(source_dir, file_name), target_dir)
 
 
 class ReadWrite:
     """
     For read and write functions. save the exp data in real time to be redone later.
     """
-
     def __init__(self):
         self.location_path = None
+        self.simulations = None
         self.rgb_images_path = None
         self.masks_path = None
         self.sonar_path = None
@@ -76,20 +182,38 @@ class ReadWrite:
         self.transformations_path_t_cam2world = None
         self.exp_date_time = get_latest_dir()
 
+    def create_directory(self):
+        if g_param.process_type == "record":
+            self.create_directories()
+            return
+        if g_param.process_type == "load":
+            self.create_sim_directory()
+            return
+
+    def create_sim_directory(self):
+        move_old_directory()
+        directory = "exp_data_dataTime"
+        directory = directory.replace("dataTime", get_local_time_2())
+        parent_dir_sim = r'D:\Users\NanoProject\simulations'
+        path_sim = os.path.join(parent_dir_sim, directory)
+        os.mkdir(path_sim)
+        self.simulations = path_sim
+
     def create_directories(self):  # TODO: add Date to the name of the directory
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
         """
         Creates all directories and sub directories
         """
-        # Directory
+        move_old_directory()
         directory = "exp_data_dataTime"
         directory = directory.replace("dataTime", get_local_time_2())
         parent_dir = r'D:\Users\NanoProject\experiments'
         path = os.path.join(parent_dir, directory)
         os.mkdir(path)
+
         directory_1, directory_2, directory_3 = "locations", "rgb_images", "masks"
-        sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3  = "class_sonar", "dist_sonar", "distances"
+        sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3 = "class_sonar", "dist_sonar", "distances"
         sub_dir_sonar_2_1, sub_dir_sonar_2_2 = "s_dist_sonar", "t_dist_sonar"
         directory_4, directory_5, directory_6, directory_7 = "sonar", "transformations", "platform", "TB"
         sub_dir_1, sub_dir_2, sub_dir_3, sub_dir_4 = "ang_vec_tcp", "t_tcp2base", "t_cam2base", "t_cam2world"
@@ -105,16 +229,14 @@ class ReadWrite:
         path_4_1 = os.path.join(path_4, sub_dir_sonar_1)
 
         path_4_2 = os.path.join(path_4, sub_dir_sonar_2)
-        path_4_2_1 = os.path.join(path_4_2, sub_dir_sonar_2_1) #s
-        path_4_2_2 = os.path.join(path_4_2, sub_dir_sonar_2_2) #t
+        path_4_2_1 = os.path.join(path_4_2, sub_dir_sonar_2_1)  # s
+        path_4_2_2 = os.path.join(path_4_2, sub_dir_sonar_2_2)  # t
         path_4_3 = os.path.join(path_4, sub_dir_sonar_3)  # distance and real distance
 
         path_5_1 = os.path.join(path_5, sub_dir_1)
         path_5_2 = os.path.join(path_5, sub_dir_2)
         path_5_3 = os.path.join(path_5, sub_dir_3)
         path_5_4 = os.path.join(path_5, sub_dir_4)
-
-        path_distances = os.path.join(path_5, sub_dir_4)
 
         folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7,
                    path_4_1, path_4_2, path_4_3, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3, path_5_4]
@@ -137,7 +259,29 @@ class ReadWrite:
         self.transformations_path_t_cam2base = path_5_3
         self.transformations_path_t_cam2world = path_5_4
 
+    def create_simulation_config_file(self):
+        """
+        Create a txt file with the configurations used for this simulation
+        """
+        path_sim = self.simulations
+        write_txt_config(path_sim)
+
+    def save_mask(self, mask, mask_id):
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        if g_param.work_place == 'lab':
+            write_txt(self.masks_path)
+            return
+        mask_parent_path = self.masks_path
+        mask_path = generate_str_num_mask_dt(mask_id)
+        mask_path = os.path.join(mask_parent_path, mask_path)
+        write_np_csv(mask_path, mask)
+
     def save_rgb_image(self, frame):
+        """
+        :param frame: The image that was taken successfully
+        :return:
+        """
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
         folder_path_for_images = self.rgb_images_path
@@ -225,15 +369,7 @@ class ReadWrite:
         location_data = location_data.replace("num", str(g_param.image_number))
         location_data = location_data.replace("dt", str(current_time))
         location_path = os.path.join(folder_path_for_location, location_data)
-
-        file = open(location_path, 'w+')
-        # writing the data into the file
-        with file:
-            # write = csv.writer(file)
-            # write.writerows(data)
-            out = csv.writer(file)
-            out.writerows(map(lambda x: [x], data))
-            file.close()
+        write_to_csv(location_path, data)
 
     def write_sonar_class_to_csv(self, record, mask_id):
         """
@@ -242,23 +378,10 @@ class ReadWrite:
         """
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
-        # opening the csv file in 'w+' mode
-        current_time = get_local_time_3()
         folder_path_for_sonar_class = self.class_sonar_path
-        sonar_class_data = 'num_maskNum_dt.csv'
-        sonar_class_data = sonar_class_data.replace("num", str(g_param.image_number))
-        sonar_class_data = sonar_class_data.replace("maskNum", str(mask_id))
-        sonar_class_data = sonar_class_data.replace("dt", str(current_time))
+        sonar_class_data = generate_str_num_mask_dt(mask_id)
         sonar_class_data = os.path.join(folder_path_for_sonar_class, sonar_class_data)
-
-        file = open(sonar_class_data, 'w+')
-        # writing the data into the file
-        with file:
-            # write = csv.writer(file)
-            # write.writerows(data)
-            out = csv.writer(file)
-            out.writerows(map(lambda x: [x], record))
-            file.close()
+        write_to_csv(sonar_class_data, record)
 
     def write_sonar_dist_s_to_csv(self, s, mask_id):
         """
@@ -267,22 +390,10 @@ class ReadWrite:
         """
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
-        # opening the csv file in 'w+' mode
-        current_time = get_local_time_3()
         folder_path_for_sonar_dist_s = self.s_dist_sonar_path
-        sonar_dist_s_data = 'num_maskNum_dt.csv'
-        sonar_dist_s_data = sonar_dist_s_data.replace("num", str(g_param.image_number))
-        sonar_dist_s_data = sonar_dist_s_data.replace("maskNum", str(mask_id))
-        sonar_dist_s_data = sonar_dist_s_data.replace("dt", str(current_time))
+        sonar_dist_s_data = generate_str_num_mask_dt(mask_id)
         sonar_dist_s_data = os.path.join(folder_path_for_sonar_dist_s, sonar_dist_s_data)
-        file = open(sonar_dist_s_data, 'w+')
-        # writing the data into the file
-        with file:
-            # write = csv.writer(file)
-            # write.writerows(data)
-            out = csv.writer(file)
-            out.writerows(map(lambda x: [x], s))
-            file.close()
+        write_to_csv(sonar_dist_s_data, s)
 
     def write_sonar_dist_t_to_csv(self, t, mask_id):
         """
@@ -291,18 +402,10 @@ class ReadWrite:
         """
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
-        current_time = get_local_time_3()
         folder_path_for_sonar_class = self.t_dist_sonar_path
-        sonar_dist_t_data = 'num_maskNum_dt.csv'
-        sonar_dist_t_data = sonar_dist_t_data.replace("num", str(g_param.image_number))
-        sonar_dist_t_data = sonar_dist_t_data.replace("maskNum", str(mask_id))
-        sonar_dist_t_data = sonar_dist_t_data.replace("dt", str(current_time))
+        sonar_dist_t_data = generate_str_num_mask_dt(mask_id)
         sonar_dist_t_data = os.path.join(folder_path_for_sonar_class, sonar_dist_t_data)
-        file = open(sonar_dist_t_data, 'w+')
-        with file:
-            out = csv.writer(file)
-            out.writerows(map(lambda x: [x], t))
-            file.close()
+        write_to_csv(sonar_dist_t_data, t)
 
     def write_sonar_distances(self, mask_id, distances):
         """
@@ -312,18 +415,10 @@ class ReadWrite:
         """
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
-        current_time = get_local_time_3()
         folder_path_for_sonar_dist_s = self.distances
-        distances_data = 'num_maskNum_dt.csv'
-        distances_data = distances_data.replace("num", str(g_param.image_number))
-        distances_data = distances_data.replace("maskNum", str(mask_id))
-        distances_data = distances_data.replace("dt", str(current_time))
-        distances_data = os.path.join(folder_path_for_sonar_dist_s, distances_data)
-        file = open(distances_data, 'w+')
-        with file:
-            out = csv.writer(file)
-            out.writerows(map(lambda x: [x], distances))
-            file.close()
+        distances_path = generate_str_num_mask_dt(mask_id)
+        distances_path = os.path.join(folder_path_for_sonar_dist_s, distances_path)
+        write_to_csv(distances_path, distances)
 
     def write_tb(self):
         if g_param.process_type == "work" or g_param.process_type == "load":
@@ -470,4 +565,19 @@ class ReadWrite:
         distances = np.genfromtxt(path, delimiter=",")
         return distances[0], distances[1]
 
+    def load_mask(self, mask_id):
+        """
+        :param mask_id: mask id to load
+        :return: mask
+        """
+        image_number = g_param.image_number
+        directory = self.masks_path
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'masks')
+        records_list = os.listdir(path)
+        res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
+        path = os.path.join(path, res[0])
+        mask = np.load(path)
+        return mask
 

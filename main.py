@@ -19,6 +19,7 @@ from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_mov
     point_meter_2_pixel, image_resize
 import write_to_socket
 import read_from_socket
+import math
 
 ########################################################################################################################
 # parameters ###########################################################################################################
@@ -53,11 +54,22 @@ first_run = True
 g_param.show_images = True  # g.show_images: if true, it is visualizes the process
 time_to_move_platform, external_signal_all_done = False, False
 not_finished = True
-g_param.trans = transform.Trans()
-g_param.read_write_object.create_directories()
 
 
 ########################################################################################################################
+# ---------- controlling the robot ----------
+
+def init_variables():
+    """
+    init Trans, read_write_object
+    """
+    g_param.trans = transform.Trans()
+    read_write_init()
+
+
+def read_write_init():
+    g_param.read_write_object.create_directory()
+    g_param.read_write_object.create_simulation_config_file()
 
 
 def line_division(p1, p2, ratio):
@@ -67,13 +79,15 @@ def line_division(p1, p2, ratio):
 
 
 def move_and_spray(start, end, target_grape):
-    if possible_move(start, target_grape) and possible_move(end, target_grape):
-        ws_rob.move_command(True, start, 5)
-        ws_rob.spray_command(True)
-        ws_rob.move_command(True, end, 5)
-        ws_rob.spray_command(False)
-    else:
-        pass
+    if g_param.process_type != "load":
+        if possible_move(start, target_grape) and possible_move(end, target_grape):
+            ws_rob.move_command(True, start, 5)
+            ws_rob.spray_command(True)
+            ws_rob.move_command(True, end, 5)
+            ws_rob.spray_command(False)
+        else:
+            pass
+    return
 
 
 def calc_path_points(pos, x_c, y_c, p):
@@ -82,9 +96,14 @@ def calc_path_points(pos, x_c, y_c, p):
     return pos
 
 
+def calc_spray_diameter(x_max):
+    # the function will calculate how close the sprayer can get to the target.
+    # By knowing that we will calculate the spray diameter
+    pass
+
+
 # tell me which input you want. I don't think that I need any output,
 # maybe only if there is a problem such as no more spraying material.
-
 def spray_procedure(g, d, k):
     """
     :param g: The target grape for spraying
@@ -102,6 +121,8 @@ def spray_procedure(g, d, k):
     x_c = g.x_center
     y_c = g.y_center
     print("target's width: ", g.w_meter)
+    N = math.floor(g.w_meter/d + 0.5)
+    print("The number of path is: ", N)
     r = (g.w_meter / 2 + d) / g.w_meter
     print("ratio", r)
     if r < 1:
@@ -286,34 +307,34 @@ def possible_move(goal_pos, grape_1):
     return True
 
 
-def move_const(size_of_step, direction, location):
+def move_const(size_of_step, direction_to_move, location):
     """
     calculate if the new position of the arm is in reach. return the position and boolean.
     grape1 = the TB object of the grape
     I assumed that
     type_of_move = move/ spray_procedure/ sonar/ take_picture
-    move = advence X cm to the right (arbitrary), not receiving grape as input (not relevant)
+    move = advance X cm to the right (arbitrary), not receiving grape as input (not relevant)
     spray_procedure - move to spraying position
     sonar - move to sonar position
     take_picture - move to take_picture from centered position #
     :param size_of_step: step size
-    :param direction:
+    :param direction_to_move:
     :param location:
     :return:
     """
     size_of_step = calc_step_size(size_of_step)
     print("move const ", step_size, " start at:", location)
     if g_param.process_type != "load":
-        if direction == "right":
+        if direction_to_move == "right":
             location[1] = location[1] + size_of_step
             ws_rob.move_command(True, location, sleep_time)
-        elif direction == "up":
+        elif direction_to_move == "up":
             location[2] = location[2] + size_of_step
             ws_rob.move_command(True, location, sleep_time)
-        elif direction == "down":
+        elif direction_to_move == "down":
             location[2] = location[2] - size_of_step
             ws_rob.move_command(True, location, sleep_time)
-        elif direction == "stay":
+        elif direction_to_move == "stay":
             pass
         else:
             location[1] = location[1] - size_of_step
@@ -363,6 +384,8 @@ def init_arm_and_platform():
         g_param.trans.set_capture_pos(current_location)
         g_param.trans.update_cam2base(current_location)
 
+
+# ---------- visualizations ----------
 
 def display_path_of_spray(grape_spray, path_points):
     """
@@ -626,6 +649,13 @@ def mark_sprayed_and_display():
         cv.destroyAllWindows()
 
 
+def check_end_program_time():
+    temp_input = input("Enter 11 to end the program")
+    if temp_input == "11":
+        return True
+    return False
+
+
 def display_points(g_to_display):
     """
     display 4 points
@@ -659,6 +689,7 @@ def check_more_than_half_away(x_center, half_step_size):
 
 
 if __name__ == '__main__':
+    init_variables()
     init_arm_and_platform()
     print(">>> Start position: ")
     current_location = g_param.trans.capture_pos
@@ -704,7 +735,6 @@ if __name__ == '__main__':
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
             for i in range(amount_of_grapes_to_spray):
-
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index), org=(g_param.TB[i].x_p,
                                                                                                      g_param.TB[i].y_p),
@@ -732,7 +762,7 @@ if __name__ == '__main__':
                     # spray_procedure_pixels(grape)
                     spray_procedure(grape, d=0.05, k=1)  # 28 # TODO: Omer, generate safety movement
                     move2capture()
-                    update_database_sprayed(i)  # 28 # TODO Edo: show the image and mark grape sprayed
+                    update_database_sprayed(i)  # 28
                     mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22
@@ -745,5 +775,6 @@ if __name__ == '__main__':
         if steps_counter >= number_of_steps and step_direction[(g_param.plat_position_step_number + 1) % 4] == "right":
             g_param.time_to_move_platform = True
             print(print_line_sep_time(), '\n', " move platform", '\n')
+            external_signal_all_done = check_end_program_time()
             # break
             # restart_target_bank()  # option to restart without initialize

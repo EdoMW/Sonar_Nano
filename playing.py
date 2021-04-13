@@ -3,21 +3,31 @@ import sys
 import os
 import warnings
 import numpy as np
+import matplotlib.pyplot as plt
+
+# image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG' # FIXME- grape 3
 
 """
 1) make sure loading process works by mask!!!
 2) make all sonar functions
 """
+img = np.load(r'D:\Users\NanoProject\experiments\exp_data_10_46\masks\0_2_10_4.npy')
+print(img.shape)
+# for i in range(3):
+plt.imshow(img[:, :], cmap="gray")
+plt.show()
 
-ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master/")
-warnings.filterwarnings("ignore")
-sys.path.append(ROOT_DIR)  # To find local version of the library
 
-
-
-image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0214.JPG'
-from mrcnn import utils
-img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+#
+# ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master/")
+# warnings.filterwarnings("ignore")
+# sys.path.append(ROOT_DIR)  # To find local version of the library
+#
+#
+#
+# image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0214.JPG'
+# from mrcnn import utils
+# img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
 
 

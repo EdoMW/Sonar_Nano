@@ -77,11 +77,16 @@ def distance2(sig, mask_id):
     :return: distance to grape in Meters
     """
     f, t, s = get_t_s(sig, mask_id)
-    new_s = np.sum(s[15:40], axis=0)
-    peaks, heights = find_peaks(new_s, height=0.003, distance=5)
-
+    new_s = s[30, :] / np.max(s[30, :])
+    peaks, heights = find_peaks(new_s, height=0.4)
+    # new_s = np.sum(s[15:40], axis=0)
+    # peaks, heights = find_peaks(new_s, height=0.003, distance=5)
     try:
         dist = abs((t[peaks[0]] - t[peaks[1]])) * 340 / 2
+        if dist < 0.1:
+            print('second peak')
+            dist = abs((t[peaks[0]] - t[peaks[2]])) * 340 / 2
+        # dist = abs((t[peaks[0]] - t[peaks[1]])) * 340 / 2
     except IndexError:
         dist = float(input("Please enter distance to grape in Meters"))
 

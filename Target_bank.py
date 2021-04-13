@@ -14,9 +14,10 @@ fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
 fg.yellow = Style(RgbFg(255, 255, 70))
 
-######################################################
-################# Parameters to tune #################
-######################################################
+# ----------------------------------------------------------------
+# ---------------------- Parameters to tune ----------------------
+# ----------------------------------------------------------------
+
 """
 same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
@@ -105,8 +106,17 @@ class Target_bank:
     def calc_mask_size_pixels(self):
         pass
 
-    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world, corners, p_corners, grape_base, pixels_count):
+    def calc_dist_from_center(self):
+        # FIXME
+        # x = 512 - self.x_p
+        # y = 512 - self.y_p
+        # return round(math.sqrt((x * x) + (y * y)), 2)
+        return 2
+
+    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world,
+                 corners, p_corners, grape_base, pixels_count=None, com=None):
         """
+        13 variables (for now)
         :param x: x center coordinate in meters
         :param y: y center coordinate in meters
         :param w: width in meters
@@ -130,13 +140,13 @@ class Target_bank:
         self.y_center = round(y, 3)
         self.w_meter = round(w, 3)
         self.h_meter = round(h, 3)
-        self.dist_from_center = Target_bank.calc_dist_from_center(self.x_p, self.y_p)
+        self.dist_from_center = self.calc_dist_from_center()  # in pixels
         self.angle = angle
-        self.rect_area = self.w_p * self.h_p # in pixels
+        self.rect_area = self.w_p * self.h_p  # in pixels
         self.sprayed = False
         self.mask = mask
-        self.center_of_mass = Target_bank.calc_center_of_mass(self)
-        self.pixels_count = pixels_count
+        self.center_of_mass = com
+        self.pixels_count = pixels_count  # in pixels
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.in_range = "ok"
@@ -144,13 +154,6 @@ class Target_bank:
         self.p_corners = p_corners
         self.corners = simplify_corners(corners)
         # amount of updates, what iteration was the last update
-
-    def calc_dist_from_center(x, y):
-        return math.sqrt(x * x + y * y)
-
-
-
-
 
 
 # if distance between centers is smaller than the treshhold
@@ -293,17 +296,17 @@ def add_to_target_bank(target):
     grape_base = g_param.trans.grape_base(target[0], target[1])
     ans, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if ans:
-        closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[0],
-                                                                                                              target[1])
+        closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[1])
         if closer_to_center or too_close:  # not sprayed and closer to center
             g_param.TB[temp_target_index].grape_world = temp_grape_world
             g_param.TB[temp_target_index].grape_base = grape_base
-
     else:
         if not too_close:
             # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
-                                          target[5], target[6], temp_grape_world, target[8], target[9], grape_base, 0))
+                                          target[5], target[6], temp_grape_world, target[8], target[9],
+                                          grape_base, 0, target[11]))
+            g_param.read_write_object.save_mask(target[5], Target_bank.grape_index)
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")
 

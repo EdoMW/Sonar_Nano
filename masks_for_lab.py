@@ -102,7 +102,7 @@ if g_param.work_place == "field":
         STEPS_PER_EPOCH = 30
 
         # Skip detections with < 90% confidence
-        DETECTION_MIN_CONFIDENCE = 0.8
+        DETECTION_MIN_CONFIDENCE = 0.95
 
         DETECTION_NMS_THRESHOLD = 0.1
 
@@ -277,6 +277,7 @@ if g_param.work_place == "field":
 
     weights_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
     print("Loading weights ", weights_path)
+    g_param.cnn_config = g_param.get_cnn_config(GrapeConfig())
     model.load_weights(weights_path, by_name=True)
 
     dataset_test = GrapeDataset()
@@ -815,8 +816,8 @@ def ueye_take_picture_2(image_number):
         image_path = os.path.join(folder_path_for_images, img_name)
 
         plt.imsave(image_path, frame)
-        if g_param.process_type == "record":
-            g_param.read_write_object.save_rgb_image(frame)
+        # if g_param.process_type == "record":
+        #     g_param.read_write_object.save_rgb_image(frame)
         cv.destroyAllWindows()
 
         # print("image_path!!!!!!:", image_path)
@@ -841,7 +842,7 @@ def ueye_take_picture_2(image_number):
     #
     # print()
     # print("END")
-    return image_path
+    return image_path, frame
 
 
 def biggest_box(det_rotated_boxes):
@@ -1043,12 +1044,14 @@ def take_picture_and_run():
     if g_param.process_type == "record" or g_param.process_type == "work":
         image_path = ueye_take_picture_2(image_number)
         for i in range(amount_of_tries):
-            image_path = ueye_take_picture_2(image_number)
+            image_path, frame = ueye_take_picture_2(image_number)
             image_taken = check_image(image_path)
             print("try number: ", i)
             if image_taken:
                 print(i)
                 print(colored("Image taken successfully", 'green'))
+                if g_param.process_type == "record":
+                    g_param.read_write_object.save_rgb_image(frame)
                 break
         if not image_taken:
             print_special()
@@ -1062,7 +1065,7 @@ def take_picture_and_run():
 
     # fOR FIELD simulation in lab
     if g_param.work_place == "field":
-        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0348.JPG'
+        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG'
 
     img = cv.imread(image_path)
     # img = cv.resize(img, (1024, 692))  # Resize image if needed
@@ -1176,7 +1179,7 @@ def take_picture_and_run():
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             det_rotated_boxes.append(box_in_meter)
             grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                     None, det_box, None, corners_in_meter, corner_points]
+                     None, det_box, None, corners_in_meter, corner_points, None, None]
             add_to_target_bank(grape)
 
     # for field usage with net
@@ -1217,14 +1220,13 @@ def take_picture_and_run():
         amount_of_mask_detacted = len(pred_masks[0][0])
         boxes = []
         mini_boxes = []
-        coms = []
         images = []
         for i in range(3):
             a = f'id_{i}'
             images.append(a)
         for i in range(amount_of_mask_detacted):
-            com = scipy.ndimage.measurements.center_of_mass(pred_masks[:, :, i])  # TODO- add to TB
-            coms.append(com)
+            com = np.asarray(scipy.ndimage.measurements.center_of_mass(pred_masks[:, :, i]))  # TODO- add to TB
+            com = np.round(com)
             # load the image, convert it to grayscale, and blur it slightly
             im = Image.fromarray(pred_masks[:, :, i])
             im.save("your_file.jpeg")
@@ -1274,7 +1276,7 @@ def take_picture_and_run():
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             # det_rotated_boxes.append(box_in_meter)
             grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                     None, det_box, None, corners_in_meter, corner_points, pixels_count]
+                     pred_masks[:, :, i], det_box, None, corners_in_meter, corner_points, pixels_count, com]
             add_to_target_bank(grape)
 
         # image_orig = rgb.copy()
