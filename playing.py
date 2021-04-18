@@ -5,19 +5,96 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 
-# image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG' #
-# img = np.load(r'D:\Users\NanoProject\experiments\exp_data_10_46\masks\0_2_10_4.npy')
-print(img.shape)
-resized = utils.resize_image(img, max_dim = 1024, mode="square")
-print(len(resized[0]), len(resized[0][0]), len(resized))
-print('Resized Dimensions : ', len(resized))
-resized, *_ = np.asarray(resized)
-print(type(resized))
-print('Resized Dimensions : ', resized.shape)
+# create array that looks like the images path
+a = np.zeros((2,10))
+for i in range(2):
+    for j in range(10):
+        if j % 2 == 0:
+            if i % 2 == 1:
+                a[i][j] = j * 2
+            else:
+                a[i][j] = j*2 + 1
+        else:
+            if i % 2 == 0:
+                a[i][j] = j * 2
+            else:
+                a[i][j] = j * 2 + 1
+print(len(a[0]))
 
-cv2.imshow("Resized image", resized)
-cv2.waitKey()
-cv2.destroyAllWindows()
+
+def get_index(index):
+    """
+    :param index: index of current image
+    :return: low image idx, high image idx
+    """
+    if index % 2 == 0:
+        lpi_temp = index * 2
+        hpi_temp = lpi_temp + 1
+    else:
+        lpi_temp = index * 2 + 1
+        hpi_temp = lpi_temp - 1
+    return lpi_temp, hpi_temp
+
+
+def build_array(step_size):
+    """
+    builds array to take image from
+    :param step_size:
+    :return:
+    """
+    direction = 0  # even = up, odd = down
+    b = []
+    for i in range(0, 10, step_size):
+        lpi, hpi = get_index(i)
+        if direction % 2 == 0:
+            b.append(lpi)
+            b.append(hpi)
+        else:
+            b.append(hpi)
+            b.append(lpi)
+        direction += 1
+    return b
+
+
+def get_image_num(imgae_num, step):
+    b = build_array(step)
+    print(b)
+    print(b[imgae_num])
+
+from time import time
+start_time = time()
+
+get_image_num(imgae_num=4 , step=1)
+print("--- %s seconds ---" % (time() - start_time))
+point1 = [[100,200],[200,300]]
+point2 = [[100,201],[202,301]]
+
+a = np.isclose(point1, point2, atol=1.01)
+ans = np.all(a)
+
+print(round(233, -1))
+print(np.all(a))  # TODO use it on boxes, corners
+
+x = [[100, 200], [200, 300], [1000], [23, [123, 223]]]
+c = np.hstack(x)
+print(type(c))
+print(c)
+
+
+
+# image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG' #
+# # img = np.load(r'D:\Users\NanoProject\experiments\exp_data_10_46\masks\0_2_10_4.npy')
+# print(img.shape)
+# resized = utils.resize_image(img, max_dim = 1024, mode="square")
+# print(len(resized[0]), len(resized[0][0]), len(resized))
+# print('Resized Dimensions : ', len(resized))
+# resized, *_ = np.asarray(resized)
+# print(type(resized))
+# print('Resized Dimensions : ', resized.shape)
+#
+# cv2.imshow("Resized image", resized)
+# cv2.waitKey()
+# cv2.destroyAllWindows()
 
 
 

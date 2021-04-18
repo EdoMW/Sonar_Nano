@@ -23,8 +23,8 @@ same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
-same_grape_distance_threshold = 0.07
-edge_distance_threshold = 0.04
+same_grape_distance_threshold = 0.06
+edge_distance_threshold = 0.05
 
 
 # prints the TB by grapes index
@@ -114,7 +114,7 @@ class Target_bank:
         return 2
 
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world,
-                 corners, p_corners, grape_base, pixels_count=None, com=None):
+                 corners, p_corners, grape_base, pixels_count, com):
         """
         13 variables (for now)
         :param x: x center coordinate in meters
@@ -214,29 +214,29 @@ def check_close_to_edge(target):
     w_m = target[2] / 2
     h_m = target[3] / 2
     angle = target[4]
-    right = check_close_to_right_edge(x_m, w_m, h_m, angle)
+    right = check_close_to_right_edge(target[8])
     lower = check_close_to_lower_edge(y_m, w_m, h_m, angle)
     upper = check_close_to_upper_edge(y_m, w_m, h_m, angle)
     return True if True in [right, lower, upper] else False  # True if at least one of them is True
 
 
-def check_close_to_right_edge(x_m, w_m, h_m, angle):
+def check_close_to_right_edge(corners_in_m):
     """
-    :param x_m: x center coordinate of the grape
-    :param w_m: width of the Bounding box
-    :param h_m: height of the Bounding box
-    :param angle: angle of rotation of the bounding box
+    :param corners_in_m:
     :return: True if too close to the right edge
     """
-    dist_on_x_from_center_1 = w_m * math.cos(math.radians(angle))
-    dist_on_x_from_center_2 = h_m * math.cos(math.radians(angle))
-    dist_to_edge_1 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_1))
-    dist_to_edge_2 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_2))
-    if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
+    edt = edge_distance_threshold
+    p1, p2, p3, p4 = corners_in_m[0][0], corners_in_m[1][0], corners_in_m[2][0], corners_in_m[3][0]
+    dist_to_edge_1 = abs(g_param.half_width_meter - p1)
+    dist_to_edge_2 = abs(g_param.half_width_meter - p2)
+    dist_to_edge_3 = abs(g_param.half_width_meter - p3)
+    dist_to_edge_4 = abs(g_param.half_width_meter - p4)
+    if dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt  or dist_to_edge_4 < edt:
         print("Right to close too edge")
-    return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+    return dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt  or dist_to_edge_4 < edt
 
 
+#  FIXME: not working.
 def check_close_to_lower_edge(y_m, w_m, h_m, angle):
     """
     :param y_m: x center coordinate of the grape
@@ -305,7 +305,7 @@ def add_to_target_bank(target):
             # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
                                           target[5], target[6], temp_grape_world, target[8], target[9],
-                                          grape_base, 0, target[11]))
+                                          grape_base, target[10], target[11]))
             g_param.read_write_object.save_mask(target[5], Target_bank.grape_index)
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")

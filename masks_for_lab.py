@@ -1030,6 +1030,26 @@ def arrange_data(width_0, height_0, corner_points):
     return width_0, height_0, [p1, p2, p3, p4]
 
 
+def check_if_in_list(temp_box, list_a):
+    """
+    Check if new element is already in the list (allow 3 pix to each corner separately tolerance)
+    :param temp_box: new element to check
+    :param list_a: list of element
+    :return: True if it is a new point
+    """
+    list_size = len(list_a)
+    if list_size == 0:
+        return True
+    temp_box = np.hstack(temp_box)
+    for i in range(list_size):
+        curr_box = np.hstack(list_a[i])
+        check_diff = np.isclose(temp_box, curr_box, atol=10.01)
+        ans = np.all(check_diff)
+        if ans:
+            return False
+    return True
+
+
 # im1 = 'path to captured image indside cv2.imageread'
 def take_picture_and_run():
     """
@@ -1134,9 +1154,10 @@ def take_picture_and_run():
         # corner_points = list(corner_points for corner_points,_ in itertools.groupby(corner_points))  # remove duplicates
 
         # next 17 lines are to remove duplicates (not very elegant)
+        # new_corner_points = []
         new_corner_points = []
         for elem in corner_points:
-            if elem not in new_corner_points:
+            if check_if_in_list(elem, new_corner_points):
                 new_corner_points.append(elem)
         corner_points = new_corner_points
         boxes = map(list, boxes)
@@ -1149,13 +1170,13 @@ def take_picture_and_run():
             boxes[i] = [[np.round(float(i), 0) for i in nested] for nested in boxes[i]]
         new_boxes = []
         for elem in boxes:
-            if elem not in new_boxes:
+            if check_if_in_list(elem, new_boxes):
                 new_boxes.append(elem)
         boxes = new_boxes
         # boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
         predicted_masks_to_mrbb, det_rotated_boxes = [], []
         amount_of_mask_detacted = len(boxes)
-        for i in range(0, len(corner_points)):
+        for i in range(0, len(boxes)):
             x = int(boxes[i][0][0])
             y = int(boxes[i][0][1])
             w, h, corners_in_meter = calculate_w_h(d, corner_points[i])
@@ -1174,7 +1195,8 @@ def take_picture_and_run():
             width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
             # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
             # angle_0 = (angle_0*180)/pi
-            det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
+            det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[b][1][0]), int(boxes[b][1][1]), angle_0, None]
+            # det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             det_rotated_boxes.append(box_in_meter)
@@ -1193,7 +1215,7 @@ def take_picture_and_run():
         img = im0
         arr = [im0]
         show_in_moved_window("check image", img)
-        cv.destroyAllWindows()
+        # cv.destroyAllWindows()
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)
         r = results[0]
@@ -1271,7 +1293,8 @@ def take_picture_and_run():
             corner_points = box[6]
             width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
 
-            det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
+            # det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
+            det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[i][1][0]), int(boxes[i][1][1]), angle_0, None]
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             # det_rotated_boxes.append(box_in_meter)

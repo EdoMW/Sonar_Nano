@@ -30,6 +30,7 @@ fg.orange = Style(RgbFg(255, 150, 50))
 fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
 fg.yellow = Style(RgbFg(255, 255, 70))
+
 g_param.read_write_object = read_write.ReadWrite()
 rs_rob = read_from_socket.ReadFromRobot()  # FIXME: make it possible to run on "load" when robot is turned off
 ws_rob = write_to_socket.Send2Robot()
@@ -42,9 +43,10 @@ sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 start_pos = np.array([-0.252, -0.24198481, 0.52430055, -0.6474185, -1.44296026, 0.59665296])  # check pos
 # start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
-step_size = 0.25
+
+step_size = g_param.step_size
 # TODO: think of better way to calculate the amount of steps based on range of the movement
-number_of_steps = 1  # amount of steps before plat move
+number_of_steps = int(0.3/step_size)  # amount of steps before plat move
 steps_counter = 0
 moving_direction = "right"  # right/left
 sleep_time = 3.05
@@ -98,79 +100,73 @@ def calc_path_points(pos, x_c, y_c, p):
     return pos
 
 
-def calc_spray_diameter(x_max):
+def calc_spray_diameter(goal):
+    """
+    :param goal: goal position in base coordinate
+    :return: maximum X coordinate possible
+    """
+    d_min = 0.03
+    d_max = 0.0  # maybe move those parameters to g_param
+    x_max = math.sqrt(g_param.max_euclid_dist ** 2 - goal[1] ** 2 - goal[2] ** 2)
+    print("x_max", x_max)
+    if g_param.last_grape_dist - g_param.max_spray_dist < x_max:
+        x_star = min(x_max, g_param.last_grape_dist - g_param.min_spray_dist)
+        print("x_star", x_star)
+        a = g_param.last_grape_dist - g_param.min_spray_dist
+        b = g_param.last_grape_dist - g_param.max_spray_dist
+        slope = (d_min - d_max) / (a - b)
+        d_star = slope * x_star - b * slope + d_max
+        return d_star
+    else:
+        print("The arm can not reach the spray position!")
+
     # the function will calculate how close the sprayer can get to the target.
     # By knowing that we will calculate the spray diameter
-    pass
+    return
 
 
 # tell me which input you want. I don't think that I need any output,
 # maybe only if there is a problem such as no more spraying material.
-def spray_procedure(g, d, k):
+def spray_procedure(g, d, k=1):
     """
     :param g: The target grape for spraying
     :param d: The nozzle diameter
     :param k:
     """
-    # s = g.w_meter * g.h_meter
-    # a = k * (g.mask/s)
-    a = 0.8
+    # s = g.w_p * g.h_p
+    # a = k * (g.pixels_count/s)
+    # print("a", a)
     center = read_position()
-    p1 = g.corners[0]
-    p2 = g.corners[1]
-    p3 = g.corners[2]
-    p4 = g.corners[3]
-    x_c = g.x_center
-    y_c = g.y_center
+    flip = False
+    p1, p2, p3, p4 = g.corners
+    x_c, y_c = g.x_center, g.y_center
     print("target's width: ", g.w_meter)
-    N = math.floor(g.w_meter/d + 0.5)
+    N = math.floor(g.w_meter / d + 0.5)
     print("The number of path is: ", N)
-    r = (g.w_meter / 2 + d) / g.w_meter
-    print("ratio", r)
-    if r < 1:
-        bottom_point = line_division(p1, p2, 0.5)
-        top_point = line_division(p3, p4, 0.5)
+    for n in range(N):
+        r = (d / 2 + n * d) / g.w_meter
+        if N > 2 and (n == 0 or n == N - 1):
+            a = 0.8
+        else:
+            a = 1
+        bottom_point = line_division(p1, p2, r)
+        top_point = line_division(p4, p3, r)
+        bottom_point = line_division(top_point, bottom_point, a)
         pixel_path = point_meter_2_pixel(g.distance, [bottom_point, top_point])
-        display_path_of_spray(g, pixel_path)
-
+        display_path_of_spray(g, pixel_path, flip)
         end_p = calc_path_points(np.copy(center), x_c, y_c, bottom_point)
         start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
         print("end_p", end_p)
         print("start_p", start_p)
         # input("press enter for check spray procedure")
         print(fg.yellow + "wait" + fg.rs, "\n")
-        move_and_spray(start_p, end_p, g)
+        if not flip:
+            move_and_spray(start_p, end_p, g)
+            flip = True
+        else:
+            move_and_spray(end_p, start_p, g)
+            flip = False
         print(fg.green + "continue" + fg.rs, "\n")
-    else:
-        r = 0.33
-
-    # secondary paths
-    bottom_point = line_division(p1, p2, r)
-    top_point = line_division(p4, p3, r)
-    bottom_point = line_division(top_point, bottom_point, a)
-    pixel_path = point_meter_2_pixel(g.distance, [bottom_point, top_point])
-    display_path_of_spray(g, pixel_path)
-    end_p = calc_path_points(np.copy(center), x_c, y_c, bottom_point)
-    start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
-    print("end_p", end_p)
-    print("start_p", start_p)
-    input("press enter for check spray procedure")
-    print(fg.yellow + "wait" + fg.rs, "\n")
-    move_and_spray(start_p, end_p, g)
-    print(fg.green + "continue" + fg.rs, "\n")
-    bottom_point = line_division(p1, p2, 1 - r)
-    top_point = line_division(p4, p3, 1 - r)
-    bottom_point = line_division(top_point, bottom_point, a)
-    pixel_path = point_meter_2_pixel(g.distance, [bottom_point, top_point])
-    display_path_of_spray(g, pixel_path)
-    end_p = calc_path_points(np.copy(center), x_c, y_c, bottom_point)
-    start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
-    print("end_p", end_p)
-    print("start_p", start_p)
-    input("press enter for check spray procedure")
-    print(fg.yellow + "wait" + fg.rs, "\n")
-    move_and_spray(start_p, end_p, g)
-    print(fg.green + "continue" + fg.rs, "\n")
 
 
 def spray_procedure_pixels(g):
@@ -281,26 +277,23 @@ def possible_move(goal_pos, grape_1):
     :param grape_1: The grape according to the parameters are checked
     :return: True if goal position is in reach of the robot, False else
     """
-    z_max = 0.82
-    z_min = 0.35
-    y_max = 0.6
-    euclid_max = 0.95
+
     euclid_dist = np.linalg.norm(np.array([0, 0, 0]) - goal_pos[0:3])
     print("euclid_dist ", euclid_dist)
-    if abs(goal_pos[1]) > y_max:
+    if abs(goal_pos[1]) > g_param.y_max:
         print("Target too right, move platform")
         g_param.TB[grape_1.index].in_range = "right"
         g_param.time_to_move_platform = True
         return False
-    elif goal_pos[2] > z_max:
+    elif goal_pos[2] > g_param.z_max:
         print("Target too high!")
         g_param.TB[grape_1.index].in_range = "high"
         return False
-    elif goal_pos[2] < z_min:
+    elif goal_pos[2] < g_param.z_min:
         print("Target too low!")
         g_param.TB[grape_1.index].in_range = "low"
         return False
-    elif euclid_dist > euclid_max:
+    elif euclid_dist > g_param.max_euclid_dist:
         print("The arm can not reach the goal position!!!, dist is: ", euclid_dist)
         g_param.TB[grape_1.index].in_range = "distant"
         return False
@@ -389,7 +382,7 @@ def init_arm_and_platform():
 
 # ---------- visualizations ----------
 
-def display_path_of_spray(grape_spray, path_points):
+def display_path_of_spray(grape_spray, path_points, flip):
     """
     :param grape_spray: grape to draw the spraying path on top of it
     :param path_points:  points that are the edges of the spraying route
@@ -398,6 +391,8 @@ def display_path_of_spray(grape_spray, path_points):
     for index in range(0, len(path_points) - 1):
         start = path_points[index]
         end = path_points[index + 1]
+        if flip:
+            start, end = end, start
         display_points_spray(start, end)
     if g_param.show_images:
         zoomed_in = g_param.masks_image.copy()
@@ -422,8 +417,8 @@ def display_path_of_spray(grape_spray, path_points):
         numpy_horizontal_concat = np.concatenate((g_param.masks_image, crop_img), axis=1)
         numpy_horizontal_concat = image_resize(numpy_horizontal_concat, height=945)
         show_in_moved_window("masks, mask zoomed in", numpy_horizontal_concat)
-        cv.waitKey()
-        cv.destroyAllWindows()
+        # cv.waitKey()
+        # cv.destroyAllWindows()
 
 
 def display_points_spray(start, end):
@@ -757,15 +752,15 @@ if __name__ == '__main__':
                 display_points(g_to_display=g_param.TB[i])
                 if g_param.show_images:
                     show_in_moved_window("Checking", g_param.masks_image)
-                    cv.waitKey()
-                    cv.destroyAllWindows()
+                    # cv.waitKey()
+                    # cv.destroyAllWindows()
 
                 grape = g_param.TB[i]  # 16 grape is the the most __ in the least, not sprayed
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
                 # g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20 # FIXME- WORKING WITH SONAR
-                g_param.last_grape_dist, is_grape = g_param.avg_dist, True # without sonar usage
+                g_param.last_grape_dist, is_grape = g_param.avg_dist, True  # without sonar usage
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
                     TB_class.update_distance(g_param.TB[i], read_position())  # 23,24
@@ -774,6 +769,8 @@ if __name__ == '__main__':
                     if time_to_move_platform:  # 27
                         break  #
                     # spray_procedure_pixels(grape)
+                    spray_diameter = calc_spray_diameter(grape.grape_base)
+                    print("spray diameter", spray_diameter)
                     spray_procedure(grape, d=0.05, k=1)  # 28 # TODO: Omer, generate safety movement
                     move2capture()
                     update_database_sprayed(i)  # 28

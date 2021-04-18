@@ -9,9 +9,9 @@ avg_dist = 0.71
 platform_step_size = 0
 sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.71
-step_size = 0.25
+step_size = 0.10
 height_step_size = 0.6  # parameter to_tune
-# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO: ask Sigal
+# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO
 image_number = 0
 plat_position_step_number = 0
 read_write_object = None
@@ -20,15 +20,20 @@ safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
 time_to_move_platform = False
 image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
 cnn_config = None
-
+min_spray_dist = 0.15
+max_spray_dist = 0.2
+# UR5 limitation:
+max_euclid_dist = 0.95
+z_max = 0.82
+z_min = 0.35
+y_max = 0.6
 
 """
 steps_gap: determines how many horizontal steps should be done.
 for example, if step size is 0.1m and we want to keep it that wat (default) than steps_gap = 1.
 if an experiment wants to test step size of 0.2m, than steps_gap should be equal to 2.
 """
-steps_gap = 1
-
+steps_gap = 3
 """
 work_place: lab/field
 process_type: work/record/load
@@ -65,17 +70,62 @@ def calc_image_height():
 
 
 def get_cnn_config(train_config_obj):
-    cnn_config = {"BACKBONE": train_config_obj.BACKBONE,
-                  "DETECTION_MIN_CONFIDENCE": train_config_obj.DETECTION_MIN_CONFIDENCE,
-                  "DETECTION_NMS_THRESHOLD": train_config_obj.DETECTION_NMS_THRESHOLD,
-                  "GPU_COUNT": train_config_obj.GPU_COUNT,
-                  "IMAGES_PER_GPU": train_config_obj.IMAGES_PER_GPU,
-                  "LEARNING_MOMENTUM": train_config_obj.LEARNING_MOMENTUM,
-                  "LEARNING_RATE": train_config_obj.LEARNING_RATE,
-                  "STEPS_PER_EPOCH": train_config_obj.STEPS_PER_EPOCH,
-                  "WEIGHT_DECAY": train_config_obj.WEIGHT_DECAY
-                  }
-    return cnn_config
+    """
+    :param train_config_obj:
+    :return: mask rcnn config as a dictionary for writing it down
+    """
+    cnn_config_temp = {"BACKBONE": train_config_obj.BACKBONE,
+                       "DETECTION_MIN_CONFIDENCE": train_config_obj.DETECTION_MIN_CONFIDENCE,
+                       "DETECTION_NMS_THRESHOLD": train_config_obj.DETECTION_NMS_THRESHOLD,
+                       "GPU_COUNT": train_config_obj.GPU_COUNT,
+                       "IMAGES_PER_GPU": train_config_obj.IMAGES_PER_GPU,
+                       "LEARNING_MOMENTUM": train_config_obj.LEARNING_MOMENTUM,
+                       "LEARNING_RATE": train_config_obj.LEARNING_RATE,
+                       "STEPS_PER_EPOCH": train_config_obj.STEPS_PER_EPOCH,
+                       "WEIGHT_DECAY": train_config_obj.WEIGHT_DECAY
+                       }
+    return cnn_config_temp
+
+
+def get_index(index):
+    """
+    :param index: index of current image
+    :return: low image idx, high image idx
+    """
+    if index % 2 == 0:
+        lpi_temp = index * 2
+        hpi_temp = lpi_temp + 1
+    else:
+        lpi_temp = index * 2 + 1
+        hpi_temp = lpi_temp - 1
+    return lpi_temp, hpi_temp
+
+
+def build_array(step_size_sim):
+    """
+    builds array to take image from
+    :param step_size_sim:
+    :return:
+    """
+    move_direction = 0  # even = up, odd = down
+    b = []
+    for i in range(0, 500, step_size_sim):
+        lpi, hpi = get_index(i)
+        if move_direction % 2 == 0:
+            b.append(lpi)
+            b.append(hpi)
+        else:
+            b.append(hpi)
+            b.append(lpi)
+        move_direction += 1
+    return b
+
+
+def get_image_num_sim(image_num):
+    global steps_gap
+    b = build_array(steps_gap)
+    print(b[image_num])
+    return b[image_num]
 
 
 def init():
@@ -83,8 +133,8 @@ def init():
     initializes all global variables.
     """
     global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number, \
-        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size,\
+        image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size, \
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
-        image_cnn_path, cnn_config, steps_gap
+        image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()

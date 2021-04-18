@@ -1,6 +1,7 @@
 import csv
 import os
 import g_param
+from g_param import get_image_num_sim
 import matplotlib.pyplot as plt
 from datetime import datetime
 import numpy as np
@@ -42,6 +43,7 @@ def get_local_time_2():
 
 
 def get_latest_dir():
+    # return 0  # FIXME
     """
     if take_last_exp = True (default) it will return the last exp dir. AND
     :return: dir path of the exp to be analysed
@@ -117,9 +119,11 @@ def write_txt_config(sim_directory_path):
     headlines = ["Network configuration", "Running configuration"]
     with open(path, 'w') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow([headlines[0]])
-        for key, value in cnn_config.items():
-            writer.writerow([key, value])
+        cnn_used = False  # TODO- add to exp name real/fake
+        if cnn_used:
+            writer.writerow([headlines[0]])
+            for key, value in cnn_config.items():
+                writer.writerow([key, value])
         writer.writerow([headlines[1]])
         writer.writerows(zip(param_list_name, param_list))
         csv_file.close()
@@ -202,7 +206,7 @@ class ReadWrite:
         return
 
     def create_sim_directory(self):
-        move_old_directory()
+        # move_old_directory()
         directory = "exp_data_dataTime"
         directory = directory.replace("dataTime", get_local_time_2())
         parent_dir_sim = r'D:\Users\NanoProject\simulations'
@@ -445,12 +449,14 @@ class ReadWrite:
             file.close()
 
     # ------------------------------------------------------------------
-    # -----------------------------read---------------------------------
+    # ---------------------------- read --------------------------------
     # ------------------------------------------------------------------
 
     def load_image_path(self):
-        image_number = g_param.image_number
-        # calc_image_number()
+        """
+        :return: path for image to be loaded
+        """
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -466,7 +472,7 @@ class ReadWrite:
         it takes the location according to the current image number
         :return:
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -483,7 +489,7 @@ class ReadWrite:
         it takes the location according to the current image number
         :return:
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -500,7 +506,7 @@ class ReadWrite:
         it takes the platform according to the current image number
         :return:
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -517,7 +523,7 @@ class ReadWrite:
         :param mask_id: id of the mask
         :return: recording of class
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.class_sonar_path
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -534,7 +540,7 @@ class ReadWrite:
         :param mask_id: id of the mask
         :return:
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.dist_sonar_path
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -550,7 +556,7 @@ class ReadWrite:
         :param mask_id: id of the mask
         :return: the s of the dist activation
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.dist_sonar_path
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -566,7 +572,7 @@ class ReadWrite:
         :param mask_id: id of the mask
         :return: measured distance by sonar, real distance
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.dist_sonar_path
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -582,7 +588,7 @@ class ReadWrite:
         :param mask_id: mask id to load
         :return: mask
         """
-        image_number = g_param.image_number
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.masks_path
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
