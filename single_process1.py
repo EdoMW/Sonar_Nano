@@ -46,7 +46,7 @@ import read_from_socket
 rs_rob = read_from_socket.ReadFromRobot()
 ws_rob = write_to_socket.Send2Robot()
 
-weight_file_name = r'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
+weight_file_name = d'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
@@ -303,7 +303,7 @@ def check_more_than_half_away(x_meter, half_step_size):
     :param x_meter: location of middle of the grape in meter
     :param half_step_size: half step size in meters
     :return:
-    true if  x_base > half_step_size, then spray_procedure only after next image (when grape will be captured when
+    true if  x_center > half_step_size, then spray_procedure only after next image (when grape will be captured when
     it is closer to the center of the point, which in high probability produce more accurate mask.
     else, return False, meaning that the grape wen't get an image when it is closer to the center.
     """

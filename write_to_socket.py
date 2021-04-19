@@ -80,7 +80,7 @@ class Send2Robot:
         if isLinear:
             self.s.send(("movel(p[" + (
                     "%f,%f,%f,%f,%f,%f" % (
-                pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])) + "], a=0.5, v=0.7,r=0)" + "\n").encode(
+                pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])) + "], a=0.5, v=0.7 ,r=0)" + "\n").encode(
                 "utf8"))
         else:
             self.s.send(("movej(p[" + (

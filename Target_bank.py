@@ -3,6 +3,7 @@ import math
 from operator import itemgetter, attrgetter
 import g_param
 from math import cos, sin, pi, radians
+import scipy
 import cv2 as cv
 
 # Define colors for printing
@@ -13,16 +14,17 @@ fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
 fg.yellow = Style(RgbFg(255, 255, 70))
 
-######################################################
-################# Parameters to tune #################
-######################################################
+# ----------------------------------------------------------------
+# ---------------------- Parameters to tune ----------------------
+# ----------------------------------------------------------------
+
 """
 same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
-same_grape_distance_threshold = 0.07
-edge_distance_threshold = 0.04
+same_grape_distance_threshold = 0.06
+edge_distance_threshold = 0.05
 
 
 # prints the TB by grapes index
@@ -39,16 +41,16 @@ class Target_bank:
         ind = self.index
         ind = " ID : " + str(ind) + " "
         ind = fg.orange + ind + fg.rs
-        a = self.x_base
-        b = self.y_base
+        a = self.x_center
+        b = self.y_center
         c = self.x_p
         d = self.y_p
         x = " x:" + str(a) + " "
         y = " y:" + str(b) + " "
         x_c = " x_p:" + str(c) + " "
         y_c = " y_p:" + str(d)
-        w = f" w: {self.w_base}"
-        h = f" h: {self.h_base}"
+        w = f" w: {self.w_meter}"
+        h = f" h: {self.h_meter}"
         if self.sprayed:
             e = fg.green + str(self.sprayed) + fg.rs
         else:
@@ -56,7 +58,7 @@ class Target_bank:
         f = " area: " + str(self.rect_area) + " "
         sp = " sprayed :" + str(e) + " "
         wr = "wait_round: " + str(self.wait_another_step)
-        world_data = " x world " + str(round(self.x_base, 3)) + " y world " + str(round(self.y_base, 3)) + " "
+        world_data = " x world " + str(round(self.x_center, 3)) + " y world " + str(round(self.y_center, 3)) + " "
         x_base = "x base: " + str(round(self.grape_world[0], 3)) + " "
         y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
         z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
@@ -77,8 +79,8 @@ class Target_bank:
         Doesn't work when extra process is done to the image.
         :return:
         """
-        x_cen, y_cen = self.x_base, self.y_base
-        w, h = self.w_base, self.h_base
+        x_cen, y_cen = self.x_center, self.y_center
+        w, h = self.w_meter, self.h_meter
         angle = self.angle
         ninety = pi / 2
         alpha = radians(angle)
@@ -96,8 +98,25 @@ class Target_bank:
         # auto_corners = cv.boxPoints(box)
         return [cor_1, cor_2, cor_3, cor_4]
 
-    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world, corners):
+    def calc_center_of_mass(self):
+        if self.mask is not None:
+            return scipy.ndimage.measurements.center_of_mass(self.mask)
+        return None
+
+    def calc_mask_size_pixels(self):
+        pass
+
+    def calc_dist_from_center(self):
+        # FIXME
+        # x = 512 - self.x_p
+        # y = 512 - self.y_p
+        # return round(math.sqrt((x * x) + (y * y)), 2)
+        return 2
+
+    def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world,
+                 corners, p_corners, grape_base, pixels_count, com):
         """
+        13 variables (for now)
         :param x: x center coordinate in meters
         :param y: y center coordinate in meters
         :param w: width in meters
@@ -111,31 +130,30 @@ class Target_bank:
         """
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
+        self.grape_base = grape_base
+
         self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
         self.h_p = int(pixels_data[3])
-        self.x_base = round(x, 3)  # base are in meters, relative to the base
-        self.y_base = round(y, 3)
-        self.w_base = round(w, 3)
-        self.h_base = round(h, 3)
-        self.dist_from_center = Target_bank.calc_dist_from_center(self.x_p, self.y_p)
+        self.x_center = round(x, 3)  # base are in meters, relative to the center of the image
+        self.y_center = round(y, 3)
+        self.w_meter = round(w, 3)
+        self.h_meter = round(h, 3)
+        self.dist_from_center = self.calc_dist_from_center()  # in pixels
         self.angle = angle
-        self.rect_area = self.w_p * self.h_p
+        self.rect_area = self.w_p * self.h_p  # in pixels
         self.sprayed = False
         self.mask = mask
+        self.center_of_mass = com
+        self.pixels_count = pixels_count  # in pixels
         self.distance = 0.71  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.in_range = "ok"
         self.wait_another_step = False
+        self.p_corners = p_corners
         self.corners = simplify_corners(corners)
         # amount of updates, what iteration was the last update
-
-    def calc_dist_from_center(x, y):
-        return math.sqrt(x * x + y * y)
-
-
-
 
 
 # if distance between centers is smaller than the treshhold
@@ -158,8 +176,8 @@ def check_if_in_TB(grape_world, target):
                 g_param.TB[i].y_p = int(target[6][1])
                 g_param.TB[i].w_p = int(target[6][2])
                 g_param.TB[i].h_p = int(target[6][3])
-                g_param.TB[i].x_meter = target[0]
-                g_param.TB[i].y_meter = target[1]
+                g_param.TB[i].x_center = target[0]
+                g_param.TB[i].y_center = target[1]
                 g_param.TB[i].w_meter = target[2]
                 g_param.TB[i].h_meter = target[3]
                 # decide if to update world
@@ -196,29 +214,29 @@ def check_close_to_edge(target):
     w_m = target[2] / 2
     h_m = target[3] / 2
     angle = target[4]
-    right = check_close_to_right_edge(x_m, w_m, h_m, angle)
+    right = check_close_to_right_edge(target[8])
     lower = check_close_to_lower_edge(y_m, w_m, h_m, angle)
     upper = check_close_to_upper_edge(y_m, w_m, h_m, angle)
     return True if True in [right, lower, upper] else False  # True if at least one of them is True
 
 
-def check_close_to_right_edge(x_m, w_m, h_m, angle):
+def check_close_to_right_edge(corners_in_m):
     """
-    :param x_m: x center coordinate of the grape
-    :param w_m: width of the Bounding box
-    :param h_m: height of the Bounding box
-    :param angle: angle of rotation of the bounding box
+    :param corners_in_m:
     :return: True if too close to the right edge
     """
-    dist_on_x_from_center_1 = w_m * math.cos(math.radians(angle))
-    dist_on_x_from_center_2 = h_m * math.cos(math.radians(angle))
-    dist_to_edge_1 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_1))
-    dist_to_edge_2 = abs(g_param.half_width_meter - (x_m + dist_on_x_from_center_2))
-    if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
+    edt = edge_distance_threshold
+    p1, p2, p3, p4 = corners_in_m[0][0], corners_in_m[1][0], corners_in_m[2][0], corners_in_m[3][0]
+    dist_to_edge_1 = abs(g_param.half_width_meter - p1)
+    dist_to_edge_2 = abs(g_param.half_width_meter - p2)
+    dist_to_edge_3 = abs(g_param.half_width_meter - p3)
+    dist_to_edge_4 = abs(g_param.half_width_meter - p4)
+    if dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt  or dist_to_edge_4 < edt:
         print("Right to close too edge")
-    return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+    return dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt  or dist_to_edge_4 < edt
 
 
+#  FIXME: not working.
 def check_close_to_lower_edge(y_m, w_m, h_m, angle):
     """
     :param y_m: x center coordinate of the grape
@@ -236,7 +254,6 @@ def check_close_to_lower_edge(y_m, w_m, h_m, angle):
             print("Lower to close too edge")
         return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
     return False
-
 
 
 def check_close_to_upper_edge(y_m, w_m, h_m, angle):
@@ -276,17 +293,20 @@ def add_to_target_bank(target):
     target = round_to_three(target)
     too_close = check_close_to_edge(target)
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
+    grape_base = g_param.trans.grape_base(target[0], target[1])
     ans, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if ans:
-        closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[0],
-                                                                                                              target[1])
+        closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[1])
         if closer_to_center or too_close:  # not sprayed and closer to center
             g_param.TB[temp_target_index].grape_world = temp_grape_world
+            g_param.TB[temp_target_index].grape_base = grape_base
     else:
         if not too_close:
             # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
-                                          target[5], target[6], temp_grape_world, target[8]))
+                                          target[5], target[6], temp_grape_world, target[8], target[9],
+                                          grape_base, target[10], target[11]))
+            g_param.read_write_object.save_mask(target[5], Target_bank.grape_index)
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")
 
@@ -315,8 +335,8 @@ def sort_by_and_check_for_grapes(sorting_type):
 
 
 def sort_by_leftest_first():
-    g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_base'))
-    # g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'y_base'))
+    g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_center'))
+    # g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'y_center'))
 
 
 def sort_by_rect_size():

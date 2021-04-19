@@ -36,7 +36,7 @@ from distance import distance2
 from operator import itemgetter, attrgetter
 import matplotlib.pyplot as plt
 import tensorflow as tf
-weight_file_name = r'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
+weight_file_name = d'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -133,7 +133,7 @@ def angVec2Rot(RV):
     t = np.linalg.norm(RV)
     # print("t ", t)
     k = RV / t
-    # print("k ", k)
+    # print("d ", d)
     ct = math.cos(t)
     st = math.sin(t)
     R = rotation_matrix(k, ct, st)
@@ -369,7 +369,7 @@ if __name__ == '__main__':
             mark_sprayed_and_display()
         # print("TB after sorting \n", g.TB)
         # for i in range(len(g.TB)):
-        #     if g.TB[i].sprayed and g.TB[i].x_base > -0.5: # sprayed and steel should appear in the image
+        #     if g.TB[i].sprayed and g.TB[i].x_center > -0.5: # sprayed and steel should appear in the image
         #         g.masks_image = cv.circle(g.masks_image, (int(g.TB[i].x_p), int(g.TB[i].y_p)),
         #                                   radius=4, color=(0, 0, 255), thickness=4)
         # show_in_moved_window("Checking status", g.masks_image)
@@ -412,7 +412,7 @@ if __name__ == '__main__':
                 print("distance :", distance, "is_grape :", is_grape)
                 if is_grape:  # 16 - yes
                     update_database_sonard(i, distance)  # 17
-                    # if time_to_move_platform or g.TB[i].x_base > (step_size / 2):  # 17. TODO: more complicated logic for later
+                    # if time_to_move_platform or g.TB[i].x_center > (step_size / 2):  # 17. TODO: more complicated logic for later
                     #     continue  # move to 13, select next grape
                     print("Distance: ", distance)
                     time_to_move_platform = move_to_next_pos(current_location, grape, 'spray_procedure') # TODO Omer: check time to move platform

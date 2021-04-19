@@ -319,6 +319,23 @@ from math import pi, cos, sin
 # [3] convert list to np.array
 
 
+
+def show_in_moved_window(win_name, img, x=0, y=0):
+    """
+    show image
+    :param win_name: name of the window
+    :param img: image to display
+    :param x: x coordinate of end left corner of the window
+    :param y: y coordinate of end left corner of the window
+    """
+    cv.namedWindow(win_name, cv.WINDOW_AUTOSIZE)        # Create a named window
+    cv.moveWindow(win_name, x, y)   # Move it to (x,y)
+    # cv.resizeWindow(win_name, 400, 512)
+    # img = cv.resize(img, (800, 1024))
+    cv.imshow(win_name, img)
+
+
+
 def masks_to_convex_hulls(list_of_masks):
     list_of_npas = []
     list_of_CH = []
@@ -1076,6 +1093,44 @@ def pixel_2_meter(d, box):
     # h = d * (box.h_p / 1024) * (1.2 / 16)
     # return [cen_poi_x_0/100, cen_poi_y_0/100, w/100, h/100, box.angle]
 
+
+def point_pixels_2_meter(d, point):
+    cen_poi_x_0 = point[0]
+    cen_poi_y_0 = point[1]
+    cen_poi_x_0 = cen_poi_x_0 - int(1024 / 2)
+    cen_poi_y_0 = cen_poi_y_0 - int(1024 / 2)
+    x_point = d * (cen_poi_x_0 / 1024) * (7.11 / 8)
+    y_point = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.33
+    return [x_point, y_point]
+
+
+def box_points_to_np_array(d, corner):
+    p1 = point_pixels_2_meter(d, corner)
+    p1 = np.array(p1)
+    p1 = np.insert(arr=p1, obj=2, values=1, axis=0)
+    return p1
+
+
+def calculate_w_h(d, box_points):
+    """
+    calculates the width and height of the box.
+    I used the same method as the cv.minAreaRect way of calculating H,W
+    :param d: distance to grape
+    :param box_points: [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+    :return: w,h in meters
+    """
+    p1 = box_points_to_np_array(d, box_points[0])
+    p2 = box_points_to_np_array(d, box_points[1])
+    p3 = box_points_to_np_array(d, box_points[2])
+    p4 = box_points_to_np_array(d, box_points[3])
+    w = np.linalg.norm(p1 - p2)
+    h = np.linalg.norm(p2 - p3)
+    if w > h:
+        h, w = w, h
+        p1, p2, p3, p4 = p1, p4, p3, p2
+    return w, h, [p1, p2, p3, p4]
+
+
 def take_from_omer():
     d = 520
     return d
@@ -1091,7 +1146,7 @@ def take_picture_and_run(current_location, image_number):
     # ueye_take_picture_2(i)
     # take a picture by pressing a key
     # captured_image = take_picture()
-    im1 = cv2.imread(r"C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0107.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
+    im1 = cv2.imread(d"C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0107.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
     im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2RGB)
     img = im1
 
@@ -1168,12 +1223,12 @@ def take_picture_and_run(current_location, image_number):
         p_convex_hulls, p_npas = masks_to_convex_hulls(predicted_masks_to_mrbb)
         mrbbs_prediction = output_dict(p_npas)
 
-        amount_of_mask_detacted = len(boxes)
+        amount_of_mask_detacted = len(predicted_masks_to_mrbb)
         for i in range(0, amount_of_mask_detacted):
-            x = int(boxes[i][0][0])
-            y = int(boxes[i][0][1])
+            x = int(mrbbs_prediction[i][0][0])
+            y = int(mrbbs_prediction[i][0][1])
             w, h, corners_in_meter = calculate_w_h(d, corner_points[i])
-            a = int(boxes[i][2])
+            a = int(mrbbs_prediction[i][2])
             box = [x, y, w, h, a, corners_in_meter]
             predicted_masks_to_mrbb.append(box)
 
