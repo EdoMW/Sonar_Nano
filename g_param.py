@@ -35,7 +35,7 @@ if an experiment wants to test step size of 0.2m, than steps_gap should be equal
 """
 steps_gap = 3
 """
-work_place: lab/field
+work_place: lab/field/lab_grapes
 process_type: work/record/load
 work- don't save any data except the Final TB 
 record- save all relevant data in folders (as CSV/JPG..)
@@ -44,7 +44,7 @@ change parameters if necessary.
 """
 
 process_type = "work"  # TODO-add save of the TB before ending the program. also descriptive statistic
-work_place = "lab"  # lab. to know which function of image processing to use.
+work_place = "lab_grapes"  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():

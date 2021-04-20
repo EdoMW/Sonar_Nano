@@ -226,6 +226,7 @@ def check_close_to_right_edge(corners_in_m):
     :return: True if too close to the right edge
     """
     edt = edge_distance_threshold
+    edt = edge_distance_threshold
     p1, p2, p3, p4 = corners_in_m[0][0], corners_in_m[1][0], corners_in_m[2][0], corners_in_m[3][0]
     dist_to_edge_1 = abs(g_param.half_width_meter - p1)
     dist_to_edge_2 = abs(g_param.half_width_meter - p2)

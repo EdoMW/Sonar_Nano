@@ -10,7 +10,6 @@ import codecs
 import read_from_socket as rfs
 
 
-
 def get_local_time():
     # Hours: minutes
     t = datetime.now().strftime("%H_%M_%S_%f")[:-4]
@@ -75,25 +74,18 @@ class Send2Robot:
         self.s.settimeout(10)
         time.sleep(0.2)
 
-    def move_command(self, isLinear, pos, tSleep):
+    def move_command(self, isLinear, pos, tSleep, velocity):
         time.sleep(0.05)
         if isLinear:
-            self.s.send(("movel(p[" + (
-                    "%f,%f,%f,%f,%f,%f" % (
-                pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])) + "], a=0.5, v=0.7 ,r=0)" + "\n").encode(
-                "utf8"))
+            self.s.send(
+                (f'movel(p[{pos[0]},{pos[1]},{pos[2]},{pos[3]},{pos[4]},{pos[5]}], a=0.5, v={velocity},r=0)' + "\n").encode(
+                    "utf8"))
         else:
-            self.s.send(("movej(p[" + (
-                    "%f,%f,%f,%f,%f,%f" % (
-                pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])) + "], a=0.5, v=0.7,r=0)" + "\n").encode(
-                "utf8"))
+            self.s.send(
+                (f'movej(p[{pos[0]},{pos[1]},{pos[2]},{pos[3]},{pos[4]},{pos[5]}], a=0.5, v={velocity},r=0)' + "\n").encode(
+                    "utf8"))
         time.sleep(tSleep)
 
-
-
-
     def spray_command(self, spray):
-        if spray:
-            self.s.send(("set_digital_out(0, True)" + "\n").encode("utf8"))
-        else:
-            self.s.send(("set_digital_out(0, False)" + "\n").encode("utf8"))
+        self.s.send((f'set_digital_out(0, {spray})' + "\n").encode("utf8"))
+

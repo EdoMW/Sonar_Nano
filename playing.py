@@ -5,7 +5,8 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 
-# create array that looks like the images path
+
+
 a = np.zeros((2,10))
 for i in range(2):
     for j in range(10):
@@ -19,8 +20,6 @@ for i in range(2):
                 a[i][j] = j * 2
             else:
                 a[i][j] = j * 2 + 1
-print(len(a[0]))
-
 
 def get_index(index):
     """
@@ -58,27 +57,38 @@ def build_array(step_size):
 
 def get_image_num(imgae_num, step):
     b = build_array(step)
-    print(b)
-    print(b[imgae_num])
+    return b[imgae_num]
 
-from time import time
-start_time = time()
+step_direction = ["right", "up", "right", "down"]  # the order of movement
 
-get_image_num(imgae_num=4 , step=1)
-print("--- %s seconds ---" % (time() - start_time))
-point1 = [[100,200],[200,300]]
-point2 = [[100,201],[202,301]]
+for i in range(10):
+    num = get_image_num(i, 1)
+    direction = step_direction[(num + 1) % 4]
+    print(num, direction)
 
-a = np.isclose(point1, point2, atol=1.01)
-ans = np.all(a)
 
-print(round(233, -1))
-print(np.all(a))  # TODO use it on boxes, corners
 
-x = [[100, 200], [200, 300], [1000], [23, [123, 223]]]
-c = np.hstack(x)
-print(type(c))
-print(c)
+
+
+#
+# from time import time
+# start_time = time()
+#
+# get_image_num(imgae_num=4 , step=1)
+# print("--- %s seconds ---" % (time() - start_time))
+# point1 = [[100,200],[200,300]]
+# point2 = [[100,201],[202,301]]
+#
+# a = np.isclose(point1, point2, atol=1.01)
+# ans = np.all(a)
+#
+# print(round(233, -1))
+# print(np.all(a))  # TODO use it on boxes, corners
+#
+# x = [[100, 200], [200, 300], [1000], [23, [123, 223]]]
+# c = np.hstack(x)
+# print(type(c))
+# print(c)
 
 
 
