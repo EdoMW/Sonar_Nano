@@ -66,6 +66,7 @@ def get_latest_dir():
     #         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
 
 
+
 def generate_str_num_mask_dt(mask_id):
     current_time = get_local_time_3()
     path = 'num_maskNum_dt.csv'
@@ -163,13 +164,15 @@ def move_old_directory():
     source_dir = r'D:\Users\NanoProject\experiments'
     target_dir = r'D:\Users\NanoProject\old_experiments'
     file_names = os.listdir(source_dir)
-    for file_name in file_names:
-        shutil.move(os.path.join(source_dir, file_name), target_dir)
+    if len(file_names) != 0:
+        for file_name in file_names:
+            shutil.move(os.path.join(source_dir, file_name), target_dir)
     source_dir = r'D:\Users\NanoProject\simulations'
     target_dir = r'D:\Users\NanoProject\old_simulations'
     file_names = os.listdir(source_dir)
-    for file_name in file_names:
-        shutil.move(os.path.join(source_dir, file_name), target_dir)
+    if len(file_names) != 0:
+        for file_name in file_names:
+            shutil.move(os.path.join(source_dir, file_name), target_dir)
 
 
 class ReadWrite:

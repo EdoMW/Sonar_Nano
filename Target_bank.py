@@ -24,7 +24,7 @@ edge_distance_threshold: if distance from right edge of the grape to the edge of
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
 same_grape_distance_threshold = 0.06
-edge_distance_threshold = 0.05
+edge_distance_threshold = 0.01
 
 
 # prints the TB by grapes index
@@ -64,7 +64,8 @@ class Target_bank:
         z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
         base_data = x_base + y_base + z_base + '\n'
         angle = f" angle: {self.angle}"
-        return ind + sp + wr + world_data + base_data + w + h + angle + '\n'
+        distance = f'distance: {self.distance}'
+        return ind + sp + wr + world_data + base_data + w + h + angle + '\n' + distance + '\n'
         # return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
 
     def __repr__(self):
@@ -147,7 +148,7 @@ class Target_bank:
         self.mask = mask
         self.center_of_mass = com
         self.pixels_count = pixels_count  # in pixels
-        self.distance = 0.71  # 0:default distance value, 1:from sonar
+        self.distance = 0.75  # 0:default distance value, 1:from sonar
         self.fake_grape = False
         self.in_range = "ok"
         self.wait_another_step = False
@@ -215,8 +216,12 @@ def check_close_to_edge(target):
     h_m = target[3] / 2
     angle = target[4]
     right = check_close_to_right_edge(target[8])
-    lower = check_close_to_lower_edge(y_m, w_m, h_m, angle)
-    upper = check_close_to_upper_edge(y_m, w_m, h_m, angle)
+    if right:
+        g_param.masks_image = cv.circle(g_param.masks_image, (target[6][0],  target[6][1]),
+                                        radius=2, color=(0, 0, 255), thickness=2)
+    lower = check_close_to_lower_edge(y_m, w_m, h_m, angle, target[8])
+    upper = check_close_to_upper_edge(y_m, w_m, h_m, angle, target[8])
+    # print(f'right: {right}, up: {upper}, down: {lower}')
     return True if True in [right, lower, upper] else False  # True if at least one of them is True
 
 
@@ -227,36 +232,45 @@ def check_close_to_right_edge(corners_in_m):
     """
     edt = edge_distance_threshold
     p1, p2, p3, p4 = corners_in_m[0][0], corners_in_m[1][0], corners_in_m[2][0], corners_in_m[3][0]
-    dist_to_edge_1 = abs(g_param.half_width_meter - p1)
-    dist_to_edge_2 = abs(g_param.half_width_meter - p2)
-    dist_to_edge_3 = abs(g_param.half_width_meter - p3)
-    dist_to_edge_4 = abs(g_param.half_width_meter - p4)
-    if dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt  or dist_to_edge_4 < edt:
+    dist_to_edge_1 = g_param.half_width_meter - p1
+    dist_to_edge_2 = g_param.half_width_meter - p2
+    dist_to_edge_3 = g_param.half_width_meter - p3
+    dist_to_edge_4 = g_param.half_width_meter - p4
+    print("Right edge: ", dist_to_edge_1," ", dist_to_edge_2," ", dist_to_edge_3," ", dist_to_edge_4)
+    if dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt or dist_to_edge_4 < edt:
         print("Right to close too edge")
-    return dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt  or dist_to_edge_4 < edt
+    return dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt or dist_to_edge_4 < edt
 
 
 #  FIXME: not working.
-def check_close_to_lower_edge(y_m, w_m, h_m, angle):
+def check_close_to_lower_edge(y_m, w_m, h_m, angle, corners_in_m):
     """
+    :param corners_in_m:
     :param y_m: x center coordinate of the grape
     :param w_m: width of the Bounding box
     :param h_m: height of the Bounding box
     :param angle: angle of rotation of the bounding box
     :return: True if too close to the lower edge
     """
-    if g_param.direction == "down" or g_param.direction == "right":
-        dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
-        dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
-        dist_to_edge_1 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_1))
-        dist_to_edge_2 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_2))
-        if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
-            print("Lower to close too edge")
-        return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+    edt = edge_distance_threshold
+    p1 = corners_in_m[0][1]
+    dist_to_lower_edge = g_param.half_height_meter - p1
+    if dist_to_lower_edge < edt:
+        print("Lower edge too close to edge", dist_to_lower_edge, "p1", p1)
+        return dist_to_lower_edge < edt
     return False
+    # if g_param.direction == "down" or g_param.direction == "right":
+    #     dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
+    #     dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
+    #     dist_to_edge_1 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_1))
+    #     dist_to_edge_2 = abs(g_param.half_height_meter - (y_m + dist_on_y_from_center_2))
+    #     if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
+    #         print("Lower to close too edge")
+    #     return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+    # return False
 
 
-def check_close_to_upper_edge(y_m, w_m, h_m, angle):
+def check_close_to_upper_edge(y_m, w_m, h_m, angle, corners_in_m):
     """
     :param y_m: x center coordinate of the grape
     :param w_m: width of the Bounding box
@@ -264,13 +278,20 @@ def check_close_to_upper_edge(y_m, w_m, h_m, angle):
     :param angle: angle of rotation of the bounding box
     :return: True if too close to the lower edge
     """
-    dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
-    dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
-    dist_to_edge_1 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_1))
-    dist_to_edge_2 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_2))
-    if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
-        print("Upper to close too edge")
-    return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
+    edt = edge_distance_threshold
+    p3 = corners_in_m[2][1]
+    dist_to_upper_edge = g_param.half_height_meter + p3
+    if dist_to_upper_edge < edt:
+        print("Upper edge too close", p3)
+        return dist_to_upper_edge < edt
+    return False
+    # dist_on_y_from_center_1 = w_m * math.sin(math.radians(angle))
+    # dist_on_y_from_center_2 = h_m * math.sin(math.radians(angle))
+    # dist_to_edge_1 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_1))
+    # dist_to_edge_2 = abs(g_param.half_height_meter + (y_m + dist_on_y_from_center_2))
+    # if dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold:
+    #     print("Upper to close too edge")
+    # return dist_to_edge_1 < edge_distance_threshold or dist_to_edge_2 < edge_distance_threshold
 
 
 def round_to_three(arr):
@@ -351,10 +372,58 @@ def sort_by_mask_size():
     pass
 
 
-def update_distance(grape, sonar_location):
+def point_pixels_2_meter(d, point):
     """
+    :param d: distance to grape
+    :param point: point to convert to meter
+    :return: [x, y] in meters relative to the center
+    """
+    cen_poi_x_0 = int(point[0])
+    cen_poi_y_0 = int(point[1])
+    cen_poi_x_0 = cen_poi_x_0 - int(1024 / 2)
+    cen_poi_y_0 = cen_poi_y_0 - int(1024 / 2)
+    x_point = d * (cen_poi_x_0 / 1024) * (7.11 / 8)
+    y_point = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.33
+    return [x_point, y_point]
+
+
+def box_points_to_np_array(d, corner):
+    p1 = point_pixels_2_meter(d, corner)
+    p1 = np.array(p1)
+    p1 = np.insert(arr=p1, obj=2, values=1, axis=0)
+    return p1
+
+
+def calculate_w_h(d, box_points):
+    """
+    calculates the width and height of the box.
+    I used the same method as the cv.minAreaRect way of calculating H,W
+    :param d: distance to grape
+    :param box_points: [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+    :return: w,h in meters
+    """
+    p1 = box_points_to_np_array(d, box_points[0])
+    p2 = box_points_to_np_array(d, box_points[1])
+    p3 = box_points_to_np_array(d, box_points[2])
+    p4 = box_points_to_np_array(d, box_points[3])
+    w = np.linalg.norm(p1 - p2)
+    h = np.linalg.norm(p2 - p3)
+    if w > h:
+        h, w = w, h
+        p1, p2, p3, p4 = p1, p4, p3, p2
+    return w, h, [p1, p2, p3, p4]
+
+
+def update_distance(grape):
+    """
+    call the function ONLY if Sonar activated
     :param grape: the i'th grape
-    :param sonar_location: the location of the sonar in base coordinate
     """
     # TODO: call the function that updates g_param.avg_dist with sonar_location
-    grape.distance = g_param.last_grape_dist + abs(sonar_location[0] - g_param.trans.capture_pos[0])
+    grape.distance = g_param.last_grape_dist + g_param.sonar_x_length
+    x, y = point_pixels_2_meter(grape.distance, [grape.x_p, grape.y_p])
+    w, h, corners = calculate_w_h(grape.distance, grape.p_corners)
+    grape.x_center, grape.y_center, grape.w_meter, grape.h_meter, grape.corners = x, y, w, h, corners
+    grape.grape_world = g_param.trans.grape_world(x, y)
+    grape.grape_base = g_param.trans.grape_base(x, y)
+    print(grape)

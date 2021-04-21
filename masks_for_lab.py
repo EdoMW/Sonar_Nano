@@ -285,67 +285,6 @@ if g_param.work_place == "field":
     dataset_test.prepare()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
     """
     resize image
@@ -394,7 +333,7 @@ def show_in_moved_window(win_name, img, x=0, y=0):
     # cv.resizeWindow(win_name, 400, 512)
     # img = cv.resize(img, (800, 1024))
     cv.imshow(win_name, img)
-    cv.waitKey(0)
+    # cv.waitKey(0)
 
 
 def masks_to_convex_hulls(list_of_masks):
@@ -990,7 +929,6 @@ def add_circle_and_index(img_1, img_2):
     # cv.imshow("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
     show_in_moved_window("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
 
-
 def display_image_with_masks(image):
     """
     :param image: image with all the masks
@@ -1059,8 +997,6 @@ def take_picture_and_run():
     d = g_param.avg_dist
     # box = [0, 0, 0, 0, 0]
     plt.clf()  # clean the canvas
-    image_details = f"Picture number {image_number}"
-    print(colored(image_details, 'green'))
     if g_param.process_type == "record" or g_param.process_type == "work":
         image_path = ueye_take_picture_2(image_number)
         for i in range(amount_of_tries):
@@ -1092,9 +1028,8 @@ def take_picture_and_run():
     rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
     if g_param.work_place == "lab":
-        # for lab # TODO; for lab use without net
+        # for lab
         rng.seed(12345)
-
         def thresh_callback(val):
             threshold = val
             ret, thresh = cv.threshold(src_gray, 50, 255, cv.THRESH_BINARY)
@@ -1124,7 +1059,7 @@ def take_picture_and_run():
                 area = width_a * height_a
                 color_index = 50
                 tresh_size = 6000
-                if area > tresh_size and (width_a/height_a > 0.15) and (height_a/width_a > 0.15):
+                if tresh_size < area < 200_000 and (width_a/height_a > 0.15) and (height_a/width_a > 0.15):
                     # print("area: ", area)
                     # TODO: להכפיל את הזוית ב-1
                     boxes.append(minRect[i])
@@ -1143,10 +1078,10 @@ def take_picture_and_run():
         src_gray = cv.cvtColor(green, cv.COLOR_BGR2GRAY)
         src_gray = cv.blur(src_gray, (3, 3))
         source_window = 'Source'
-        cv.namedWindow(source_window)
+        # cv.namedWindow(source_window)
         max_thresh = 255
         thresh = 100  # initial threshold
-        cv.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback)
+        # cv.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback)
         boxes,corner_points = [], []
         thresh_callback(thresh)
         # print(len(boxes), boxes)
@@ -1155,6 +1090,111 @@ def take_picture_and_run():
 
         # next 17 lines are to remove duplicates (not very elegant)
         # new_corner_points = []
+        new_corner_points = []
+        for elem in corner_points:
+            if check_if_in_list(elem, new_corner_points):
+                new_corner_points.append(elem)
+        corner_points = new_corner_points
+        boxes = map(list, boxes)
+        boxes = [list(elem) for elem in boxes]
+        for i in range(0, len(boxes)):
+            for j in range(0, 2):
+                boxes[i][j] = list(boxes[i][j])
+            boxes[i][2] = [boxes[i][2]]
+        for i in range(0, len(boxes)):
+            boxes[i] = [[np.round(float(i), 0) for i in nested] for nested in boxes[i]]
+        new_boxes = []
+        for elem in boxes:
+            if check_if_in_list(elem, new_boxes):
+                new_boxes.append(elem)
+        boxes = new_boxes
+        # boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
+        predicted_masks_to_mrbb, det_rotated_boxes = [], []
+        amount_of_mask_detacted = len(boxes)
+        for i in range(0, len(boxes)):
+            x = int(boxes[i][0][0])
+            y = int(boxes[i][0][1])
+            w, h, corners_in_meter = calculate_w_h(d, corner_points[i])
+            a = int(boxes[i][2][0])
+            box = [x, y, w, h, a, corners_in_meter, corner_points[i]]
+            predicted_masks_to_mrbb.append(box)
+        # for the new function
+        for b in range(0, len(predicted_masks_to_mrbb)):
+            cen_poi_x_0 = predicted_masks_to_mrbb[b][0]
+            cen_poi_y_0 = predicted_masks_to_mrbb[b][1]
+            width_0 = predicted_masks_to_mrbb[b][2]
+            height_0 = predicted_masks_to_mrbb[b][3]
+            angle_0 = predicted_masks_to_mrbb[b][4] * -1
+            corners_in_meter = predicted_masks_to_mrbb[b][5]
+            corner_points = predicted_masks_to_mrbb[b][6]
+            width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
+            # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
+            # angle_0 = (angle_0*180)/pi
+            det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[b][1][0]), int(boxes[b][1][1]), angle_0, None]
+            # det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
+            x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
+            box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
+            det_rotated_boxes.append(box_in_meter)
+            grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
+                     None, det_box, None, corners_in_meter, corner_points, None, None]
+            add_to_target_bank(grape)
+
+
+    if g_param.work_place == "lab_grapes":
+        # for lab
+        rng.seed(12345)
+
+        def thresh_callback(val):
+            threshold = val
+            ret, thresh = cv.threshold(src_gray, 5, 255, cv.THRESH_BINARY)
+            # kernel = np.ones((5, 5), np.uint8)
+            # thresh = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
+            # thresh = cv.dilate(thresh, kernel, iterations=1)
+            # thresh = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
+            # thresh = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
+            # thresh = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
+            # thresh = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
+            # thresh = cv.erode(thresh, kernel, iterations=3)
+            # canny_output = cv.Canny(thresh, threshold, threshold * 2)
+            contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+            # Find the rotated rectangles and ellipses for each contour
+            minRect = [None] * len(contours)
+            corners_rect = [None] * len(contours)
+            # rect = ((center_x,center_y),(width,height),angle)
+            for i, c in enumerate(contours):
+                minRect[i] = cv.minAreaRect(c)
+                corners_rect[i] = cv.boxPoints(minRect[i])
+            drawing = np.zeros((rgb.shape[0], rgb.shape[1], 3), dtype=np.uint8)
+            for i, c in enumerate(contours):
+                box = cv.boxPoints(minRect[i])
+                box = np.intp(box)
+                width_a = int(minRect[i][1][0])
+                height_a = int(minRect[i][1][1])
+                area = width_a * height_a
+                color_index = 50
+                tresh_size = 10_000
+                if (width_a / (height_a + 0.001) > 0.2) and (height_a / (width_a + 0.001) > 0.2) and tresh_size < area:  # and tresh_size < area < 200_000:
+                    print("area: ", area)
+                    # TODO: להכפיל את הזוית ב-1
+                    boxes.append(minRect[i])
+                    corner_points.append(box)
+                    cv.drawContours(green, [box], 0, (255 - color_index, 255 - color_index * 2, 255 - color_index * 3))
+                    color_index += 20
+
+        hsv = cv.cvtColor(rgb, cv.COLOR_RGB2HSV)
+        mask = cv.inRange(hsv, (36, 25, 25), (72, 255, 255))
+
+        imask = mask > 0
+        green = np.zeros_like(rgb, np.uint8)
+        green[imask] = rgb[imask]
+
+        temp_bgr = cv.cvtColor(green, cv.COLOR_HSV2BGR)
+        src_gray = cv.cvtColor(temp_bgr, cv.COLOR_BGR2GRAY)
+        thresh = 100  # initial threshold
+        boxes, corner_points = [], []
+        thresh_callback(thresh)
+        corner_points = [arr.tolist() for arr in corner_points]
+
         new_corner_points = []
         for elem in corner_points:
             if check_if_in_list(elem, new_corner_points):
@@ -1215,6 +1255,7 @@ def take_picture_and_run():
         img = im0
         arr = [im0]
         show_in_moved_window("check image", img)
+        cv.waitKey()
         # cv.destroyAllWindows()
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)

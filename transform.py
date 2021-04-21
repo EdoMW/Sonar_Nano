@@ -50,8 +50,8 @@ class Trans:
                                     axis=1)
         self.t_cam2base = np.matmul(self.t_tcp2base, self.t_cam2tcp)
         self.t_cam2world = np.matmul(self.t_base2world, self.t_cam2base)
-        # if g_param.process_type == "record":
-        #     g_param.read_write_object.write_transformations_to_csv()
+        if g_param.process_type == "record":
+            g_param.read_write_object.write_transformations_to_csv()
         # elif g_param.process_type == "load":
         #     g_param.read_write_object.read_transformations_from_csv()
         time.sleep(0.01)
@@ -70,7 +70,9 @@ class Trans:
 
     def tcp_base(self, tcp):
         tcp = np.append(tcp, 1)
+        print("1tcp ", tcp)
         tcp_base = np.matmul(self.t_tcp2base, tcp)
+        print("2tcp_base ", tcp_base)
         tcp_base = np.concatenate((tcp_base[:-1], self.ang_vec_tcp), axis=0)
         return tcp_base
 
@@ -83,8 +85,11 @@ class Trans:
 
     def aim_spray(self, x_cam, y_cam, distance):
         dist = distance - g_param.safety_dist
+        print("????????????????????????????????", dist)
         grape_cam = np.array([float(x_cam), float(y_cam), dist, 1])
         grape_tcp = np.matmul(self.t_cam2tcp, grape_cam)
+        print("nnnnnnnnnnnnnnnnnnnnnnnn", grape_tcp)
         grape_tcp = grape_tcp[:-1]
         new_tcp = grape_tcp - self.v_spray_tcp
+        print("nnnnnnnnnnnnnnnnnnnnnnnn", new_tcp)
         return new_tcp
