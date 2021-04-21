@@ -41,13 +41,13 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 # start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255 ])  # Left pos
-start_pos = np.array([-0.252, -0.24198481, 0.44430055, -0.6474185, -1.44296026, 0.59665296])  # check pos
+start_pos = np.array([-0.252, -0.24198481, 0.43430055, -0.6474185, -1.44296026, 0.59665296])  # check pos
 # start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
 # start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
 
 step_size = g_param.step_size
 # TODO: think of better way to calculate the amount of steps based on range of the movement
-number_of_steps = int(0.3 / step_size)  # amount of steps before plat move
+number_of_steps = int(0.4 / step_size)  # amount of steps before plat move
 steps_counter = 0
 moving_direction = "right"  # right/left
 sleep_time = 3.05
@@ -93,9 +93,9 @@ def calc_linear_equation(x1, x2, y1, y2):
 def move_and_spray(start, end, target_grape):
     if g_param.process_type != "load":
         if possible_move(start, target_grape) and possible_move(end, target_grape):
-            ws_rob.move_command(True, start, 5, velocity)
+            ws_rob.move_command(True, start, 3, velocity)
             ws_rob.spray_command(True)
-            ws_rob.move_command(True, end, 5, velocity)
+            ws_rob.move_command(True, end, 1.5, velocity)
             ws_rob.spray_command(False)
         else:
             pass
@@ -117,28 +117,22 @@ def calc_spray_properties(goal):
     :param goal: goal position in base coordinate
     :return: maximum X coordinate possible
     """
-    d_min = 0.03
-    d_max = 0.05  # maybe move those parameters to g_param
+    dist_min = g_param.last_grape_dist - g_param.min_spray_dist
+    print("dist_min", dist_min)
+    dist_max = g_param.last_grape_dist - g_param.max_spray_dist
+    print("dist_max", dist_max)
     v_min = 0.3
     v_max = 0.7
     x_max = math.sqrt(g_param.max_euclid_dist ** 2 - goal[1] ** 2 - goal[2] ** 2)
     print("x_max", x_max)
-    if g_param.last_grape_dist - g_param.max_spray_dist < x_max:
+    if dist_max < x_max:
         x_star = min(x_max, g_param.last_grape_dist - g_param.min_spray_dist)
-        print("x_star", x_star)
-        dist_min = g_param.last_grape_dist - g_param.min_spray_dist
-        dist_max = g_param.last_grape_dist - g_param.max_spray_dist
-        slope, intercept = calc_linear_equation(dist_min, dist_max, d_min, d_max)
-        d_star = slope * x_star + intercept
-        print("D* ", d_star)
+        d_star = 0.0739 * x_star + 5.3632  # The linear equation base on the results of the lab experiment
         slope, intercept = calc_linear_equation(dist_min, dist_max, v_max, v_min)
         v_star = slope * x_star + intercept
-        print("V* ", v_star)
-        return d_star, v_star
+        return x_star, d_star, v_star
     else:
         print("The arm can not reach the spray position!")
-    # the function will calculate how close the sprayer can get to the target.
-    # By knowing that we will calculate the spray diameter
     return
 
 
@@ -226,7 +220,7 @@ def read_position():
 
 
 def move2sonar(grape_1):
-    input("Press Enter to move to sonar")
+    # input("Press Enter to move to sonar")
     print(fg.yellow + "wait" + fg.rs, "\n")
     x_cam, y_cam = grape_1.x_center, grape_1.y_center
     tcp = g_param.trans.aim_sonar(x_cam, y_cam)
@@ -243,14 +237,15 @@ def move2sonar(grape_1):
 
 def move2spray(grape_1):
     tcp = g_param.trans.aim_spray(grape_1.x_center, grape_1.y_center, grape_1.distance)
+    print(">>>>>>>>>>>>>>", tcp)
     print("grape dist: ", grape_1.distance)
     new_location = g_param.trans.tcp_base(tcp)
     print("spray_procedure location: ", new_location)
     location = read_position()
-    print("old location ", location)
+    # print("old location ", location)
     yz_move = np.concatenate([location[0:1], new_location[1:6]])
-    print("y_movbe", yz_move)
-    input("press enter to move to spray_procedure location")
+    # print("yz_move", yz_move)
+    # input("press enter to move to spray_procedure location")
     print(fg.yellow + "wait" + fg.rs, "\n")
     if g_param.process_type != "load":
         if possible_move(new_location, grape_1):
@@ -268,7 +263,7 @@ def move2capture():
     print("old location ", location)
     x_move = np.concatenate([g_param.trans.capture_pos[0:1], location[1:3], g_param.trans.capture_pos[3:6]])
     print("x_move", x_move)
-    input("Press Enter to move to capture location")
+    # input("Press Enter to move to capture location")
     print(fg.yellow + "wait" + fg.rs, "\n")
     if g_param.process_type != "load":
         ws_rob.move_command(True, x_move, 5, velocity)
@@ -284,7 +279,7 @@ def check_update_move(goal_pos):
     curr_pos = np.around(read_position(), 2)
     if not np.array_equal(curr_pos, np.around(goal_pos, 2)):
         print("The arm can not reach the goal position!!!")
-        input("press enter to move back to capture position")
+        # input("press enter to move back to capture position")
         move2capture()
 
 
@@ -477,13 +472,20 @@ def write_distances(mask_id, dist_from_sonar, dist_confirm):
 
 
 def get_distances(mask_id, dist_from_sonar, real_dist):
+    """
+    TODO: check if to load with real/measured distance
+    :param mask_id:
+    :param dist_from_sonar:
+    :param real_dist:
+    :return:
+    """
     if g_param.process_type == "record":
         write_distances(mask_id, dist_from_sonar, real_dist)
     if g_param.process_type == "load":
         meas, real = g_param.read_write_object.read_sonar_distances(mask_id)
         print(f'Real distance to grape {real} will be used. value measured by sonar is {meas}')
         return real
-    return dist_from_sonar
+    return real_dist
 
 
 # calling the 2 sonar methods to get distance and validate existence of grapes
@@ -509,7 +511,7 @@ def activate_sonar(mask_id):
                                          DAQ_BG.update_freq, DAQ_BG.trapRel)
     # D = correlation_dist(transmition_Chirp, record)
     dist_from_sonar = distance2(record, mask_id)
-    # real dist, real distance measured
+    # real dist, real distance measured: to the outer edge of the sonar (10 CM from the Flach)
     real_dist = input(f'Distance measured by the sonar is :{dist_from_sonar}meters.'
                       f' press enter to confirm, or enter real distance (in meters)')
     if real_dist != "":
@@ -756,7 +758,7 @@ if __name__ == '__main__':
         print(colored(image_details, 'green'))
         print(fg.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
-        input("press enter for continue to spraying")
+        # input("press enter for continue to spraying")
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
         if not first_run:
             mark_sprayed_and_display()
@@ -783,14 +785,23 @@ if __name__ == '__main__':
                 g_param.last_grape_dist, is_grape = g_param.avg_dist, True  # without sonar usage
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
-                    TB_class.update_distance(g_param.TB[i], read_position())  # 23,24
+                    # TB_class.update_distance(g_param.TB[i])  # 23,24
                     print("current location before spray_procedure", current_location)
                     move2spray(grape)  # 25+26
                     if time_to_move_platform:  # 27
                         break  #
                     # spray_procedure_pixels(grape)
-                    spray_diameter, spray_speed = calc_spray_properties(grape.grape_base)
-                    print(f"spray properties: \nDiameter:ncwe {spray_diameter} \n Speed: {spray_speed}")
+                    spray_x_dist, spray_diameter, spray_speed = calc_spray_properties(grape.grape_base)
+                    print(f"spray properties: \nDistance from target: {spray_x_dist}\nDiameter: {spray_diameter}"
+                          f" \n Speed: {spray_speed}")
+
+                    # locNow = read_position()
+                    # print("locNow", locNow)
+                    # locNow[0] = -spray_x_dist
+                    # print("locNow",locNow)
+                    # input("press any key for movement")
+                    # ws_rob.move_command(True, locNow, 2, 0.4)
+
                     spray_procedure(grape, d=0.05, k=1)  # 28 # TODO: Omer, generate safety movement
                     move2capture()
                     update_database_sprayed(i)  # 28

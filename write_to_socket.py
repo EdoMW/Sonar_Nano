@@ -20,7 +20,7 @@ def get_local_time():
 class Send2Robot:
     def __init__(self):
         self.HOST = "132.72.96.97"  # The remote host
-        self.PORT_30002 = 30002  # The same port as used by the servers = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.PORT_30002 = 30002 # The same port as used by the servers = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connect_to_robot()
         self.rob_init()
@@ -78,12 +78,12 @@ class Send2Robot:
         time.sleep(0.05)
         if isLinear:
             self.s.send(
-                (f'movel(p[{pos[0]},{pos[1]},{pos[2]},{pos[3]},{pos[4]},{pos[5]}], a=0.5, v={velocity},r=0)' + "\n").encode(
-                    "utf8"))
+                (f'movel(p[{pos[0]},{pos[1]},{pos[2]},{pos[3]},{pos[4]},{pos[5]}],'
+                 f' a=0.5, v={velocity},r=0)' + "\n").encode("utf8"))
         else:
             self.s.send(
-                (f'movej(p[{pos[0]},{pos[1]},{pos[2]},{pos[3]},{pos[4]},{pos[5]}], a=0.5, v={velocity},r=0)' + "\n").encode(
-                    "utf8"))
+                (f'movej(p[{pos[0]},{pos[1]},{pos[2]},{pos[3]},{pos[4]},{pos[5]}],'
+                 f' a=0.5, v={velocity},r=0)' + "\n").encode("utf8"))
         time.sleep(tSleep)
 
     def spray_command(self, spray):

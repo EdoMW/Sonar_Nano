@@ -333,7 +333,7 @@ def show_in_moved_window(win_name, img, x=0, y=0):
     # cv.resizeWindow(win_name, 400, 512)
     # img = cv.resize(img, (800, 1024))
     cv.imshow(win_name, img)
-    cv.waitKey(0)
+    # cv.waitKey(0)
 
 
 def masks_to_convex_hulls(list_of_masks):
@@ -929,7 +929,6 @@ def add_circle_and_index(img_1, img_2):
     # cv.imshow("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
     show_in_moved_window("Masks and first Chosen grape cluster to spray_procedure", numpy_horizontal_concat)
 
-
 def display_image_with_masks(image):
     """
     :param image: image with all the masks
@@ -1256,6 +1255,7 @@ def take_picture_and_run():
         img = im0
         arr = [im0]
         show_in_moved_window("check image", img)
+        cv.waitKey()
         # cv.destroyAllWindows()
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)

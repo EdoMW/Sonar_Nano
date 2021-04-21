@@ -5,12 +5,12 @@ half_height_meter = 0.2
 show_images = None
 spray_sonar = True
 trans = None
-avg_dist = 0.71
+avg_dist = 0.75  # 75
 platform_step_size = 0
 sum_platform_steps = 0  # sum of all platform steps
-last_grape_dist = 0.71
+last_grape_dist = 0.75
 step_size = 0.10
-height_step_size = 0.6  # parameter to_tune
+height_step_size = 0.9  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO
 image_number = 0
 plat_position_step_number = 0
@@ -23,10 +23,11 @@ cnn_config = None
 min_spray_dist = 0.15
 max_spray_dist = 0.2
 # UR5 limitation:
-max_euclid_dist = 0.95
+max_euclid_dist = 0.98
 z_max = 0.82
-z_min = 0.35
+z_min = 0.22
 y_max = 0.6
+sonar_x_length = 0.075
 
 """
 steps_gap: determines how many horizontal steps should be done.
