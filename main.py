@@ -1,6 +1,8 @@
 import sys
 import g_param
 import numpy as np
+
+np.set_printoptions(precision=3)
 import cv2 as cv
 import DAQ_BG
 from test_one_record import test_spec
@@ -13,6 +15,7 @@ import transform
 import read_write
 from sty import fg, Style, RgbFg
 from termcolor import colored
+from transform import rotation_coordinate_sys
 
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
@@ -40,11 +43,8 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 sys.path.append("C:/Users/omerdad/Desktop/RFR/")
-# start_pos = np.array([-0.31741425, -0.26198481, 0.47430055, -0.67481487, -1.51019764, 0.5783255 ])  # Left pos
-start_pos = np.array([-0.252, -0.24198481, 0.43430055, -0.6474185, -1.44296026, 0.59665296])  # check pos
-# start_pos = np.array([-0.31745283, -0.03241247,  0.43269234, -0.69831852, -1.50455224,  0.60859664]) # Middle pos
-# start_pos = np.array([-0.31741425, 0.04, 0.47430055, -0.69831206, -1.50444873, 0.60875449])  # right pos
-
+start_pos = np.array([-0.252, -0.24198481, 0.43430055, -0.6474185, -1.44296026, 0.59665296])  # start pos
+# start_pos = np.array([-0.14, -0.349, 0.433, 0.068, -1.713, 1.281])  # start pos volcani
 step_size = g_param.step_size
 # TODO: think of better way to calculate the amount of steps based on range of the movement
 number_of_steps = int(0.4 / step_size)  # amount of steps before plat move
@@ -59,6 +59,9 @@ g_param.show_images = True  # g.show_images: if true, it is visualizes the proce
 time_to_move_platform, external_signal_all_done = False, False
 not_finished = True
 velocity = 0.7
+# trans_volcani = np.array([[-0.7071, 0.7071, 0], [-0.7071, -0.7071, 0], [0, 0, 1]])
+# base_rotation_ang = 135  # volcani angle
+base_rotation_ang = 180  # lab angle
 
 
 ########################################################################################################################
@@ -90,12 +93,12 @@ def calc_linear_equation(x1, x2, y1, y2):
     return slope, intercept
 
 
-def move_and_spray(start, end, target_grape):
+def move_and_spray(start, end, target_grape, adj_v):
     if g_param.process_type != "load":
         if possible_move(start, target_grape) and possible_move(end, target_grape):
-            ws_rob.move_command(True, start, 3, velocity)
+            ws_rob.move_command(True, start, 3, adj_v)
             ws_rob.spray_command(True)
-            ws_rob.move_command(True, end, 1.5, velocity)
+            ws_rob.move_command(True, end, 1.5, adj_v)
             ws_rob.spray_command(False)
         else:
             pass
@@ -117,17 +120,21 @@ def calc_spray_properties(goal):
     :param goal: goal position in base coordinate
     :return: maximum X coordinate possible
     """
+
+    # dist_min = g_param.last_grape_dist - g_param.sprayer_x_length - g_param.min_spray_dist
     dist_min = g_param.last_grape_dist - g_param.min_spray_dist
     print("dist_min", dist_min)
+    # dist_max = g_param.last_grape_dist - g_param.sprayer_x_length - g_param.max_spray_dist
     dist_max = g_param.last_grape_dist - g_param.max_spray_dist
     print("dist_max", dist_max)
     v_min = 0.3
     v_max = 0.7
-    x_max = math.sqrt(g_param.max_euclid_dist ** 2 - goal[1] ** 2 - goal[2] ** 2)
+    y_rotate = rotation_coordinate_sys(goal[0], goal[1], base_rotation_ang)[1]
+    x_max = math.sqrt(g_param.max_euclid_dist ** 2 - y_rotate ** 2 - goal[2] ** 2)
     print("x_max", x_max)
     if dist_max < x_max:
-        x_star = min(x_max, g_param.last_grape_dist - g_param.min_spray_dist)
-        d_star = 0.0739 * x_star + 5.3632  # The linear equation base on the results of the lab experiment
+        x_star = min(x_max, dist_min)
+        d_star = 0.0739 / 100 * x_star + 5.3632 / 100  # The linear equation base on the results of the lab experiment
         slope, intercept = calc_linear_equation(dist_min, dist_max, v_max, v_min)
         v_star = slope * x_star + intercept
         return x_star, d_star, v_star
@@ -138,26 +145,30 @@ def calc_spray_properties(goal):
 
 # tell me which input you want. I don't think that I need any output,
 # maybe only if there is a problem such as no more spraying material.
-def spray_procedure(g, d, k=1):
+def spray_procedure(g, d, overlap, k, vel, th):
     """
+    :param th:
+    :param vel:
+    :param overlap:
     :param g: The target grape for spraying
     :param d: The nozzle diameter
     :param k:
     """
     # s = g.w_p * g.h_p
-    # a = k * (g.pixels_count/s)
-    # print("a", a)
     center = read_position()
     flip = False
     p1, p2, p3, p4 = g.corners
     x_c, y_c = g.x_center, g.y_center
     print("target's width: ", g.w_meter)
-    N = math.floor(g.w_meter / d + 0.5)
-    print("The number of path is: ", N)
+    N = math.floor(g.w_meter / (d * (1 - overlap)) + 0.5)
+    print("The number of paths is: ", N)
     for n in range(N):
-        r = (d / 2 + n * d) / g.w_meter
+        r = (d / 2 + n * d * (1 - overlap)) / g.w_meter
+        if r > th:
+            break  # If the remainder of the unsprayed area is less than half the spray diameter, terminate the loop.
         if N > 2 and (n == 0 or n == N - 1):
             a = 0.8
+            # a = k * (g.pixels_count/s)
         else:
             a = 1
         bottom_point = line_division(p1, p2, r)
@@ -169,13 +180,13 @@ def spray_procedure(g, d, k=1):
         start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
         print("end_p", end_p)
         print("start_p", start_p)
-        # input("press enter for check spray procedure")
+        input("press enter for check spray procedure")
         print(fg.yellow + "wait" + fg.rs, "\n")
         if not flip:
-            move_and_spray(start_p, end_p, g)
+            move_and_spray(start_p, end_p, g, vel)
             flip = True
         else:
-            move_and_spray(end_p, start_p, g)
+            move_and_spray(end_p, start_p, g, vel)
             flip = False
         print(fg.green + "continue" + fg.rs, "\n")
 
@@ -220,7 +231,7 @@ def read_position():
 
 
 def move2sonar(grape_1):
-    # input("Press Enter to move to sonar")
+    input("Press Enter to move to sonar")
     print(fg.yellow + "wait" + fg.rs, "\n")
     x_cam, y_cam = grape_1.x_center, grape_1.y_center
     tcp = g_param.trans.aim_sonar(x_cam, y_cam)
@@ -231,26 +242,41 @@ def move2sonar(grape_1):
             ws_rob.move_command(False, new_location, 5, velocity)
             # check_update_move(new_location)
     else:
-        pass  # TODO: Sigal - do we need to save the spray_procedure location and sonar location??
+        pass  # TODO: Sigal - do we need to save the spray_procedure location and sonar location??[-0.21790651, -0.44937682, 0.50891671, 0.09135264, -1.75525897, 1.30217356]
     print(fg.green + "continue" + fg.rs, "\n")
 
 
-def move2spray(grape_1):
-    tcp = g_param.trans.aim_spray(grape_1.x_center, grape_1.y_center, grape_1.distance)
-    print(">>>>>>>>>>>>>>", tcp)
+def x_y__movement(old_pos, new_pos):
+    r_new_pos = np.copy(new_pos)
+    r_old_pos = np.copy(old_pos)
+    r_new_pos[0], r_new_pos[1] = rotation_coordinate_sys(r_new_pos[0], r_new_pos[1], -base_rotation_ang)
+    r_old_pos[0], r_old_pos[1] = rotation_coordinate_sys(r_old_pos[0], r_old_pos[1], -base_rotation_ang)
+    r_y_move = r_new_pos[1] - r_old_pos[1]
+    r_x_move = r_new_pos[0] - r_old_pos[0]
+    x_move1, y_move1 = rotation_coordinate_sys(0, r_y_move, base_rotation_ang)
+    x_move2, y_move2 = rotation_coordinate_sys(r_x_move, 0, base_rotation_ang)
+    first_move = np.concatenate([old_pos[0:1] + x_move1, old_pos[1:2] + y_move1, new_pos[2:6]])
+    second_move = np.concatenate([old_pos[0:1] + x_move2, old_pos[1:2] + y_move2, old_pos[2:3], new_pos[3:6]])
+    return first_move, second_move
+
+
+def move2spray(grape_1, spray_dist):
+    tcp = g_param.trans.aim_spray(grape_1.x_center, grape_1.y_center, spray_dist)
+    # tcp = g_param.trans.aim_spray(grape_1.x_center, grape_1.y_center, grape_1.distance)
     print("grape dist: ", grape_1.distance)
     new_location = g_param.trans.tcp_base(tcp)
     print("spray_procedure location: ", new_location)
     location = read_position()
-    # print("old location ", location)
-    yz_move = np.concatenate([location[0:1], new_location[1:6]])
+    # yz_move = np.concatenate([location[0:1], new_location[1:6]])
     # print("yz_move", yz_move)
-    # input("press enter to move to spray_procedure location")
+    input("press enter to move to spray_procedure location")
     print(fg.yellow + "wait" + fg.rs, "\n")
     if g_param.process_type != "load":
         if possible_move(new_location, grape_1):
-            ws_rob.move_command(False, yz_move, 4, velocity)
-            ws_rob.move_command(True, new_location, 2, velocity)
+            ws_rob.move_command(False, x_y__movement(location, new_location)[0], 4, velocity)
+            ws_rob.move_command(True, x_y__movement(location, new_location)[1], 2, velocity)
+            # ws_rob.move_command(False, yz_move, 4, velocity)
+            # ws_rob.move_command(True, new_location, 2, velocity)
             # check_update_move(new_location)
     else:
         pass  # TODO: Sigal - do we need to save the spray_procedure location and spray_procedure location??
@@ -263,9 +289,11 @@ def move2capture():
     print("old location ", location)
     x_move = np.concatenate([g_param.trans.capture_pos[0:1], location[1:3], g_param.trans.capture_pos[3:6]])
     print("x_move", x_move)
-    # input("Press Enter to move to capture location")
+    input("Press Enter to move to capture location")
     print(fg.yellow + "wait" + fg.rs, "\n")
     if g_param.process_type != "load":
+        # ws_rob.move_command(True, x_y__movement(location, g_param.trans.capture_pos)[1], 5, velocity)
+        # ws_rob.move_command(False, x_y__movement(location, g_param.trans.capture_pos)[0], 5, velocity)
         ws_rob.move_command(True, x_move, 5, velocity)
         ws_rob.move_command(False, g_param.trans.capture_pos, 5, velocity)
     else:
@@ -279,7 +307,7 @@ def check_update_move(goal_pos):
     curr_pos = np.around(read_position(), 2)
     if not np.array_equal(curr_pos, np.around(goal_pos, 2)):
         print("The arm can not reach the goal position!!!")
-        # input("press enter to move back to capture position")
+        input("press enter to move back to capture position")
         move2capture()
 
 
@@ -290,9 +318,11 @@ def possible_move(goal_pos, grape_1):
     :return: True if goal position is in reach of the robot, False else
     """
 
+    # x and y in the rotate coordinate system:
+    x_r, y_r = rotation_coordinate_sys(goal_pos[0], goal_pos[1], -base_rotation_ang)
     euclid_dist = np.linalg.norm(np.array([0, 0, 0]) - goal_pos[0:3])
     print("euclid_dist ", euclid_dist)
-    if abs(goal_pos[1]) > g_param.y_max:
+    if abs(y_r) > g_param.y_max:
         print("Target too right, move platform")
         g_param.TB[grape_1.index].in_range = "right"
         g_param.time_to_move_platform = True
@@ -333,7 +363,9 @@ def move_const(size_of_step, direction_to_move, location):
     print("move const ", step_size, " start at:", location)
     if g_param.process_type != "load":
         if direction_to_move == "right":
-            location[1] = location[1] + size_of_step
+            delta_x, delta_y = rotation_coordinate_sys(0, -size_of_step, base_rotation_ang)
+            location[0] = location[0] + delta_x
+            location[1] = location[1] + delta_y
             ws_rob.move_command(True, location, sleep_time, velocity)
         elif direction_to_move == "up":
             location[2] = location[2] + size_of_step
@@ -344,7 +376,9 @@ def move_const(size_of_step, direction_to_move, location):
         elif direction_to_move == "stay":
             pass
         else:
-            location[1] = location[1] - size_of_step
+            delta_x, delta_y = rotation_coordinate_sys(0, size_of_step, base_rotation_ang)
+            location[0] = location[0] + delta_x
+            location[1] = location[1] + delta_y
             ws_rob.move_command(True, location, sleep_time, velocity)
         # check_update_move(location) # FIXME: omer
         pos = read_position()
@@ -512,8 +546,8 @@ def activate_sonar(mask_id):
     # D = correlation_dist(transmition_Chirp, record)
     dist_from_sonar = distance2(record, mask_id)
     # real dist, real distance measured: to the outer edge of the sonar (10 CM from the Flach)
-    real_dist = input(f'Distance measured by the sonar is :{dist_from_sonar}meters.'
-                      f' press enter to confirm, or enter real distance (in meters)')
+    print(f'Distance measured by the sonar is :{dist_from_sonar} meters.')
+    real_dist = input(f' press enter to confirm, or enter real distance (in meters)')
     if real_dist != "":
         real_dist = float(real_dist)
     else:
@@ -719,6 +753,7 @@ def init_program():
 
 
 if __name__ == '__main__':
+    print(colored("Take inital points for both sides", 'blue'))
     init_program()
     print(">>> Start position: ")
     current_location = g_param.trans.capture_pos
@@ -750,7 +785,7 @@ if __name__ == '__main__':
                 steps_counter += 1
         else:
             first_run = False
-        # input("Press Enter to take picture")
+        input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         capture_update_TB()  # 5 + 7-12 inside
         im_num = g_param.image_number
@@ -758,7 +793,7 @@ if __name__ == '__main__':
         print(colored(image_details, 'green'))
         print(fg.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB)
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
-        # input("press enter for continue to spraying")
+        input("press enter for continue to spraying")
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
         if not first_run:
             mark_sprayed_and_display()
@@ -787,22 +822,23 @@ if __name__ == '__main__':
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
                     # TB_class.update_distance(g_param.TB[i])  # 23,24
                     print("current location before spray_procedure", current_location)
-                    move2spray(grape)  # 25+26
+                    spray_x_dist, spray_diameter, spray_speed = calc_spray_properties(grape.grape_base)
+                    move2spray(grape, spray_x_dist)  # 25+26
                     if time_to_move_platform:  # 27
                         break  #
                     # spray_procedure_pixels(grape)
-                    spray_x_dist, spray_diameter, spray_speed = calc_spray_properties(grape.grape_base)
                     print(f"spray properties: \nDistance from target: {spray_x_dist}\nDiameter: {spray_diameter}"
                           f" \n Speed: {spray_speed}")
-
-                    # locNow = read_position()
-                    # print("locNow", locNow)
-                    # locNow[0] = -spray_x_dist
-                    # print("locNow",locNow)
-                    # input("press any key for movement")
-                    # ws_rob.move_command(True, locNow, 2, 0.4)
-
-                    spray_procedure(grape, d=0.05, k=1)  # 28 # TODO: Omer, generate safety movement
+                    # spray_pos = read_position()
+                    # print("spray position", spray_pos)
+                    # delta_x, delta_y = rotation_coordinate_sys(spray_x_dist, 0, base_rotation_ang)
+                    # spray_pos[0] = g_param.trans.capture_pos[0]+delta_x
+                    # spray_pos[1] = g_param.trans.capture_pos[1]+delta_y
+                    # print("spray position: ", spray_pos)
+                    # input("press any key to confirm new spray location>>>")
+                    # ws_rob.move_command(True, spray_pos, 3, 0.4)
+                    spray_procedure(grape, d=spray_diameter, overlap=0, k=1, vel=spray_speed,
+                                    th=0.9)  # 28 # TODO: Omer, generate safety movement
                     move2capture()
                     update_database_sprayed(i)  # 28
                     mark_sprayed_and_display()

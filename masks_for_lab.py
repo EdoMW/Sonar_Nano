@@ -16,6 +16,7 @@ from math import pi, cos, sin
 import sys
 from pyueye import ueye
 import numpy as np
+np.set_printoptions(precision=3)
 import g_param
 import time
 import os
@@ -753,7 +754,6 @@ def ueye_take_picture_2(image_number):
         img_name = img_name.replace("num", str(image_number))
         img_name = img_name.replace("dt", str(current_time))
         image_path = os.path.join(folder_path_for_images, img_name)
-
         plt.imsave(image_path, frame)
         # if g_param.process_type == "record":
         #     g_param.read_write_object.save_rgb_image(frame)
@@ -882,12 +882,11 @@ def meter_2_pixel(d, i):
     # y_m = d * (cen_poi_y_0 / 1024) * (1.6 / 16)
 
 
-def print_special():
+def print_special_cam_error():
     """
     :return: print red warnning massege if no real image was taken in N iterations
     """
-
-    print(colored("3 images in a row were not taken succsesfully", 'red'))
+    print(colored("3 images in a row were not taken successfully. Check camera", 'red'))
 
 
 def check_image(image_path):
@@ -998,19 +997,23 @@ def take_picture_and_run():
     # box = [0, 0, 0, 0, 0]
     plt.clf()  # clean the canvas
     if g_param.process_type == "record" or g_param.process_type == "work":
-        image_path = ueye_take_picture_2(image_number)
-        for i in range(amount_of_tries):
-            image_path, frame = ueye_take_picture_2(image_number)
+        # image_path = ueye_take_picture_2(image_number) # TODO: uncomment if working with camera
+
+        for i in range(amount_of_tries):  # TODO: comment next 3 lines if working with camera
+            image_path = r'D:\Users\NanoProject\old_experiments\exp_data_11_10\rgb_images\0_11_10_46.jpeg'
+            frame = cv.imread(image_path)
+            frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+            # image_path, frame = ueye_take_picture_2(image_number) # TODO: uncomment if working with camera
+
             image_taken = check_image(image_path)
             print("try number: ", i)
             if image_taken:
-                print(i)
                 print(colored("Image taken successfully", 'green'))
                 if g_param.process_type == "record":
                     g_param.read_write_object.save_rgb_image(frame)
                 break
         if not image_taken:
-            print_special()
+            print_special_cam_error()
     else:
         image_path = g_param.read_write_object.load_image_path()
 
@@ -1147,6 +1150,9 @@ def take_picture_and_run():
         def thresh_callback(val):
             threshold = val
             ret, thresh = cv.threshold(src_gray, 5, 255, cv.THRESH_BINARY)
+            # cv.imshow("a", thresh)
+            # cv.waitKey()
+            # print("a")
             # kernel = np.ones((5, 5), np.uint8)
             # thresh = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
             # thresh = cv.dilate(thresh, kernel, iterations=1)
@@ -1383,7 +1389,14 @@ def take_picture_and_run():
         g_param.masks_image = img
     g_param.read_write_object.write_tb()
 
+#
+# def sort_TB_left_to_right():
+#     for i in range(len(g_param.TB)):
+#         print(g_param.TB[i].index)
+#         # g_param.TB[i].index = int(i)
+
 
 if __name__ == '__main__':
     g_param.masks_image = None
     take_picture_and_run()
+    # sort_TB_left_to_right()

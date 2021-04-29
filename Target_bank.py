@@ -1,4 +1,5 @@
 import numpy as np
+np.set_printoptions(precision=3)
 import math
 from operator import itemgetter, attrgetter
 import g_param
@@ -357,7 +358,6 @@ def sort_by_and_check_for_grapes(sorting_type):
 
 def sort_by_leftest_first():
     g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_center'))
-    # g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'y_center'))
 
 
 def sort_by_rect_size():

@@ -8,6 +8,7 @@ import codecs
 class ReadFromRobot:
     def __init__(self):
         self.HOST = "132.72.96.97"  # The remote host
+        # self.HOST = "192.168.1.113"  # volcani IP
         self.PORT_30003 = 30003
         self.s = 0
         self.packet_1, self.packet_2, self.packet_3, self.packet_4, self.packet_5, self.packet_6, self.packet_7, \

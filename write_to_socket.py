@@ -20,6 +20,7 @@ def get_local_time():
 class Send2Robot:
     def __init__(self):
         self.HOST = "132.72.96.97"  # The remote host
+        # self.HOST = "192.168.1.113"  # The volcani IP
         self.PORT_30002 = 30002 # The same port as used by the servers = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connect_to_robot()

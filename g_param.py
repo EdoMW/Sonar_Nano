@@ -5,10 +5,10 @@ half_height_meter = 0.2
 show_images = None
 spray_sonar = True
 trans = None
-avg_dist = 0.75  # 75
+avg_dist = 0.76  # 75
 platform_step_size = 0
 sum_platform_steps = 0  # sum of all platform steps
-last_grape_dist = 0.75
+last_grape_dist = 0.76
 step_size = 0.10
 height_step_size = 0.9  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO
@@ -16,18 +16,20 @@ image_number = 0
 plat_position_step_number = 0
 read_write_object = None
 direction = None
-safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
+# safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
+safety_dist = 0.20
 time_to_move_platform = False
 image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
 cnn_config = None
 min_spray_dist = 0.15
 max_spray_dist = 0.2
 # UR5 limitation:
-max_euclid_dist = 0.98
+max_euclid_dist = 0.95
 z_max = 0.82
 z_min = 0.22
 y_max = 0.6
 sonar_x_length = 0.075
+sprayer_x_length = 0.095
 
 """
 steps_gap: determines how many horizontal steps should be done.

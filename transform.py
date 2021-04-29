@@ -2,6 +2,7 @@ import math
 import numpy as np
 import g_param
 import time
+np.set_printoptions(precision=3)
 
 
 def ang_vec2rot(rv):
@@ -15,6 +16,13 @@ def ang_vec2rot(rv):
          [k[0] * k[2] * (1 - ct) - k[1] * st, k[1] * k[2] * (1 - ct) + k[0] * st,
           pow(k[2], 2) * (1 - ct) + ct]])  # rotation matrix
     return rot
+
+
+def rotation_coordinate_sys(x, y, angle):
+    radians_ang = np.radians(angle % 360)
+    x_tag = x * math.cos(radians_ang) + y * math.sin(radians_ang)
+    y_tag = -x * math.sin(radians_ang) + y * math.cos(radians_ang)
+    return x_tag, y_tag
 
 
 class Trans:
@@ -70,9 +78,7 @@ class Trans:
 
     def tcp_base(self, tcp):
         tcp = np.append(tcp, 1)
-        print("1tcp ", tcp)
         tcp_base = np.matmul(self.t_tcp2base, tcp)
-        print("2tcp_base ", tcp_base)
         tcp_base = np.concatenate((tcp_base[:-1], self.ang_vec_tcp), axis=0)
         return tcp_base
 
@@ -85,11 +91,8 @@ class Trans:
 
     def aim_spray(self, x_cam, y_cam, distance):
         dist = distance - g_param.safety_dist
-        print("????????????????????????????????", dist)
         grape_cam = np.array([float(x_cam), float(y_cam), dist, 1])
         grape_tcp = np.matmul(self.t_cam2tcp, grape_cam)
-        print("nnnnnnnnnnnnnnnnnnnnnnnn", grape_tcp)
         grape_tcp = grape_tcp[:-1]
         new_tcp = grape_tcp - self.v_spray_tcp
-        print("nnnnnnnnnnnnnnnnnnnnnnnn", new_tcp)
         return new_tcp

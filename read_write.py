@@ -8,6 +8,7 @@ import numpy as np
 import shutil
 from time import sleep
 from pprint import pprint
+np.set_printoptions(precision=3)
 
 take_last_exp = True  # take the exp that was conducted the latest
 

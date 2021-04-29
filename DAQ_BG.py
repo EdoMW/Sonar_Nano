@@ -5,7 +5,7 @@ import scipy.signal as signal
 
 import matplotlib.pyplot as plt
 from preprocessing_and_adding import preprocess_one_record
-
+np.set_printoptions(precision=3)
 device = 'dev1'  # device name
 ai_channel = 0
 a0_channel = 0
