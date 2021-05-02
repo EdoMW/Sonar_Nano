@@ -237,7 +237,7 @@ def check_close_to_right_edge(corners_in_m):
     dist_to_edge_2 = g_param.half_width_meter - p2
     dist_to_edge_3 = g_param.half_width_meter - p3
     dist_to_edge_4 = g_param.half_width_meter - p4
-    print("Right edge: ", dist_to_edge_1," ", dist_to_edge_2," ", dist_to_edge_3," ", dist_to_edge_4)
+    # print("Right edge: ", dist_to_edge_1," ", dist_to_edge_2," ", dist_to_edge_3," ", dist_to_edge_4)
     if dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt or dist_to_edge_4 < edt:
         print("Right to close too edge")
     return dist_to_edge_1 < edt or dist_to_edge_2 < edt or dist_to_edge_3 < edt or dist_to_edge_4 < edt

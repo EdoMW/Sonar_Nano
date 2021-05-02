@@ -717,6 +717,11 @@ def display_points(g_to_display):
     :param g_to_display: grape to display
     :return:
     """
+    color_index = 10
+    for i in range(len(g_param.TB)):
+        color = (255 - color_index, 255 - color_index * 2, 255 - color_index * 3)
+        box = np.array(g_param.TB[i].p_corners)
+        cv.drawContours(g_param.masks_image, [box], 0, color)
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (int(g_to_display.p_corners[0][0]), int(g_to_display.p_corners[0][1])),
                                     radius=2, color=(0, 0, 255), thickness=2)
@@ -797,7 +802,6 @@ if __name__ == '__main__':
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
         if not first_run:
             mark_sprayed_and_display()
-        print(g_param.TB)
         if grape_ready_to_spray:  # 15- yes (change to sorting according to 14, rap the next lines in a function)
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()

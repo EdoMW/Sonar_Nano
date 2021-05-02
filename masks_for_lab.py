@@ -24,6 +24,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import imutils
 from PIL import Image, ImageDraw, ImageDraw
 import scipy.misc
+from add_grapes import add_grapes
 
 # parameters #
 ####################################
@@ -329,6 +330,7 @@ def show_in_moved_window(win_name, img, x=0, y=0):
     :param x: x coordinate of end left corner of the window
     :param y: y coordinate of end left corner of the window
     """
+
     cv.namedWindow(win_name, cv.WINDOW_AUTOSIZE)        # Create a named window
     cv.moveWindow(win_name, x, y)   # Move it to (x,y)
     # cv.resizeWindow(win_name, 400, 512)
@@ -1085,7 +1087,7 @@ def take_picture_and_run():
         max_thresh = 255
         thresh = 100  # initial threshold
         # cv.createTrackbar('Canny Thresh:', source_window, thresh, max_thresh, thresh_callback)
-        boxes,corner_points = [], []
+        boxes, corner_points = [], []
         thresh_callback(thresh)
         # print(len(boxes), boxes)
         corner_points = [arr.tolist() for arr in corner_points]
@@ -1093,6 +1095,29 @@ def take_picture_and_run():
 
         # next 17 lines are to remove duplicates (not very elegant)
         # new_corner_points = []
+
+
+
+
+
+
+
+
+        # TODO: add this.
+        print("before corners", corner_points)
+        mask, obbs_list, corners_list, img_rgb = add_grapes() # adding new grapes that were not recognized
+        corner_points = corner_points + corners_list
+        print("after corners", corner_points)
+        print("before boxes", boxes)
+        boxes = boxes + obbs_list
+        print("after boxes", boxes)
+
+
+
+
+
+
+
         new_corner_points = []
         for elem in corner_points:
             if check_if_in_list(elem, new_corner_points):
@@ -1113,6 +1138,7 @@ def take_picture_and_run():
         boxes = new_boxes
         # boxes_with_corners = [list(itertools.chain(*i)) for i in zip(boxes, corner_points)]  # [box, corners]
         predicted_masks_to_mrbb, det_rotated_boxes = [], []
+
         amount_of_mask_detacted = len(boxes)
         for i in range(0, len(boxes)):
             x = int(boxes[i][0][0])
@@ -1146,22 +1172,9 @@ def take_picture_and_run():
     if g_param.work_place == "lab_grapes":
         # for lab
         rng.seed(12345)
-
         def thresh_callback(val):
             threshold = val
             ret, thresh = cv.threshold(src_gray, 5, 255, cv.THRESH_BINARY)
-            # cv.imshow("a", thresh)
-            # cv.waitKey()
-            # print("a")
-            # kernel = np.ones((5, 5), np.uint8)
-            # thresh = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
-            # thresh = cv.dilate(thresh, kernel, iterations=1)
-            # thresh = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
-            # thresh = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
-            # thresh = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel)
-            # thresh = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
-            # thresh = cv.erode(thresh, kernel, iterations=3)
-            # canny_output = cv.Canny(thresh, threshold, threshold * 2)
             contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
             # Find the rotated rectangles and ellipses for each contour
             minRect = [None] * len(contours)
@@ -1177,14 +1190,14 @@ def take_picture_and_run():
                 width_a = int(minRect[i][1][0])
                 height_a = int(minRect[i][1][1])
                 area = width_a * height_a
-                color_index = 50
+                color_index = 30
                 tresh_size = 10_000
                 if (width_a / (height_a + 0.001) > 0.2) and (height_a / (width_a + 0.001) > 0.2) and tresh_size < area:  # and tresh_size < area < 200_000:
                     print("area: ", area)
                     # TODO: להכפיל את הזוית ב-1
                     boxes.append(minRect[i])
                     corner_points.append(box)
-                    cv.drawContours(green, [box], 0, (255 - color_index, 255 - color_index * 2, 255 - color_index * 3))
+                    cv.drawContours(rgb, [box], 0, (255 - color_index, 255 - color_index * 2, 255 - color_index * 3))
                     color_index += 20
 
         hsv = cv.cvtColor(rgb, cv.COLOR_RGB2HSV)
@@ -1193,13 +1206,25 @@ def take_picture_and_run():
         imask = mask > 0
         green = np.zeros_like(rgb, np.uint8)
         green[imask] = rgb[imask]
-
-        temp_bgr = cv.cvtColor(green, cv.COLOR_HSV2BGR)
-        src_gray = cv.cvtColor(temp_bgr, cv.COLOR_BGR2GRAY)
+        temp_bgr = cv.cvtColor(green, cv.COLOR_HSV2RGB)
+        rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
+        src_gray = cv.cvtColor(temp_bgr, cv.COLOR_RGB2GRAY)
         thresh = 100  # initial threshold
         boxes, corner_points = [], []
         thresh_callback(thresh)
         corner_points = [arr.tolist() for arr in corner_points]
+
+
+
+        # TODO: add this.
+        print("before corners", corner_points)
+        mask, obbs_list, corners_list, img_rgb = add_grapes(rgb) # adding new grapes that were not recognized
+        corner_points = corner_points + corners_list
+        print("after corners", corner_points)
+        print("before boxes", boxes)
+        boxes = boxes + obbs_list
+        print("after boxes", boxes)
+
 
         new_corner_points = []
         for elem in corner_points:
