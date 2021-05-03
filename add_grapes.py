@@ -59,8 +59,8 @@ class DrawLineWidget(object):
         self.original_image = img_shared
         self.clone = img_shared.copy()
         self.clone_2 = self.clone.copy()
-        cv2.namedWindow('image')
-        cv2.setMouseCallback('image', self.extract_coordinates)
+        cv2.namedWindow('Add grape mask manually')
+        cv2.setMouseCallback('Add grape mask manually', self.extract_coordinates)
         self.image_coordinates = []
 
     def extract_coordinates(self, event, x, y, *_):
@@ -88,7 +88,7 @@ class DrawLineWidget(object):
                     cv2.line(self.clone, self.image_coordinates[j], self.image_coordinates[j + 1], (36, 255, 12), 2)
                 # cv2.line(self.clone, self.image_coordinates[len_line-2],
                 # self.image_coordinates[len_line-1], (36,255,12), 2)
-            show_img(title="image", image_to_show=self.clone, x_cord=screen_x_cord, y_cord=screen_y_cord)
+            show_img(title="Add grape mask manually", image_to_show=self.clone, x_cord=screen_x_cord, y_cord=screen_y_cord)
             # self.clone_2 = self.clone.copy()
         # Clear drawing boxes on right mouse button click (next two elif)
         elif event == cv2.EVENT_RBUTTONDOWN:
@@ -96,14 +96,14 @@ class DrawLineWidget(object):
             self.image_coordinates = []
         elif event == cv2.EVENT_RBUTTONUP:
             # cv2.imshow("image", self.clone)
-            show_img(title="image", image_to_show=self.clone, x_cord=screen_x_cord, y_cord=screen_y_cord)
+            show_img(title="Add grape mask manually", image_to_show=self.clone, x_cord=screen_x_cord, y_cord=screen_y_cord)
         # Clear last point added on mouse wheel scroll
         elif event == cv2.EVENT_MOUSEWHEEL:
             cv2.line(self.clone_2, self.image_coordinates[-2], self.image_coordinates[-1], (255, 36, 12), 2)
             self.image_coordinates.pop()
             # print(self.image_coordinates)
             # cv2.imshow("image", self.clone_2)
-            show_img(title="image", image_to_show=self.clone_2, x_cord=screen_x_cord, y_cord=screen_y_cord)
+            show_img(title="Add grape mask manually", image_to_show=self.clone_2, x_cord=screen_x_cord, y_cord=screen_y_cord)
             # self.clone_2 = self.clone.copy()
         elif event == cv2.EVENT_MOUSEMOVE:
             if len(self.image_coordinates) > 2:
@@ -134,7 +134,7 @@ def get_unrecognized_grapes(img_t, amount_of_grapes):
     while image_index < amount_of_grapes:
         draw_line_widget = DrawLineWidget(img_shared)
         while True:
-            show_img(title='image', image_to_show=draw_line_widget.show_image(),
+            show_img(title='Add grape mask manually', image_to_show=draw_line_widget.show_image(),
                      x_cord=screen_x_cord, y_cord=screen_y_cord)
             if cv2.waitKey() or 0xFF == 27:
                 break
@@ -179,7 +179,7 @@ def get_unrecognized_grapes(img_t, amount_of_grapes):
         alpha = 0.4
         cv2.addWeighted(img_shared_overlay, alpha, img_shared, 1 - alpha,
                         0, img_shared)
-        show_img(title=f"image number {image_index + 1}", image_to_show=img_shared,
+        show_img(title=f"Add grape mask manually {image_index + 1}", image_to_show=img_shared,
                  x_cord=screen_x_cord, y_cord=screen_y_cord)
         # cv2.imshow()
         cv2.waitKey()
@@ -192,6 +192,7 @@ def get_unrecognized_grapes(img_t, amount_of_grapes):
 
 
 def add_grapes(rgb_image):
+
     mask, obbs_list, corners_list, npys_list = None, [], [], []
     img_rgb, scale, padding = read_image(rgb_image)
     while True:
@@ -215,9 +216,11 @@ def add_grapes(rgb_image):
                 npy_array = np.dstack((npy_array, npys_list[arr]))
         else:
             npy_array = np.reshape(npy_array, (1024, 1024, 1))
-        npy_array = npy_array[170:853, :, :]  # remove the padding
-        mask = utils.resize_mask(npy_array, 1/scale, padding=0, crop=None)  # make it [4002,6000,N]
-        mask = mask[1:4001, :, :]  # fix the resizing
-        mask = mask.clip(max=1)  # fix colors in visualization module
+        mask = npy_array
+        # TODO: next 5 lines are for resize and save mask back to the original image size.
+        # npy_array = npy_array[170:853, :, :]  # remove the padding
+        # mask = utils.resize_mask(npy_array, 1/scale, padding=0, crop=None)  # make it [4002,6000,N]
+        # mask = mask[1:4001, :, :]  # fix the resizing
+        # mask = mask.clip(max=1)  # fix colors in visualization module
         # np.save(file=output_mask_path, arr=mask)  # save the name mask.
     return mask, obbs_list, corners_list, img_rgb

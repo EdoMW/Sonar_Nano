@@ -4,15 +4,24 @@ import os
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+from termcolor import colored
 
-a = [[1],[3],[2]]
-b = [[1],[3],[5],[2]]
-a = a + b
-print(a)
-import itertools
-# a = [['a','b'], ['c']]
-print(list(itertools.chain.from_iterable(a)))
-#
+print("Real grape?")
+one = "\033[1m" + "0" + "\033[0m"
+zero = "\033[1m" + "1" + "\033[0m"
+a = [(500, 500)] * 12
+# real_grape = input(colored("Yes: ", "cyan") + "press " + one + colored(" No: ", "red") + "Press " + zero + " ")
+print(a[-6:])
+
+
+# a = [[1],[3],[2]]
+# b = [[1],[3],[5],[2]]
+# a = a + b
+# print(a)
+# import itertools
+# # a = [['a','b'], ['c']]
+# print(list(itertools.chain.from_iterable(a)))
+# #
 #
 #
 # a = np.zeros((2,10))

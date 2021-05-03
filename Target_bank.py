@@ -36,84 +36,6 @@ def print_by_id():
 
 
 class Target_bank:
-    grape_index = 0
-
-    def target_to_string(self):
-        ind = self.index
-        ind = " ID : " + str(ind) + " "
-        ind = fg.orange + ind + fg.rs
-        a = self.x_center
-        b = self.y_center
-        c = self.x_p
-        d = self.y_p
-        x = " x:" + str(a) + " "
-        y = " y:" + str(b) + " "
-        x_c = " x_p:" + str(c) + " "
-        y_c = " y_p:" + str(d)
-        w = f" w: {self.w_meter}"
-        h = f" h: {self.h_meter}"
-        if self.sprayed:
-            e = fg.green + str(self.sprayed) + fg.rs
-        else:
-            e = fg.red + str(self.sprayed) + fg.rs
-        f = " area: " + str(self.rect_area) + " "
-        sp = " sprayed :" + str(e) + " "
-        wr = "wait_round: " + str(self.wait_another_step)
-        world_data = " x world " + str(round(self.x_center, 3)) + " y world " + str(round(self.y_center, 3)) + " "
-        x_base = "x base: " + str(round(self.grape_world[0], 3)) + " "
-        y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
-        z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
-        base_data = x_base + y_base + z_base + '\n'
-        angle = f" angle: {self.angle}"
-        distance = f'distance: {self.distance}'
-        return ind + sp + wr + world_data + base_data + w + h + angle + '\n' + distance + '\n'
-        # return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
-
-    def __repr__(self):
-        params = self.target_to_string()
-        corners = f"corner_1: {self.corners[0]} corner_2: {self.corners[1]} " \
-                  f"corner_3: {self.corners[2]} corner_4: {self.corners[3]}"
-        return params + corners + '\n' + '\n'
-        # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
-
-    def calc_corners_by_gemotry(self):
-        """
-        Doesn't work when extra process is done to the image.
-        :return:
-        """
-        x_cen, y_cen = self.x_center, self.y_center
-        w, h = self.w_meter, self.h_meter
-        angle = self.angle
-        ninety = pi / 2
-        alpha = radians(angle)
-        beta = ninety - radians(angle)
-        # beta = radians(angle)
-        # alpha = ninety - radians(angle)
-        w = w / 2
-        h = h / 2
-        cor_1 = [round(x_cen + (-cos(beta) * h + cos(alpha) * w), 3),
-                 round(y_cen + (-sin(beta) * h - w * sin(alpha)), 3)]
-        cor_2 = [round(x_cen + (cos(beta) * h + cos(alpha) * w), 3), round(y_cen + (sin(beta) * h - w * sin(alpha)), 3)]
-        cor_3 = [round(x_cen + (cos(beta) * h - cos(alpha) * w), 3), round(y_cen + (sin(beta) * h + w * sin(alpha)), 3)]
-        cor_4 = [round(x_cen + (-cos(beta) * h - cos(alpha) * w), 3),
-                 round(y_cen + (-sin(beta) * h + w * sin(alpha)), 3)]
-        # auto_corners = cv.boxPoints(box)
-        return [cor_1, cor_2, cor_3, cor_4]
-
-    def calc_center_of_mass(self):
-        if self.mask is not None:
-            return scipy.ndimage.measurements.center_of_mass(self.mask)
-        return None
-
-    def calc_mask_size_pixels(self):
-        pass
-
-    def calc_dist_from_center(self):
-        # FIXME
-        # x = 512 - self.x_p
-        # y = 512 - self.y_p
-        # return round(math.sqrt((x * x) + (y * y)), 2)
-        return 2
 
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world,
                  corners, p_corners, grape_base, pixels_count, com):
@@ -156,6 +78,90 @@ class Target_bank:
         self.p_corners = p_corners
         self.corners = simplify_corners(corners)
         # amount of updates, what iteration was the last update
+
+    grape_index = 0
+
+    def target_to_string(self):
+        ind = self.index
+        ind = " ID : " + str(ind) + " "
+        ind = fg.orange + ind + fg.rs
+        a = self.x_center
+        b = self.y_center
+        c = self.x_p
+        d = self.y_p
+        fake_grape = " fake grape: " + str(self.fake_grape) + " "
+        dist_from_center = " dist from center in pixels:" + str(round(self.dist_from_center, 1))
+        x = " x:" + str(a) + " "
+        y = " y:" + str(b) + " "
+        x_c = " x_p:" + str(c) + " "
+        y_c = " y_p:" + str(d)
+        w = f" w: {self.w_meter}"
+        h = f" h: {self.h_meter}"
+        if self.sprayed:
+            e = fg.green + str(self.sprayed) + fg.rs
+        else:
+            e = fg.red + str(self.sprayed) + fg.rs
+        f = " area: " + str(self.rect_area) + " "
+        sp = " sprayed :" + str(e) + " "
+        # wr = "wait_round: " + str(self.wait_another_step)
+        world_data = " x world " + str(round(self.x_center, 3)) + " y world " + str(round(self.y_center, 3)) + " "
+        x_base = "x base: " + str(round(self.grape_world[0], 3)) + " "
+        y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
+        z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
+        base_data = x_base + y_base + z_base + '\n'
+        angle = f" angle: {self.angle}"
+        distance = f'distance: {self.distance}'
+        return ind + sp + fake_grape + world_data + base_data + w + h + angle + '\n'\
+               + distance + dist_from_center + '\n'
+        # return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
+
+    def __repr__(self):
+        params = self.target_to_string()
+        corners = f"corner_1: {self.corners[0]} corner_2: {self.corners[1]} " \
+                  f"corner_3: {self.corners[2]} corner_4: {self.corners[3]}"
+        return params + corners + '\n' + '\n'
+        # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
+
+    def calc_corners_by_gemotry(self):
+        """
+        Doesn't work when extra process is done to the image.
+        :return:
+        """
+        x_cen, y_cen = self.x_center, self.y_center
+        w, h = self.w_meter, self.h_meter
+        angle = self.angle
+        ninety = pi / 2
+        alpha = radians(angle)
+        beta = ninety - radians(angle)
+        # beta = radians(angle)
+        # alpha = ninety - radians(angle)
+        w = w / 2
+        h = h / 2
+        cor_1 = [round(x_cen + (-cos(beta) * h + cos(alpha) * w), 3),
+                 round(y_cen + (-sin(beta) * h - w * sin(alpha)), 3)]
+        cor_2 = [round(x_cen + (cos(beta) * h + cos(alpha) * w), 3), round(y_cen + (sin(beta) * h - w * sin(alpha)), 3)]
+        cor_3 = [round(x_cen + (cos(beta) * h - cos(alpha) * w), 3), round(y_cen + (sin(beta) * h + w * sin(alpha)), 3)]
+        cor_4 = [round(x_cen + (-cos(beta) * h - cos(alpha) * w), 3),
+                 round(y_cen + (-sin(beta) * h + w * sin(alpha)), 3)]
+        # auto_corners = cv.boxPoints(box)
+        return [cor_1, cor_2, cor_3, cor_4]
+
+    def calc_center_of_mass(self):
+        if self.mask is not None:
+            return scipy.ndimage.measurements.center_of_mass(self.mask)
+        return None
+
+    def calc_mask_size_pixels(self):
+        pass
+
+    def calc_dist_from_center(self):
+        if type(self) is list:
+            x = 512 - self[0]
+            y = 512 - self[1]
+        else:
+            x = 512 - self.x_p
+            y = 512 - self.y_p
+        return round(math.sqrt((x * x) + (y * y)), 2)
 
 
 # if distance between centers is smaller than the treshhold
@@ -211,7 +217,7 @@ def check_close_to_edge(target):
     :param target: grape cluster
     :return: True if the grape is too close to the right edge
     """
-    x_m = target[0]
+    # x_m = target[0]
     y_m = target[1]
     w_m = target[2] / 2
     h_m = target[3] / 2
@@ -221,7 +227,7 @@ def check_close_to_edge(target):
         g_param.masks_image = cv.circle(g_param.masks_image, (target[6][0],  target[6][1]),
                                         radius=2, color=(0, 0, 255), thickness=2)
     lower = check_close_to_lower_edge(y_m, w_m, h_m, angle, target[8])
-    upper = check_close_to_upper_edge(y_m, w_m, h_m, angle, target[8])
+    upper = check_close_to_upper_edge(target[8])
     # print(f'right: {right}, up: {upper}, down: {lower}')
     return True if True in [right, lower, upper] else False  # True if at least one of them is True
 
@@ -271,12 +277,8 @@ def check_close_to_lower_edge(y_m, w_m, h_m, angle, corners_in_m):
     # return False
 
 
-def check_close_to_upper_edge(y_m, w_m, h_m, angle, corners_in_m):
+def check_close_to_upper_edge(corners_in_m):
     """
-    :param y_m: x center coordinate of the grape
-    :param w_m: width of the Bounding box
-    :param h_m: height of the Bounding box
-    :param angle: angle of rotation of the bounding box
     :return: True if too close to the lower edge
     """
     edt = edge_distance_threshold
@@ -318,7 +320,7 @@ def add_to_target_bank(target):
     grape_base = g_param.trans.grape_base(target[0], target[1])
     ans, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if ans:
-        closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target[1])
+        closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target)
         if closer_to_center or too_close:  # not sprayed and closer to center
             g_param.TB[temp_target_index].grape_world = temp_grape_world
             g_param.TB[temp_target_index].grape_base = grape_base
