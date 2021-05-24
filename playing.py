@@ -5,14 +5,18 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 from termcolor import colored
+import glob, shutil
 
-print("Real grape?")
-one = "\033[1m" + "0" + "\033[0m"
-zero = "\033[1m" + "1" + "\033[0m"
-a = [(500, 500)] * 12
-# real_grape = input(colored("Yes: ", "cyan") + "press " + one + colored(" No: ", "red") + "Press " + zero + " ")
-print(a[-6:])
+import math
+print(math.floor(-0.5))
 
+# print("Real grape?")
+# one = "\033[1m" + "0" + "\033[0m"
+# zero = "\033[1m" + "1" + "\033[0m"
+# a = [(500, 500)] * 12
+# # real_grape = input(colored("Yes: ", "cyan") + "press " + one + colored(" No: ", "red") + "Press " + zero + " ")
+# print(a[-6:])
+#
 
 # a = [[1],[3],[2]]
 # b = [[1],[3],[5],[2]]

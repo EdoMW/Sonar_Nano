@@ -1,3 +1,6 @@
+import os
+
+manual_work = True
 TB = []
 masks_image = None
 half_width_meter = 0.34
@@ -6,7 +9,7 @@ show_images = None
 spray_sonar = True
 trans = None
 avg_dist = 0.76  # 75
-platform_step_size = 0
+platform_step_size = 0.2
 sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.76
 step_size = 0.10
@@ -30,6 +33,7 @@ z_min = 0.22
 y_max = 0.6
 sonar_x_length = 0.075
 sprayer_x_length = 0.095
+base_rotation_ang = 180  # 180 for lab 135 for volcani
 
 """
 steps_gap: determines how many horizontal steps should be done.
@@ -46,7 +50,7 @@ load- load all the date that was recorded.
 change parameters if necessary.
 """
 
-process_type = 'work'  # TODO-add save of the TB before ending the program. also descriptive statistic
+process_type = 'record'  # TODO-add save of the TB before ending the program. also descriptive statistic
 work_place = "lab_grapes"  # lab. to know which function of image processing to use.
 
 
@@ -131,6 +135,16 @@ def get_image_num_sim(image_num):
     return b[image_num]
 
 
+def empty_npz_dir():
+    """
+    Delete all mask npz files from previous run
+    """
+    path = r'D:\Users\NanoProject\Sonar_Nano\npzs'
+    file_list = [f for f in os.listdir(path)]
+    for f in file_list:
+        os.remove(os.path.join(path, f))
+
+
 def init():
     """
     initializes all global variables.
@@ -138,6 +152,9 @@ def init():
     global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number, \
         image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size, \
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
-        image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max
+        image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
+        manual_work, base_rotation_ang
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
+    empty_npz_dir()
+

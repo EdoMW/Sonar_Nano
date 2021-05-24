@@ -8,6 +8,7 @@ import argparse
 import g_param
 import random as rng
 import matplotlib.pyplot as plt
+import imgaug.augmenters as iaa
 from Target_bank import check_if_in_TB, add_to_target_bank, sort_by_and_check_for_grapes, sort_by_rect_size
 # import random
 # import math
@@ -54,7 +55,7 @@ from mrcnn.model import log
 
 # Import COCO config
 sys.path.append(os.path.join(ROOT_DIR, "samples/coco"))  # To find local version
-import coco
+# import coco
 
 # Directory to save logs and trained model
 MODEL_DIR = os.path.join(ROOT_DIR, "logs")
@@ -97,24 +98,24 @@ class GrapeConfig(Config):
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 1
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 1  # Background + grape
 
     # Number of training steps per epoch
-    STEPS_PER_EPOCH = 30
+    STEPS_PER_EPOCH = 356
 
     # Skip detections with < 90% confidence
     DETECTION_MIN_CONFIDENCE = 0.9
 
-    DETECTION_MAX_INSTANCES = 40
+    DETECTION_MAX_INSTANCES = 30
 
     MASK_SHAPE = [28, 28]
     # very importent to defince corect!!!!!
-    BACKBONE = "resnet101"
+    BACKBONE = "resnet50"
 
-    BACKBONE_STRIDES = [4, 8, 16, 32, 64]
+    BACKBONE_STRIDES = [8, 16, 32, 64, 128]
 
     RPN_ANCHOR_RATIOS = [0.5, 1, 2]
 
@@ -135,7 +136,7 @@ class GrapeDataset(utils.Dataset):
 
         # Train or validation dataset?
         assert subset in ["train", "val", "test"]
-        dataset_dir = os.path.join("C:\Drive\Mask_RCNN-master\samples\grape\dataset", subset)
+        dataset_dir = os.path.join("C:\Drive\Mask_RCNN-master\dataset", subset)
         dataset = os.listdir(dataset_dir)
 
         # Add images
@@ -176,7 +177,7 @@ class GrapeDataset(utils.Dataset):
         info = self.image_info[image_id]
         image_name = info["id"]
         mask_name = image_name + ".npy"
-        mask_dir = os.path.join("C:/Drive/Mask_RCNN-master/samples/grape/anew_masks/" + mask_name)
+        mask_dir = os.path.join(r'C:/Drive/Mask_RCNN-master/masks_npy/' + mask_name)
         return mask_dir
 
 
@@ -187,12 +188,12 @@ def train(model):
     """Train the model."""
     # Training dataset.
     dataset_train = GrapeDataset()
-    dataset_train.load_grape('C:/Drive/Mask_RCNN-master/samples/grape/dataset', "train")
+    dataset_train.load_grape('"C:\Drive\Mask_RCNN-master\dataset"', "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = GrapeDataset()
-    dataset_val.load_grape('C:/Drive/Mask_RCNN-master/samples/grape/dataset', "val")
+    dataset_val.load_grape('"C:\Drive\Mask_RCNN-master\dataset"', "val")
     dataset_val.prepare()
 
     # *** This training schedule is an example. Update to your needs ***
@@ -205,10 +206,19 @@ def train(model):
     # imgaug.augmenters.Crop(percent=(0, 0.1)),
     # imgaug.augmenters.LinearContrast((0.75, 1.5))],
     #                                          random_order=True)
+    augmentation_1 = iaa.Sometimes(5 / 6, iaa.OneOf(
+        [
+            imgaug.augmenters.Fliplr(0.5),
+            imgaug.augmenters.GaussianBlur(sigma=(0.0, 3.0)),
+            imgaug.augmenters.Crop(percent=(0, 0.1)),
+            imgaug.augmenters.LinearContrast((0.75, 1.25))]
+    ))
+    # mean_average_precision_callback = MeanAveragePrecisionCallback(model, model_inference,dataset_val,
+    # calculate_map_at_every_X_epoch=5, verbose=1)
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=70,
-                # augmentation = augmentation_1,
+                epochs=100,
+                augmentation=augmentation_1,
                 layers='all')
 
 
@@ -216,17 +226,31 @@ def train(model):
 # Training 2
 ############################################################
 
-# if __name__ == '__main__':
-#     config = GrapeConfig()
-#     config.display()
-#     logs_dir = 'C:\Drive\Mask_RCNN-master/logs'
-#     model = modellib.MaskRCNN(mode="training", config=config,
-#                               model_dir=logs_dir)
-#     # weights_path = '/content/gdrive/My Drive/grapes data/Mask_RCNN-master/mask_rcnn_coco.h5'
-#     # weights_path = model.find_last()
-#     # print(weights_path)
-#     model.load_weights('C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5')
-#     # train (model)
+if __name__ == '__main__':
+    config = GrapeConfig()
+    config.display()
+    logs_dir = 'C:\Drive\Mask_RCNN-master/logs'
+    model = modellib.MaskRCNN(mode="training", config=config,
+                              model_dir=logs_dir)
+    weights_path = '/content/gdrive/My Drive/grapes data/Mask_RCNN-master/mask_rcnn_coco.h5'
+    # weights_path = model.find_last()
+    # print(weights_path)
+    # model.load_weights('C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5')
+    train (model)
+
+print("sleeping")
+import time
+time.sleep(1000000)
+
+
+
+
+print("a")
+
+
+
+
+
 
 
 config = GrapeConfig()
@@ -1146,7 +1170,7 @@ def take_picture_and_run(current_location, image_number):
     # ueye_take_picture_2(i)
     # take a picture by pressing a key
     # captured_image = take_picture()
-    im1 = cv2.imread(d"C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0107.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
+    im1 = cv2.imread(r"C:\Drive\Mask_RCNN-master\samples\grape\dataset\train\DSC_0107.JPG") # change the path!!!!!!!!! that will fit the actual captured picture
     im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2RGB)
     img = im1
 

@@ -41,8 +41,11 @@ class Trans:
         self.t_tcp2base = np.identity(4)
         self.ang_vec_tcp = np.array([])
         self.capture_pos = np.array([])
-
+        self.prev_capture_pos = np.array([])
     # Turns axis angles  into rotation matrix
+
+    def set_prev_capture_pos(self, location):
+        self.prev_capture_pos = location.copy()
 
     def set_capture_pos(self, location):
         self.capture_pos = location
@@ -67,8 +70,10 @@ class Trans:
     # TODO- Omer - change the cam2word matrix due to platform steps
     def grape_world(self, x_cam, y_cam):
         grape_cam = np.array([float(x_cam), float(y_cam), 0, 1])
-        grape_world = np.matmul(self.t_cam2world, grape_cam)
-        grape_world[1] = grape_world[1] + g_param.sum_platform_steps
+        grape_world = np.matmul(self.t_cam2world, grape_cam) # TODO: also for z axis.
+        delta_x, delta_y = rotation_coordinate_sys(0, -g_param.sum_platform_steps, g_param.base_rotation_ang)
+        grape_world[0] = grape_world[0] + delta_x
+        grape_world[1] = grape_world[1] + delta_y
         return grape_world[:-1]
 
     def grape_base(self, x_cam, y_cam):

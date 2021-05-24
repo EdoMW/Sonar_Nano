@@ -7,4 +7,8 @@ __pycache__/
 */Code
 */your_file.jpeg
 */mask_rcnn
-*/masks_for_lab
+*/npzs
+1.jpg
+1.npy
+single_process.py
+single_process1.py

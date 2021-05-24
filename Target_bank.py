@@ -6,7 +6,7 @@ import g_param
 from math import cos, sin, pi, radians
 import scipy
 import cv2 as cv
-
+from transform import rotation_coordinate_sys
 # Define colors for printing
 from sty import fg, Style, RgbFg
 
@@ -55,7 +55,7 @@ class Target_bank:
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
         self.grape_base = grape_base
-
+        self.last_updated = g_param.image_number
         self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
@@ -151,9 +151,6 @@ class Target_bank:
             return scipy.ndimage.measurements.center_of_mass(self.mask)
         return None
 
-    def calc_mask_size_pixels(self):
-        pass
-
     def calc_dist_from_center(self):
         if type(self) is list:
             x = 512 - self[0]
@@ -162,6 +159,34 @@ class Target_bank:
             x = 512 - self.x_p
             y = 512 - self.y_p
         return round(math.sqrt((x * x) + (y * y)), 2)
+
+
+def calc_z_move():
+    a = g_param.image_number % 4
+    if a == 0 or a == 3:
+        return 0
+    return g_param.height_step_size * g_param.step_size
+
+
+def update_grape_center(index):
+    if g_param.image_number > 0:
+        if g_param.TB[index].last_updated < g_param.image_number:
+            # print("# Updated! #")
+            # print("x : ", math.floor(g_param.image_number / 2) * g_param.step_size, " y : ", calc_z_move())
+            # print(">>>>>>>>>>",'\n', g_param.trans.capture_pos, '\n' , g_param.trans.prev_capture_pos, '\n', "<<<<<<<<<")
+            capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
+            prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0], g_param.trans.prev_capture_pos[1], -g_param.base_rotation_ang)[1]
+            delta_x = capture_pos_r-prev_capture_pos_r
+            # print("????????????????",delta_x)
+            delta_y = g_param.trans.capture_pos[2] - g_param.trans.prev_capture_pos[2]
+            # print("!!!!!!!!!!!!!!!!", delta_y)
+            g_param.TB[index].x_center += delta_x
+            g_param.TB[index].y_center += delta_y
+        # if g_param.image_number > 0:
+        #     if (math.floor(g_param.image_number / 2) - math.floor((g_param.image_number - 1) / 2)) > 0:
+        #         g_param.TB[index].x_center += (math.floor(g_param.image_number / 2)
+        #                                        - math.floor((g_param.image_number - 1) / 2)) * g_param.step_size
+        # g_param.TB[index].y_center += calc_z_move()
 
 
 # if distance between centers is smaller than the treshhold
@@ -188,6 +213,7 @@ def check_if_in_TB(grape_world, target):
                 g_param.TB[i].y_center = target[1]
                 g_param.TB[i].w_meter = target[2]
                 g_param.TB[i].h_meter = target[3]
+                g_param.TB[i].last_updated = g_param.image_number
                 # decide if to update world
                 return True, i
     return False, None
@@ -330,7 +356,11 @@ def add_to_target_bank(target):
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
                                           target[5], target[6], temp_grape_world, target[8], target[9],
                                           grape_base, target[10], target[11]))
-            g_param.read_write_object.save_mask(target[5], Target_bank.grape_index)
+            if g_param.work_place == 'field':
+                g_param.read_write_object.save_mask(target[5], Target_bank.grape_index)
+                mask_path = f'npzs/{g_param.image_number}_{Target_bank.grape_index}.npz'
+                np.savez_compressed(mask_path, target[5])
+                # savezcompressed (npz of the mask)
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")
 
@@ -359,7 +389,7 @@ def sort_by_and_check_for_grapes(sorting_type):
 
 
 def sort_by_leftest_first():
-    g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_center'))
+    g_param.TB = sorted(g_param.TB, key=attrgetter('sprayed', 'x_center'), reverse=False)
 
 
 def sort_by_rect_size():
@@ -418,7 +448,7 @@ def calculate_w_h(d, box_points):
 
 def update_distance(grape):
     """
-    call the function ONLY if Sonar activated
+    call the function ONLY if Sonar was activated
     :param grape: the i'th grape
     """
     # TODO: call the function that updates g_param.avg_dist with sonar_location

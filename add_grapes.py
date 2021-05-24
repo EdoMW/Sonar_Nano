@@ -3,7 +3,7 @@ import cv2
 import os
 import sys
 ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master/")
-sys.path.append(ROOT_DIR)  # To find local version of the library
+sys.path.append(ROOT_DIR)
 from mrcnn import utils
 
 # screen_x_cord = -1_200  # TODO: when working on my computer. change to 200 when working in lab

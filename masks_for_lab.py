@@ -340,6 +340,8 @@ def show_in_moved_window(win_name, img, i=None, x=(-1090), y=35):
     if img is not None:
         target_bolded = img.copy()
         if i is not None:
+            # if not g_param.TB[i].sprayed:
+            #     print("grape to display: ", g_param.TB[i])
             cv.drawContours(target_bolded, [np.asarray(g_param.TB[i].p_corners)], 0, (15, 25, 253), thickness=3)
         cv.namedWindow(win_name, cv.WINDOW_AUTOSIZE)  # Create a named window
         cv.moveWindow(win_name, x, y)  # Move it to (x,y)
@@ -736,30 +738,22 @@ def ueye_take_picture_2(image_number):
         # In order to display the image in an OpenCV window we need to...
         # ...extract the data of our image memory
         pic_array_1 = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
-        time.sleep(0.4)
+        time.sleep(0.1)
         pic_array = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
 
         # ...reshape it in an numpy array...
         frame = np.reshape(pic_array, (height.value, width.value, bytes_per_pixel))
+        frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+        frame_original_quality = frame[:, :, 0:3].copy()
         frame = np.pad(frame, pad_width=[(506, 506), (0, 0), (0, 0)], mode='constant')  # pad with zeros above and under
         # ...resize the image by a half
         frame = cv.resize(frame, (0, 0), fx=0.331606, fy=0.331606)
 
-        # ---------------------------------------------------------------------------------------------------------------------------------------
-        # ...and finally display it
-        # cv.imshow("SimpleLive_Python_uEye_OpenCV", frame)
-        time.sleep(0.1)
-        # show_in_moved_window("SimpleLive_Python_uEye_OpenCV", frame) # Display the image that was taken
-        time.sleep(0.1)
-
         t = time.localtime()
         current_time = time.strftime("%H_%M_%S", t)
 
-        # Press q if you want to end the loop
-        # if cv.waitKey(1) & 0xFF == ord('q'):
-        # if cv.waitKey(100) or 0xFF == ord('q'):
         frame = frame[:, :, 0:3]
-        frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+
         # TODO make folder_path_for_images a parameter
         folder_path_for_images = r'D:\Users\NanoProject\Images_for_work'
         img_name = 'num_dt.jpeg'
@@ -768,17 +762,9 @@ def ueye_take_picture_2(image_number):
         image_path = os.path.join(folder_path_for_images, img_name)
         plt.imsave(image_path, frame)
         # if g_param.process_type == "record":
-        #     g_param.read_write_object.save_rgb_image(frame)
+        #     g_param.read_write_object.save_rgb_image(frame, frame_original_quality)
         cv.destroyAllWindows()
 
-        # print("image_path!!!!!!:", image_path)
-        # a_string = "C:/Drive/25_11_20/num_dt.jpeg"
-        # a_string = a_string.replace("num", str(image_number))
-        # a_string = a_string.replace("dt", str(current_time))
-        # a_string = a_string.replace("num", str(i))
-        # im = Image.fromarray(frame)
-        # plt.imsave(a_string, frame)
-        # break
     # ---------------------------------------------------------------------------------------------------------------------------------------
     else:
         print("no image was taken")
@@ -790,10 +776,7 @@ def ueye_take_picture_2(image_number):
 
     # Destroys the OpenCv windows
     cv.destroyAllWindows()
-    #
-    # print()
-    # print("END")
-    return image_path, frame
+    return image_path, frame, frame_original_quality
 
 
 def biggest_box(det_rotated_boxes):
@@ -1000,30 +983,103 @@ def check_if_in_list(temp_box, list_a):
     return True
 
 
-# im1 = 'path to captured image indside cv2.imageread'
+def sort_results(results):
+    """
+    sort the results of detection from left to right, and not by score.
+    :param results: dict of the results
+    :return: results (dict, same size), sorted.
+    """
+    bbox = utils.extract_bboxes(results['masks'])
+    bbox = bbox.astype('int32')
+    results['bbox'] = bbox
+    res = []
+    for i in range(len(results['scores'])):
+        res.append({
+            "rois": results['rois'][i], "class_ids": results['class_ids'][i], "scores": np.array(results['scores'][i]),
+            "masks": results['masks'][:, :, i], "bbox": bbox[i], "bbox_left_x": bbox[i][1],
+        })
+    from operator import itemgetter
+    res = sorted(res, key=itemgetter('bbox_left_x'), reverse=False)
+    a, b, c, d = res[0]['rois'], res[0]['bbox'], res[0]['scores'], res[0]['masks']
+    if len(res) > 1:
+        for i in range(1, len(res)):
+            a = np.dstack((a, res[i]['rois']))
+            b = np.dstack((b, res[i]['bbox']))
+            c = np.append(c, res[i]['scores'])
+            d = np.dstack((d, res[i]['masks']))
+    results = {"rois": a, "class_ids": results['class_ids'], "scores": c, "masks": d, "bbox": b,
+               }
+    return results
+
+
+def good_manual_image():
+    """
+    Check if the manual image taken is good
+    """
+    print("Image is good?")
+    one = "\033[1m" + "0" + "\033[0m"
+    zero = "\033[1m" + "1" + "\033[0m"
+    while True:
+        time.sleep(0.01)
+        good_image = input(colored("Yes: ", "cyan") + "press " + zero +
+                           colored(" No: ", "red") + "Press " + one + " \n")
+        if good_image == '0' or good_image == '1':
+            break
+    if good_image == '1':
+        return True
+    return False
+
+
+def take_manual_image():
+    """
+    Saves extra image during the experiment.
+    validate that the image taken was good (press 1 to confirm or 0 to take another one.
+    """
+    image_number = g_param.image_number
+    plt.clf()  # clean the canvas
+    amount_of_images = 1
+    if g_param.process_type == "record":
+        not_good_image = True
+        while not_good_image:
+            for i in range(amount_of_tries):
+                image_path, frame, original_frame = ueye_take_picture_2(image_number)
+                image_taken = check_image(image_path)
+                print("try number: ", amount_of_images, " for manual image")
+                if image_taken:
+                    amount_of_images += 1
+                    print(colored("Manual image taken successfully", 'green'))
+                    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+                    show_in_moved_window(win_name="Chack manual image", img=frame)
+                    good_image_taken = good_manual_image()
+                    if good_image_taken:
+                        g_param.read_write_object.save_manual_image(original_frame)
+                        not_good_image = False
+                        break
+            if not image_taken:
+                print_special_cam_error()
+
+
 def take_picture_and_run():
     """
     :return:
     """
     image_number = g_param.image_number
     d = g_param.avg_dist
-    # box = [0, 0, 0, 0, 0]
     plt.clf()  # clean the canvas
     if g_param.process_type == "record" or g_param.process_type == "work":
-        # image_path = ueye_take_picture_2(image_number) # TODO: uncomment if working with camera
-
         for i in range(amount_of_tries):  # TODO: comment next 3 lines if working with camera
             # image_path = r'D:\Users\NanoProject\old_experiments\exp_data_11_10\rgb_images\0_11_10_46.jpeg'
             # frame = cv.imread(image_path)
             # frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            image_path, frame = ueye_take_picture_2(image_number)  # TODO: uncomment if working with camera
+            image_path, frame, original_frame = ueye_take_picture_2(
+                image_number)  # TODO: uncomment if working with camera
 
             image_taken = check_image(image_path)
             print("try number: ", i)
             if image_taken:
                 print(colored("Image taken successfully", 'green'))
                 if g_param.process_type == "record":
-                    g_param.read_write_object.save_rgb_image(frame)
+                    g_param.read_write_object.save_rgb_image(frame, original_frame)
                 break
         if not image_taken:
             print_special_cam_error()
@@ -1037,8 +1093,13 @@ def take_picture_and_run():
 
     # fOR FIELD simulation in lab
     if g_param.work_place == "field":
-        # image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG'
-        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0363.JPG' # FIXME: change to this one and fix the problem
+        dataset_images = os.listdir(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test')
+        img_path = random.choice(dataset_images)
+        image_path = os.path.join(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test', img_path)
+        print(f"image_path : {image_path}")
+
+        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG'
+        # image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0363.JPG' # FIXME: change to this one and fix the problem
 
     img = cv.imread(image_path)
     # img = cv.resize(img, (1024, 692))  # Resize image if needed
@@ -1159,60 +1220,63 @@ def take_picture_and_run():
             add_to_target_bank(grape)
 
     if g_param.work_place == "lab_grapes":
+        if not g_param.manual_work: # for exp. only manual grape detection
         # for lab
-        rng.seed(12345)
+            rng.seed(12345)
 
-        def thresh_callback(val):
-            threshold = val
-            ret, thresh = cv.threshold(src_gray, 5, 255, cv.THRESH_BINARY)
-            contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-            # Find the rotated rectangles and ellipses for each contour
-            minRect = [None] * len(contours)
-            corners_rect = [None] * len(contours)
-            # rect = ((center_x,center_y),(width,height),angle)
-            for i, c in enumerate(contours):
-                minRect[i] = cv.minAreaRect(c)
-                corners_rect[i] = cv.boxPoints(minRect[i])
-            drawing = np.zeros((rgb.shape[0], rgb.shape[1], 3), dtype=np.uint8)
-            for i, c in enumerate(contours):
-                box = cv.boxPoints(minRect[i])
-                box = np.intp(box)
-                width_a = int(minRect[i][1][0])
-                height_a = int(minRect[i][1][1])
-                area = width_a * height_a
-                color_index = 30
-                tresh_size = 10_000
-                if (width_a / (height_a + 0.001) > 0.2) and (
-                        height_a / (width_a + 0.001) > 0.2) and tresh_size < area:  # and tresh_size < area < 200_000:
-                    # TODO: להכפיל את הזוית ב-1
-                    boxes.append(minRect[i])
-                    corner_points.append(box)
-                    cv.drawContours(rgb, [box], 0, (255 - color_index, 255 - color_index * 2, 255 - color_index * 3))
-                    color_index += 20
+            def thresh_callback(val):
+                threshold = val
+                ret, thresh = cv.threshold(src_gray, 5, 255, cv.THRESH_BINARY)
+                contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+                # Find the rotated rectangles and ellipses for each contour
+                minRect = [None] * len(contours)
+                corners_rect = [None] * len(contours)
+                # rect = ((center_x,center_y),(width,height),angle)
+                for i, c in enumerate(contours):
+                    minRect[i] = cv.minAreaRect(c)
+                    corners_rect[i] = cv.boxPoints(minRect[i])
+                drawing = np.zeros((rgb.shape[0], rgb.shape[1], 3), dtype=np.uint8)
+                for i, c in enumerate(contours):
+                    box = cv.boxPoints(minRect[i])
+                    box = np.intp(box)
+                    width_a = int(minRect[i][1][0])
+                    height_a = int(minRect[i][1][1])
+                    area = width_a * height_a
+                    color_index = 30
+                    tresh_size = 10_000
+                    if (width_a / (height_a + 0.001) > 0.2) and (
+                            height_a / (width_a + 0.001) > 0.2) and tresh_size < area:  # and tresh_size < area < 200_000:
+                        # TODO: להכפיל את הזוית ב-1
+                        boxes.append(minRect[i])
+                        corner_points.append(box)
+                        cv.drawContours(rgb, [box], 0, (255 - color_index, 255 - color_index * 2, 255 - color_index * 3))
+                        color_index += 20
+                show_in_moved_window("show boxes", rgb, None)
+                # cv.imshow("show boxes", rgb)
+                # cv.waitKey()
+                # cv.destroyAllWindows()
+
+            hsv = cv.cvtColor(rgb, cv.COLOR_RGB2HSV)
+            cv.destroyAllWindows()
+            mask = cv.inRange(hsv, (38, 38, 38), (68, 255, 255))
+
+            imask = mask > 0
+            green = np.zeros_like(rgb, np.uint8)
+            green[imask] = rgb[imask]
+            temp_bgr = cv.cvtColor(green, cv.COLOR_HSV2RGB)
+            rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
+            src_gray = cv.cvtColor(temp_bgr, cv.COLOR_RGB2GRAY)
+            thresh = 100  # initial threshold
+            boxes, corner_points = [], []
+            thresh_callback(thresh)
+            corner_points = [arr.tolist() for arr in corner_points]
+        else:
+            rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
             show_in_moved_window("show boxes", rgb, None)
-            # cv.imshow("show boxes", rgb)
-            # cv.waitKey()
-            # cv.destroyAllWindows()
-
-        hsv = cv.cvtColor(rgb, cv.COLOR_RGB2HSV)
-        cv.destroyAllWindows()
-        mask = cv.inRange(hsv, (38, 38, 38), (68, 255, 255))
-
-        imask = mask > 0
-        green = np.zeros_like(rgb, np.uint8)
-        green[imask] = rgb[imask]
-        temp_bgr = cv.cvtColor(green, cv.COLOR_HSV2RGB)
-        rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
-        src_gray = cv.cvtColor(temp_bgr, cv.COLOR_RGB2GRAY)
-        thresh = 100  # initial threshold
-        boxes, corner_points = [], []
-        thresh_callback(thresh)
-        corner_points = [arr.tolist() for arr in corner_points]
-
+            boxes, corner_points = [], []
         mask, obbs_list, corners_list, img_rgb = add_grapes(rgb)  # adding new grapes that were not recognized
         corner_points = corner_points + corners_list
         boxes = boxes + obbs_list
-
 
         new_corner_points = []
         for elem in corner_points:
@@ -1263,13 +1327,13 @@ def take_picture_and_run():
                      None, det_box, None, corners_in_meter, corner_points, None, None]
             add_to_target_bank(grape)
 
-    # for field usage with net
+        # for field usage with CNN
     if g_param.work_place == "field":
         im0 = rgb
         im0 = utils.resize_image(im0, max_dim=1024, mode="square")
         im0, *_ = np.asarray(im0)
-        if g_param.process_type == "record":
-            g_param.read_write_object.save_rgb_image(im0)
+        # if g_param.process_type == "record":
+        #     g_param.read_write_object.save_rgb_image(im0, rgb)
         img = im0
         img_with_masks = img.copy()
         arr = [im0]
@@ -1287,18 +1351,10 @@ def take_picture_and_run():
             r = results[0]
             ax = get_ax(1)
             bbox = utils.extract_bboxes(r['masks']).astype('int32')
+            r = sort_results(r)
             img_with_masks = visualize.display_instances(im1, bbox, r['masks'], r['class_ids'],
                                                          dataset_test.class_names, r['scores'], ax=ax,
                                                          title="Predictions")
-
-        # else:
-        #     print("There was no grapes detected in the capturd image.")
-        #     im1 = cv.imread(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0348.JPG')
-        #     im1 = utils.resize_image(im1, max_dim=1024, mode="square")
-        #     im1, *_ = np.asarray(im1)
-        #     arr = [im1]
-        #     results = model.detect(arr, verbose=1)
-        #     r = results[0]
         images, boxes, mini_boxes, boxes_min, pixels_count_arr, com_list = [], [], [], [], [], []
         if len(pred_masks[0][0]) > 0:
             amount_of_mask_detacted = len(pred_masks[0][0])
@@ -1335,13 +1391,13 @@ def take_picture_and_run():
                 pixels_count_arr.append(pixels_count)
         amount_of_mask_detacted = len(pred_masks[0][0])
         print(fg.green + "continue" + fg.rs, "\n")
-        mask, obbs_list, corners_list, img_rgb = add_grapes(img_with_masks)  # adding new grapes that were not recognized
+        mask, obbs_list, corners_list, img_rgb = add_grapes(
+            img_with_masks)  # adding new grapes that were not recognized
 
         if len(obbs_list) > 0:
             pred_masks = np.dstack((pred_masks, mask))
             pixels_count_arr = pixels_count_arr + [10_000] * len(obbs_list)
             com_list = com_list + [(500, 500)] * len(obbs_list)
-            # print("after corners", corner_points)
             boxes = boxes + obbs_list
             boxes_min = boxes_min + corners_list
             amount_of_mask_detacted += len(obbs_list)
@@ -1353,16 +1409,11 @@ def take_picture_and_run():
             w, h, corners_in_meter = calculate_w_h(d, box_min)
             a = int(boxes[i][2])
             box = [x, y, w, h, a, corners_in_meter, box_min]
-
-            cen_poi_x_0 = box[0]
-            cen_poi_y_0 = box[1]
-            width_0 = box[2]
-            height_0 = box[3]
+            cen_poi_x_0, cen_poi_y_0 = box[0], box[1]
+            width_0, height_0 = box[2], box[3]
             angle_0 = box[4] * -1
-            corners_in_meter = box[5]
-            corner_points = box[6]
+            corners_in_meter, corner_points = box[5], box[6]
             width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
-
             # det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
             det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[i][1][0]), int(boxes[i][1][1]), angle_0, None]
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
@@ -1374,10 +1425,6 @@ def take_picture_and_run():
 
     if g_param.work_place == "lab":
         display_image_with_masks(green)
-        # print("boxes", boxes)
-        # using the TB
-        box_index = sort_by_and_check_for_grapes('rect_size')
-        # print("box_index", box_index)
         add_circle_and_index(img, green)
         cv.waitKey(0)
         cv.destroyAllWindows()
@@ -1387,14 +1434,6 @@ def take_picture_and_run():
     g_param.read_write_object.write_tb()
 
 
-#
-# def sort_TB_left_to_right():
-#     for i in range(len(g_param.TB)):
-#         print(g_param.TB[i].index)
-#         # g_param.TB[i].index = int(i)
-
-
 if __name__ == '__main__':
     g_param.masks_image = None
     take_picture_and_run()
-    # sort_TB_left_to_right()
