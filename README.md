@@ -17,21 +17,21 @@ import packages and the ReadFromRobot class- do not change
 
 list of parameters to tune:
 
-    step_size = 0.45
+    step_size = 0.1
     
     sleep_time = 2.9
     
-    safety_dist = 0.30
+    safety_dist = 0.20
     
-    distance = 680 # change
+    distance = 0.75
     
-    same_grape_distance_threshold = 9 cm (0.09m)
+    same_grape_distance_threshold =0.04m
     
     show_images = True (default) show images
     
-    Vertical/ horizontal step size
+    Vertical step size = step_size * 0.9
     
-    amount of horizontal steps before moving the platform
+    amount of horizontal steps before moving the platform  = 1
     
     DETECTION_MIN_CONFIDENCE = 0.8
 
