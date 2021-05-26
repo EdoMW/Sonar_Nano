@@ -88,7 +88,7 @@ def ueye_take_picture_2(image_number):
         current_time = time.strftime("%H_%M_%S", t)
         frame = frame[:,:,0:3]
         frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-        # TODO make folder_path_for_images a parameter
+        # TODO (after exp) make folder_path_for_images a parameter
         folder_path_for_images = r'D:\Users\NanoProject\Images_for_work'
         img_name = 'num_dt.jpeg'
         img_name = img_name.replace("num", str(image_number))

@@ -328,7 +328,8 @@ def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
     return resized
 
 
-def show_in_moved_window(win_name, img, i=None, x=(-1090), y=35):
+# def show_in_moved_window(win_name, img, i=None, x=(-1090), y=35): # lab
+def show_in_moved_window(win_name, img, i=None, x=0, y=0):  # lab
     """
     show image
     :param win_name: name of the window
@@ -886,7 +887,6 @@ def print_special_cam_error():
 
 def check_image(image_path):
     """
-    TODO - test that it works correctly:
     it's not- rgb[combined[i]] is the all image. (0,0,0) is just (0,0,0)
     :param image_path: path to last image taken
     :return: True if real image was taken (not only black pixels)
@@ -1099,7 +1099,7 @@ def take_picture_and_run():
         print(f"image_path : {image_path}")
 
         image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG'
-        # image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0363.JPG' # FIXME: change to this one and fix the problem
+        # image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0363.JPG'
 
     img = cv.imread(image_path)
     # img = cv.resize(img, (1024, 692))  # Resize image if needed
@@ -1139,12 +1139,12 @@ def take_picture_and_run():
                 color_index = 50
                 tresh_size = 6000
                 if tresh_size < area < 200_000 and (width_a / height_a > 0.15) and (height_a / width_a > 0.15):
-                    # TODO: להכפיל את הזוית ב-1
+                    # להכפיל את הזוית ב-1
                     boxes.append(minRect[i])
                     corner_points.append(box)
                     cv.drawContours(rgb, [box], 0, (255 - color_index, 255 - color_index * 2, 255 - color_index * 3))
                     color_index += 20
-            show_in_moved_window("show boxes", rgb, None)
+            show_in_moved_window("Check image", rgb, None)
             # cv.imshow()
             # cv.waitKey()
             # cv.destroyAllWindows()
@@ -1246,12 +1246,12 @@ def take_picture_and_run():
                     tresh_size = 10_000
                     if (width_a / (height_a + 0.001) > 0.2) and (
                             height_a / (width_a + 0.001) > 0.2) and tresh_size < area:  # and tresh_size < area < 200_000:
-                        # TODO: להכפיל את הזוית ב-1
+                        # להכפיל את הזוית ב-1
                         boxes.append(minRect[i])
                         corner_points.append(box)
                         cv.drawContours(rgb, [box], 0, (255 - color_index, 255 - color_index * 2, 255 - color_index * 3))
                         color_index += 20
-                show_in_moved_window("show boxes", rgb, None)
+                show_in_moved_window("check image", rgb, None)
                 # cv.imshow("show boxes", rgb)
                 # cv.waitKey()
                 # cv.destroyAllWindows()
@@ -1272,9 +1272,13 @@ def take_picture_and_run():
             corner_points = [arr.tolist() for arr in corner_points]
         else:
             rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
-            show_in_moved_window("show boxes", rgb, None)
+            show_in_moved_window("check images", rgb, None)
             boxes, corner_points = [], []
+        # mask, obbs_list, corners_list, img_rgb = None,[],[], None
+        # try:
         mask, obbs_list, corners_list, img_rgb = add_grapes(rgb)  # adding new grapes that were not recognized
+        # except Exception as e:
+        #     print("exception: ", e.__class__)
         corner_points = corner_points + corners_list
         boxes = boxes + obbs_list
 
@@ -1323,12 +1327,14 @@ def take_picture_and_run():
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             det_rotated_boxes.append(box_in_meter)
+            # change mask[:,:,b] to None if not working on manual mode
             grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                     None, det_box, None, corners_in_meter, corner_points, None, None]
+                     mask[:, :, b], det_box, None, corners_in_meter, corner_points, None, None]
             add_to_target_bank(grape)
 
         # for field usage with CNN
     if g_param.work_place == "field":
+        # TODO: same as lab_grapes: if not g_param.manual_work:  # for exp. only manual grape detection
         im0 = rgb
         im0 = utils.resize_image(im0, max_dim=1024, mode="square")
         im0, *_ = np.asarray(im0)
@@ -1391,11 +1397,10 @@ def take_picture_and_run():
                 pixels_count_arr.append(pixels_count)
         amount_of_mask_detacted = len(pred_masks[0][0])
         print(fg.green + "continue" + fg.rs, "\n")
-        mask, obbs_list, corners_list, img_rgb = add_grapes(
-            img_with_masks)  # adding new grapes that were not recognized
+        masks, obbs_list, corners_list, img_rgb = add_grapes(img_with_masks)  # adding new grapes that were not recognized
 
         if len(obbs_list) > 0:
-            pred_masks = np.dstack((pred_masks, mask))
+            pred_masks = np.dstack((pred_masks, masks))
             pixels_count_arr = pixels_count_arr + [10_000] * len(obbs_list)
             com_list = com_list + [(500, 500)] * len(obbs_list)
             boxes = boxes + obbs_list

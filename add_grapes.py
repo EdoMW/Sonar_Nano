@@ -66,7 +66,10 @@ class DrawLineWidget(object):
     def extract_coordinates(self, event, x, y, *_):
         # Record starting (x,y) coordinates on left mouse button click (next two if, elif)
         if event == cv2.EVENT_LBUTTONDOWN:
-            self.clone_2 = self.clone.copy()
+            try:
+                self.clone_2 = self.clone.copy()
+            except Exception as e:
+                print("exception :", e.__class__)
             self.image_coordinates.append((x, y))
             x_start, y_start = self.image_coordinates[0][0], self.image_coordinates[0][1]
             if len(self.image_coordinates) > 1:
@@ -167,13 +170,17 @@ def get_unrecognized_grapes(img_t, amount_of_grapes):
         cv2.polylines(img_1, [array], True, (0, 15, 255))
         cv2.drawContours(img_1, [array], -1, (0, 15, 255), -1)
         src_gray = cv2.cvtColor(img_1, cv2.COLOR_BGR2GRAY)
+        del img_1
         ret, thresh = cv2.threshold(src_gray, 127, 255, cv2.THRESH_BINARY_INV)
         contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
         rect, box = get_rect_box(contours[0])
         npy = np.asarray(thresh, dtype=np.uint8)
         img_shared = cv2.drawContours(img_shared, [box], 0, (10, 154, 255), 2)
         # if image_index == amount_of_grapes: # optional - indent lines 141-151 and add the if.
-        img_shared_overlay = img_shared.copy()
+        try:
+            img_shared_overlay = img_shared.copy()
+        except Exception as e:
+            print("exception :", e.__class__)
         cv2.polylines(img_shared_overlay, [array], True, (0, 255, 255))
         cv2.fillPoly(img_shared_overlay, [array], 255)
         alpha = 0.4

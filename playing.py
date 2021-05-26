@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 from termcolor import colored
 import glob, shutil
 
-import math
-print(math.floor(-0.5))
+N = 4
+for n in range(N):
+    print((n+1)/(N+1))
 
 # print("Real grape?")
 # one = "\033[1m" + "0" + "\033[0m"
@@ -104,7 +105,7 @@ print(math.floor(-0.5))
 # ans = np.all(a)
 #
 # print(round(233, -1))
-# print(np.all(a))  # TODO use it on boxes, corners
+# print(np.all(a))
 #
 # x = [[100, 200], [200, 300], [1000], [23, [123, 223]]]
 # c = np.hstack(x)

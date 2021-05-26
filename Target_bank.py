@@ -24,7 +24,7 @@ same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
-same_grape_distance_threshold = 0.06
+same_grape_distance_threshold = 0.09
 edge_distance_threshold = 0.01
 
 
@@ -48,7 +48,7 @@ class Target_bank:
         :param angle: in degrees from the horizontal line
         :param mask: a 2D bitmap of the grape.
         :param pixels_data: all data in pixels
-        :param grape_world: data in meter #TODO- CHECK if it has a use.
+        :param grape_world: data in meter #
         :param corners: list of lists. [[x,y],..,[x,y]]. corners[0] is the the lowest one, then it goes clockwise.
 
         """
@@ -119,7 +119,7 @@ class Target_bank:
         params = self.target_to_string()
         corners = f"corner_1: {self.corners[0]} corner_2: {self.corners[1]} " \
                   f"corner_3: {self.corners[2]} corner_4: {self.corners[3]}"
-        return params + corners + '\n' + '\n'
+        return params + corners + '\n'
         # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
 
     def calc_corners_by_gemotry(self):
@@ -198,7 +198,7 @@ def check_if_in_TB(grape_world, target):
              False, None- the grapes does not exist in TB. it will be added.
     """
     if len(g_param.TB) > 0:
-        for i in range(len(g_param.TB)):  # TODO: make it only for possible grapes in reach of the image
+        for i in range(len(g_param.TB)):  # TODO (after exp): make it only for possible grapes in reach of the image
             point_b = g_param.TB[i].grape_world
             # print("grape_world", grape_world)
             # print("distance : ", np.linalg.norm(grape_world - point_b))
@@ -333,7 +333,7 @@ def add_to_target_bank(target):
     """
     Checks if a new target (grape) already exits.
     compares the center of the new target to all exiting targets in the last 1m of the Y axis (the one the platform goes
-    along) TO BE DONE! #TODO make experiment to check if it's right to do so.
+    along) TO BE DONE!
     if the center of the new target is lower than the threshold to one of the exiting targets, treat it as the same one.
     if the target center in this image is closer to the center, update it's world coordinates.
     else- add new target to the target bank.
@@ -446,16 +446,15 @@ def calculate_w_h(d, box_points):
     return w, h, [p1, p2, p3, p4]
 
 
-def update_distance(grape):
+def update_by_real_distance(grape):
     """
     call the function ONLY if Sonar was activated
     :param grape: the i'th grape
     """
-    # TODO: call the function that updates g_param.avg_dist with sonar_location
+    # TODO (after exp): call the function that updates g_param.avg_dist with sonar_location
     grape.distance = g_param.last_grape_dist + g_param.sonar_x_length
     x, y = point_pixels_2_meter(grape.distance, [grape.x_p, grape.y_p])
     w, h, corners = calculate_w_h(grape.distance, grape.p_corners)
     grape.x_center, grape.y_center, grape.w_meter, grape.h_meter, grape.corners = x, y, w, h, corners
     grape.grape_world = g_param.trans.grape_world(x, y)
     grape.grape_base = g_param.trans.grape_base(x, y)
-    print(grape)

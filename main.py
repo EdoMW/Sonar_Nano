@@ -34,29 +34,27 @@ fg.orange = Style(RgbFg(255, 150, 50))
 fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
 fg.yellow = Style(RgbFg(255, 255, 70))
-
 g_param.read_write_object = read_write.ReadWrite()
-rs_rob = read_from_socket.ReadFromRobot()  # FIXME: make it possible to run on "load" when robot is turned off
+rs_rob = read_from_socket.ReadFromRobot()
 ws_rob = write_to_socket.Send2Robot()
 weight_file_name = r'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 sys.path.append("C:/Users/omerdad/Desktop/RFR/")
-start_pos = np.array([-0.252, -0.24198481, 0.43430055, -0.6474185, -1.44296026, 0.59665296])  # start pos
-# start_pos = np.array([-0.14, -0.349, 0.433, 0.068, -1.713, 1.281])  # start pos volcani
+# start_pos = np.array([-0.252, -0.24198481, 0.43430055, -0.6474185, -1.44296026, 0.59665296])  # start pos
+start_pos = np.array([-0.39, 0.035, 0.4, -1.144, -1.035, -0.128])  # start pos volcani
 step_size = g_param.step_size
-# TODO: think of better way to calculate the amount of steps based on range of the movement
 number_of_steps = math.floor(0.1 / step_size)  # amount of steps before plat move
 steps_counter = 0
 moving_direction = "right"  # right/left
-sleep_time = 3.05
+sleep_time = 5
 step_direction = ["right", "up", "right", "down"]  # the order of movement
 direction = None
 g_param.init()
 first_run = True
 g_param.show_images = True  # g.show_images: if true, it is visualizes the process
-time_to_move_platform, external_signal_all_done = False, False
+external_signal_all_done = False
 not_finished = True
 velocity = 0.7
 # trans_volcani = np.array([[-0.7071, 0.7071, 0], [-0.7071, -0.7071, 0], [0, 0, 1]])
@@ -86,18 +84,14 @@ def line_division(p1, p2, ratio):
     return np.array([x, y])
 
 
-def calc_linear_equation(x1, x2, y1, y2):
-    slope = (y1 - y2) / (x1 - x2)
-    intercept = y1 - slope * x1
-    return slope, intercept
-
-
 def move_and_spray(start, end, target_grape, adj_v):
     if g_param.process_type != "load":
         if possible_move(start, target_grape) and possible_move(end, target_grape):
-            ws_rob.move_command(True, start, 3, adj_v)
+            ws_rob.move_command(False, start, 3, adj_v)
+            check_update_move(start)
             ws_rob.spray_command(True)
-            ws_rob.move_command(True, end, 1.5, adj_v)
+            ws_rob.move_command(False, end, 1.5, adj_v)
+            check_update_move(end)
             ws_rob.spray_command(False)
         else:
             pass
@@ -105,52 +99,53 @@ def move_and_spray(start, end, target_grape, adj_v):
 
 
 def calc_path_points(pos, x_c, y_c, p):
-    pos[1] = pos[1] + (p[0] - x_c)
+    x_cam_movement = -(x_c - p[0])
+    delta_x, delta_y = rotation_coordinate_sys(0, x_cam_movement, g_param.base_rotation_ang)
+    pos[0] += delta_x
+    pos[1] += delta_y
     pos[2] = pos[2] + (y_c - p[1])
     return pos
 
 
-# def calc_linear_equation(x1, x2, y1, y2):
-#     slope = (y2-y1)/(x2-x1)
-
-
-def calc_spray_properties(goal):
-    """
-    :param goal: goal position in base coordinate
-    :return: maximum X coordinate possible
-    """
-
-    # dist_min = g_param.last_grape_dist - g_param.sprayer_x_length - g_param.min_spray_dist
+def calc_spray_distance(s_grape, overlap_rate):
     dist_min = g_param.last_grape_dist - g_param.min_spray_dist
-    print("dist_min", dist_min)
-    # dist_max = g_param.last_grape_dist - g_param.sprayer_x_length - g_param.max_spray_dist
     dist_max = g_param.last_grape_dist - g_param.max_spray_dist
-    print("dist_max", dist_max)
-    v_min = 0.3
-    v_max = 0.7
-    y_rotate = rotation_coordinate_sys(goal[0], goal[1], g_param.base_rotation_ang)[1]
-    x_max = math.sqrt(g_param.max_euclid_dist ** 2 - y_rotate ** 2 - goal[2] ** 2)
-    print("x_max", x_max)
-    if dist_max < x_max:
-        x_star = min(x_max, dist_min)
-        d_star = 0.0739 / 100 * x_star + 5.3632 / 100  # The linear equation base on the results of the lab experiment
-        slope, intercept = calc_linear_equation(dist_min, dist_max, v_max, v_min)
-        v_star = slope * x_star + intercept
-        return x_star, d_star, v_star
-    else:
-        print("The arm can not reach the spray position!")
-        # return _, _,_
+    N = np.array([4, 3, 2])  # num of paths
+    W = s_grape.w_meter
+    print("W: ", W)
+    all_dist = []
+    for n in N:
+        print("<<<<<", n, ">>>>>>")
+        d_req = W/(n-(n-1)*overlap_rate)
+        print("d_req", d_req)
+        dist_req = 1.6637 * d_req + 0.0423
+        print("dist_req", dist_req)
+        if dist_req <= g_param.min_spray_dist:
+            dist_pos = g_param.min_spray_dist
+        elif dist_req >= g_param.max_spray_dist:
+            dist_pos = g_param.max_spray_dist
+        else:
+            dist_pos = dist_req
+            return dist_pos, n
+        all_dist.append(dist_pos)
+    print("all distances: ", all_dist)
+    return g_param.min_spray_dist, 4  # TODO: num of paths
 
+
+def calc_spray_velocity(spray_dist):
+    dist_min = g_param.last_grape_dist - g_param.min_spray_dist
+    dist_max = g_param.last_grape_dist - g_param.max_spray_dist
+    slope = (g_param.max_vel - g_param.min_vel) / (dist_min - dist_max)
+    intercept = g_param.max_vel - slope * dist_min
+    spray_v = slope * spray_dist + intercept
+    return spray_v
 
 # tell me which input you want. I don't think that I need any output,
 # maybe only if there is a problem such as no more spraying material.
-def spray_procedure(g, d, overlap, k, vel, th):
+def spray_procedure(g, k, vel,num_of_paths):
     """
-    :param th:
-    :param vel:
-    :param overlap:
     :param g: The target grape for spraying
-    :param d: The nozzle diameter
+    :param vel: spraying velocity
     :param k:
     """
     # s = g.w_p * g.h_p
@@ -159,29 +154,27 @@ def spray_procedure(g, d, overlap, k, vel, th):
     p1, p2, p3, p4 = g.corners
     x_c, y_c = g.x_center, g.y_center
     print("target's width: ", g.w_meter)
-    N = math.floor(g.w_meter / (d * (1 - overlap)) + 0.5)
+    N = num_of_paths
     print("The number of paths is: ", N)
     for n in range(N):
-        r = (d / 2 + n * d * (1 - overlap)) / g.w_meter
-        if r > th:
-            break  # If the remainder of the unsprayed area is less than half the spray diameter, terminate the loop.
-        if N > 2 and (n == 0 or n == N - 1):
-            a = 0.8
-            # a = k * (g.pixels_count/s)
-        else:
-            a = 1
+        r = (n+1)/(N+1)
+        a = 1
+        # if N > 2 and (n == 0 or n == N - 1):
+        #     a = 0.8
+        #     # a = k * (g.pixels_count/s)
+        # else:
+        #     a = 1
         bottom_point = line_division(p1, p2, r)
         top_point = line_division(p4, p3, r)
-
         bottom_point = line_division(top_point, bottom_point, a)
         pixel_path = point_meter_2_pixel(g.distance, [bottom_point, top_point])
         display_path_of_spray(g, pixel_path, flip)
         end_p = calc_path_points(np.copy(center), x_c, y_c, bottom_point)
         start_p = calc_path_points(np.copy(center), x_c, y_c, top_point)
-        print("end_p", end_p)
-        print("start_p", start_p)
-        input("press enter for check spray procedure")
-        print(fg.yellow + "wait" + fg.rs, "\n")
+        # print("end_p", end_p)
+        # print("start_p", start_p)
+        # input("press enter for check spray procedure")
+        # print(fg.yellow + "wait" + fg.rs, "\n")
         if not flip:
             move_and_spray(start_p, end_p, g, vel)
             flip = True
@@ -240,9 +233,7 @@ def move2sonar(grape_1):
     if g_param.process_type != "load":
         if possible_move(new_location, grape_1):
             ws_rob.move_command(False, new_location, 5, velocity)
-            # check_update_move(new_location)
-    else:
-        pass  # TODO: Sigal - do we need to save the spray_procedure location and sonar location??[-0.21790651, -0.44937682, 0.50891671, 0.09135264, -1.75525897, 1.30217356]
+            check_update_move(new_location)
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -276,10 +267,9 @@ def move2spray(grape_1, spray_dist):
             dx, dy = two_step_movement(location,new_location)[0]
             first_move = np.concatenate([location[0:1] + dx, location[1:2] + dy, new_location[2:6]])
             ws_rob.move_command(False, first_move, 4, velocity)
-            ws_rob.move_command(True, new_location, 2, velocity)
-            # check_update_move(new_location)
-    else:
-        pass  # TODO: Sigal - do we need to save the spray_procedure location and spray_procedure location??
+            check_update_move(first_move)
+            ws_rob.move_command(False, new_location, 2, velocity)
+            check_update_move(new_location)
     print(fg.green + "continue" + fg.rs, "\n")
 
 
@@ -294,21 +284,31 @@ def move2capture():
     if g_param.process_type != "load":
         dx, dy = two_step_movement(location, g_param.trans.capture_pos)[1]
         first_move = np.concatenate([location[0:1] + dx, location[1:2] + dy, location[2:6]])
-        ws_rob.move_command(True, first_move, 4, velocity)
+        ws_rob.move_command(False, first_move, 4, velocity)
+        check_update_move(first_move)
         ws_rob.move_command(False, g_param.trans.capture_pos, 5, velocity)
-    else:
-        pass  # TODO: Sigal - do we need to save the temp location and spray_procedure location??
+        check_update_move(g_param.trans.capture_pos)
     print(fg.green + "continue" + fg.rs, "\n")
 
 
 # I switched between the names
 def check_update_move(goal_pos):
-    time.sleep(1.5)
-    curr_pos = np.around(read_position(), 2)
-    if not np.array_equal(curr_pos, np.around(goal_pos, 2)):
-        print("The arm can not reach the goal position!!!")
-        input("press enter to move back to capture position")
-        move2capture()
+    while True:
+        move = input("Press enter if movement was ok or any key if not")
+        if move != "":
+            input("Try move it again")
+            ws_rob.move_command(False, goal_pos, sleep_time, velocity)
+        else:
+            break
+
+
+
+    # time.sleep(1.5)
+    # curr_pos = np.around(read_position(), 2)
+    # if not np.array_equal(curr_pos, np.around(goal_pos, 2)):
+    #     print("The arm can not reach the goal position!!!")
+    #     input("press enter to move back to capture position")
+    #     move2capture()
 
 
 def possible_move(goal_pos, grape_1):
@@ -359,6 +359,7 @@ def move_const(size_of_step, direction_to_move, location):
     :param location:
     :return:
     """
+    old_location = np.copy(location)
     size_of_step = calc_step_size(size_of_step)
     print("move const ", step_size, " start at:", location)
     if g_param.process_type != "load":
@@ -366,20 +367,24 @@ def move_const(size_of_step, direction_to_move, location):
             delta_x, delta_y = rotation_coordinate_sys(0, -size_of_step, g_param.base_rotation_ang)
             location[0] = location[0] + delta_x
             location[1] = location[1] + delta_y
-            ws_rob.move_command(True, location, sleep_time, velocity)
+            ws_rob.move_command(False, location, sleep_time, velocity)
+            check_update_move(location)
         elif direction_to_move == "up":
             location[2] = location[2] + size_of_step
-            ws_rob.move_command(True, location, sleep_time, velocity)
+            ws_rob.move_command(False, location, sleep_time, velocity)
+            check_update_move(location)
         elif direction_to_move == "down":
             location[2] = location[2] - size_of_step
-            ws_rob.move_command(True, location, sleep_time, velocity)
+            ws_rob.move_command(False, location, sleep_time, velocity)
+            check_update_move(location)
         elif direction_to_move == "stay":
             pass
         else:
             delta_x, delta_y = rotation_coordinate_sys(0, size_of_step, g_param.base_rotation_ang)
             location[0] = location[0] + delta_x
             location[1] = location[1] + delta_y
-            ws_rob.move_command(True, location, sleep_time, velocity)
+            ws_rob.move_command(False, location, sleep_time, velocity)
+            check_update_move(location)
         # check_update_move(location) # FIXME: omer
         pos = read_position()
         if g_param.process_type == "record":
@@ -387,7 +392,7 @@ def move_const(size_of_step, direction_to_move, location):
     else:
         pos = g_param.read_write_object.read_location_from_csv()
     g_param.trans.set_capture_pos(pos)
-    if not time_to_move_platform:
+    if not g_param.time_to_move_platform:
         g_param.trans.update_cam2base(pos)
 
 
@@ -410,8 +415,10 @@ def init_arm_and_platform():
     """
     print_line_sep_time()
     if g_param.process_type != "load":
-        ws_rob.move_command(True, start_pos, 4, velocity)
-        move_platform()  # TODO:Edo - record and load platform movements,platform_step_size
+        ws_rob.move_command(False, start_pos, 4, velocity)
+        check_update_move(start_pos)
+        move_platform()
+        input("Finish moving platform? ")
         if external_signal_all_done is True:
             return
         g_param.time_to_move_platform = False
@@ -462,7 +469,7 @@ def display_path_of_spray(grape_spray, path_points, flip):
         crop_img = cv.resize(crop_img, (new_x, new_y))
         numpy_horizontal_concat = np.concatenate((g_param.masks_image, crop_img), axis=1)
         numpy_horizontal_concat = image_resize(numpy_horizontal_concat, height=930)
-        show_in_moved_window("masks, mask zoomed in", numpy_horizontal_concat, None, -1900, 10)
+        show_in_moved_window("masks, mask zoomed in", numpy_horizontal_concat, None)
         cv.waitKey()
         cv.destroyAllWindows()
 
@@ -495,6 +502,16 @@ def get_class_record(mask_id):
     return record_class
 
 
+def write_classes(mask_id, class_from_sonar, class_confirm):
+    if g_param.process_type != "record":
+        return
+    if class_confirm == "":
+        classes = [class_from_sonar, class_confirm]
+    else:
+        classes = [class_from_sonar, float(class_confirm)]
+    g_param.read_write_object.write_sonar_classes(mask_id, classes)
+
+
 def write_distances(mask_id, dist_from_sonar, dist_confirm):
     if g_param.process_type != "record":
         return
@@ -507,7 +524,7 @@ def write_distances(mask_id, dist_from_sonar, dist_confirm):
 
 def get_distances(mask_id, dist_from_sonar, real_dist):
     """
-    TODO: check if to load with real/measured distance
+    TODO (after exp): check if to load with real/measured distance
     :param mask_id:
     :param dist_from_sonar:
     :param real_dist:
@@ -516,25 +533,24 @@ def get_distances(mask_id, dist_from_sonar, real_dist):
     if g_param.process_type == "record":
         write_distances(mask_id, dist_from_sonar, real_dist)
     if g_param.process_type == "load":
-        meas, real = g_param.read_write_object.read_sonar_distances(mask_id)
-        print(f'Real distance to grape {real} will be used. value measured by sonar is {meas}')
+        measured, real = g_param.read_write_object.read_sonar_distances(mask_id)
+        print(f'Real distance to grape {real} will be used. value measured by sonar is {measured}')
         return real
     return real_dist
 
 
-def get_class(mask_id, dist_from_sonar, real_dist):
+def get_classes(mask_id, class_from_sonar, real_class):
     """
-    TODO: same logic as get distances
+    same logic as get distances
     """
-    # if g_param.process_type == "record":
-    #     write_classes(mask_id, class_from_sonar, real_class)
-    # if g_param.process_type == "load":
-    #     meas, real = g_param.read_write_object.read_sonar_class_from_csv(mask_id)
-    #     print(f'Real class {"grape" if is_grape else "not grape"} will be used. value measured by sonar is {"grape" if is_grape else "not grape"}')
-    #     return real
-    # return real_dist
-    pass
-
+    if g_param.process_type == "record":
+        write_classes(mask_id, class_from_sonar, real_class)
+    if g_param.process_type == "load":
+        meas, real = g_param.read_write_object.read_sonar_class_from_csv(mask_id)
+        print(f'Real class {"grape" if is_grape else "not grape"} will be used.'
+              f' value measured by sonar is {"grape" if is_grape else "not grape"}')
+        return real
+    return real_class
 # calling the 2 sonar methods to get distance and validate existence of grapes
 
 
@@ -562,18 +578,20 @@ def activate_sonar(mask_id):
     # no grapes - True if there are no grapes (pred[0]> 0.5)
     preds_2classes = [preds_3classes[0][0], preds_3classes[0][1] + preds_3classes[0][2]]
     # print("classes", preds_2classes)
-    print(f'Probabilty this is a grape by sonar CNN : {preds_2classes[1] * 100}%.')
+    print(f'Probabilty this is a grape by sonar CNN : {round(preds_2classes[1] ,4) * 100}%.')
     one = "\033[1m" + "1" + "\033[0m"
     zero = "\033[1m" + "0" + "\033[0m"
     while True:
         time.sleep(0.01)
-        target_is_grape = input( "Press " + one + " for real grape, " + zero + " if it is not a grape")
+        target_is_grape = input( "Press " + one + " for real grape, " + zero + " if it is not a grape: ")
         if target_is_grape == '0' or target_is_grape == '1':
             break
     if target_is_grape == '0':
         update_database_no_grape_sonar_human(mask_id)
         real_class = False
-    real_class = True
+    else:
+        real_class = True
+    # real_class = True
     # Sonar distance prediction
     transmition_Chirp = DAQ_BG.chirp_gen(DAQ_BG.chirpAmp, DAQ_BG.chirpTime, DAQ_BG.f0, DAQ_BG.f_end,
                                          DAQ_BG.update_freq, DAQ_BG.trapRel)
@@ -581,7 +599,7 @@ def activate_sonar(mask_id):
     dist_from_sonar = distance2(record, mask_id)
     # real dist, real distance measured: to the outer edge of the sonar (10 CM from the Flach)
     print(f'Distance measured by the sonar is :{dist_from_sonar} meters.')
-    real_dist = input(f' press enter to confirm, or enter real distance (in meters)')
+    real_dist = input(f' press enter to confirm, or enter real distance (in meters): ')
     if real_dist != "":
         real_dist = float(real_dist)
     else:
@@ -589,8 +607,9 @@ def activate_sonar(mask_id):
         # make it more efficent in 1 line ?
     # real_dist = float(real_dist) if real_dist != "" else dist_from_sonar
     distance = get_distances(mask_id, dist_from_sonar, real_dist)
-    # grape_class = get_class(mask_id, class_from_sonar, real_class) # TODO!!!!
-    return distance, preds_2classes[1]  # make sure it converts to True/ False
+    grape_class = get_classes(mask_id, preds_2classes[1], real_class)
+    # return distance, preds_2classes[1]  # make sure it converts to True/ False
+    return distance, grape_class  # make sure it converts to True/ False
     # return distance, grape_class #
 
 
@@ -624,18 +643,29 @@ def move_platform():
     if g_param.process_type == "record" or g_param.process_type == "work":
         if g_param.image_number == 0:
             return
-        print("Current platform step size: ", g_param.platform_step_size, '\n',
-              "insert number in CM to change it or press Enter to continue")
-        temp_step_size = input("Enter platform step size") #TODO : UNCOMMENT
+        while True:
+            print("Current platform step size: ", g_param.platform_step_size, '\n',
+                  "insert number in Meters to change it or press Enter to continue")
+            temp_step_size = input("Enter platform step size")  # TODO : check in volcany
+            try:
+                if float(temp_step_size):
+                    temp_step_size = float(temp_step_size)
+                    break
+                elif temp_step_size == "":
+                    temp_step_size = float(g_param.platform_step_size)
+                    break
+            except ValueError:
+                print("enter float number")
+
         if temp_step_size == 'end':
             external_signal_all_done = True
             return
         # temp_step_size = ""
         if temp_step_size != "":
-            temp_step_size = int(temp_step_size) / 100
+            temp_step_size = temp_step_size
             g_param.platform_step_size = temp_step_size
         else:
-            temp_step_size = int(orig_step_size) / 100
+            temp_step_size = orig_step_size
             g_param.platform_step_size = temp_step_size
         g_param.read_write_object.write_platform_step(g_param.platform_step_size)
     else:
@@ -733,8 +763,6 @@ def mark_sprayed_and_display():
         # sprayed and steel should appear in the image #
         if target.sprayed and abs(target.grape_world[1] - cam_0_base[1]) < half_image_left \
                 and target.in_range == "ok":
-            # print("distance from center of image : ", target.grape_world[1] - cam_0_base[1])
-            print("xxxxxxxxxxxxxxxxxx") #TODO: update location of all relevent grapes in TB
             g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
         # mark orange dot on grapes that are too high/low.
@@ -832,6 +860,7 @@ def log_statistics():
     write down some descriptive statics of what just recorded
     :return:
     """
+    take_manual_image()
     amount_of_grapes = len(g_param.TB)
     amount_of_fake = sum(g.fake_grape is True for g in g_param.TB)
     amount_sprayed = sum((g.sprayed is False and g.fake_grape is False) for g in g_param.TB)
@@ -871,7 +900,8 @@ def print_image_detials(step_dir):
 
 
 if __name__ == '__main__':
-    print(colored("Take initial points for both sides?", 'blue'))
+
+    # print(colored("Take initial points for both sides?", 'blue'))
     init_program()
     print(">>> Start position: ")
     current_location = g_param.trans.capture_pos
@@ -879,7 +909,6 @@ if __name__ == '__main__':
     # The main loop:
     while not_finished:
         if not first_run:
-            # take_manual_image() # TODO: uncomment for exp!!!
             g_param.image_number += 1
             g_param.plat_position_step_number += 1
             print_line_sep_time()
@@ -906,6 +935,7 @@ if __name__ == '__main__':
             first_run = False
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
+        # take_manual_image() # TODO: uncomment for exp!!!
         capture_update_TB()  # 5 + 7-12 inside
         update_database_visualization()
         print_image_detials(step_direction[(g_param.image_number + 1) % 4])
@@ -933,33 +963,25 @@ if __name__ == '__main__':
                 not_grape = remove_by_visual(i)
                 if not_grape:
                     continue
-                #move2sonar(grape)  # 17
+                move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
-                # g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20 # FIXME- WORKING WITH SONAR
-                g_param.last_grape_dist, is_grape = g_param.avg_dist, True  # without sonar usage
+                g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20 TODO- check WORKING WITH SONAR (volcany)
+                # g_param.last_grape_dist, is_grape = g_param.avg_dist, True  # without sonar usage
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
-                    # TB_class.update_distance(g_param.TB[i])  # 23,24
+                    TB_class.update_by_real_distance(g_param.TB[i])  # 23,24 TODO: check
                     print("current location before spray_procedure", current_location)
-                    spray_x_dist, spray_diameter, spray_speed = calc_spray_properties(grape.grape_base)
-                    move2spray(grape, spray_x_dist)  # 25+26
-                    if time_to_move_platform:  # 27
+                    distance_from_target, num_of_paths = calc_spray_distance(grape, 0.25)
+                    spray_distance = g_param.last_grape_dist-distance_from_target
+                    spray_velocity = calc_spray_velocity(spray_distance)
+                    print(f"spray properties: \nDistance from target: {round(distance_from_target,3)}\n"
+                          f"Number of paths: {num_of_paths}"
+                          f" \n Speed: {round(spray_velocity,3)}")
+                    move2spray(grape, spray_distance)  # 25+26
+                    spray_procedure(grape, 1, spray_velocity, num_of_paths)
+                    if g_param.time_to_move_platform:  # 27
                         break  #
-                    # spray_procedure_pixels(grape)
-                    print(f"spray properties: \nDistance from target: {spray_x_dist}\n"
-                          f"Diameter: {round(spray_diameter,3)}"
-                          f" \n Speed: {round(spray_speed,3)}")
-                    # spray_pos = read_position()
-                    # print("spray position", spray_pos)
-                    # delta_x, delta_y = rotation_coordinate_sys(spray_x_dist, 0, base_rotation_ang)
-                    # spray_pos[0] = g_param.trans.capture_pos[0]+delta_x
-                    # spray_pos[1] = g_param.trans.capture_pos[1]+delta_y
-                    # print("spray position: ", spray_pos)
-                    # input("press any key to confirm new spray location>>>")
-                    # ws_rob.move_command(True, spray_pos, 3, 0.4)
-                    spray_procedure(grape, d=spray_diameter, overlap=0, k=1, vel=spray_speed,
-                                    th=0.9)  # 28 # TODO: Omer, generate safety movement
                     move2capture()
                     update_database_sprayed(i)  # 28
                     mark_sprayed_and_display()

@@ -14,26 +14,28 @@ sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.76
 step_size = 0.10
 height_step_size = 0.9  # parameter to_tune
-# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO
+# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO (after exp)
 image_number = 0
 plat_position_step_number = 0
 read_write_object = None
 direction = None
 # safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
-safety_dist = 0.20
+safety_dist = 0
 time_to_move_platform = False
 image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
 cnn_config = None
-min_spray_dist = 0.15
-max_spray_dist = 0.2
+min_spray_dist = 0.10
+max_spray_dist = 0.25
+min_vel = 0.3
+max_vel = 0.7
 # UR5 limitation:
-max_euclid_dist = 0.95
+max_euclid_dist = 0.83
 z_max = 0.82
 z_min = 0.22
 y_max = 0.6
 sonar_x_length = 0.075
 sprayer_x_length = 0.095
-base_rotation_ang = 180  # 180 for lab 135 for volcani
+base_rotation_ang = 225 # 180 for lab 225 for volcani
 
 """
 steps_gap: determines how many horizontal steps should be done.
@@ -50,7 +52,7 @@ load- load all the date that was recorded.
 change parameters if necessary.
 """
 
-process_type = 'record'  # TODO-add save of the TB before ending the program. also descriptive statistic
+process_type = 'record'  # TODO!!!!-add save of the TB before ending the program.
 work_place = "lab_grapes"  # lab. to know which function of image processing to use.
 
 

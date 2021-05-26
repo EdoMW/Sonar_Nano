@@ -46,7 +46,6 @@ import socket
 import time
 import Target_bank as TBK
 # from Target_bank import print_grape
-# TODO: uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, pixel_2_meter
 from masks_for_lab import take_picture_and_run as TPAR, pixel_2_meter, show_in_moved_window, meter_2_pixel
 from Send2UR5 import read_tcp_pos, move_command, spray_command

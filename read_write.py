@@ -182,6 +182,7 @@ class ReadWrite:
         self.masks_path = None
         self.sonar_path = None
         self.distances = None
+        self.classes = None
         self.class_sonar_path = None
         self.dist_sonar_path = None
         self.s_dist_sonar_path = None
@@ -233,7 +234,7 @@ class ReadWrite:
         os.mkdir(path)
 
         directory_1, directory_2, directory_3 = "locations", "rgb_images", "masks"
-        sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3 = "class_sonar", "dist_sonar", "distances"
+        sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3, sub_dir_sonar_4 = "class_sonar", "dist_sonar", "distances", "classes"
         sub_dir_sonar_2_1, sub_dir_sonar_2_2 = "s_dist_sonar", "t_dist_sonar"
         directory_4, directory_5, directory_6, directory_7 = "sonar", "transformations", "platform", "TB"
         sub_dir_1, sub_dir_2, sub_dir_3, sub_dir_4 = "ang_vec_tcp", "t_tcp2base", "t_cam2base", "t_cam2world"
@@ -256,14 +257,15 @@ class ReadWrite:
         path_4_2_1 = os.path.join(path_4_2, sub_dir_sonar_2_1)  # s
         path_4_2_2 = os.path.join(path_4_2, sub_dir_sonar_2_2)  # t
         path_4_3 = os.path.join(path_4, sub_dir_sonar_3)  # distance and real distance
+        path_4_4 = os.path.join(path_4, sub_dir_sonar_4)  # class and real class
 
         path_5_1 = os.path.join(path_5, sub_dir_1)
         path_5_2 = os.path.join(path_5, sub_dir_2)
         path_5_3 = os.path.join(path_5, sub_dir_3)
         path_5_4 = os.path.join(path_5, sub_dir_4)
 
-        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7, path_2_1, path_2_2, path_2_3,
-                   path_4_1, path_4_2, path_4_3, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3, path_5_4]
+        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7, path_2_1, path_2_2, path_2_3, path_4_1,
+                   path_4_2, path_4_3, path_4_4, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3, path_5_4]
         for folder in folders:
             os.mkdir(folder)
         self.location_path = path_1
@@ -274,6 +276,7 @@ class ReadWrite:
         self.masks_path = path_3
         self.sonar_path = path_4
         self.distances = path_4_3
+        self.classes = path_4_4
         self.transformations_path = path_5
         self.platform_path = path_6
         self.TB_path = path_7
@@ -296,7 +299,7 @@ class ReadWrite:
     def save_mask(self, mask, mask_id):
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
-        if g_param.work_place != 'field':
+        if g_param.work_place == 'lab':
             write_txt(self.masks_path)
             return
         mask_parent_path = self.masks_path
@@ -406,9 +409,9 @@ class ReadWrite:
         :param pos: current position of the robot
         :return:
         """
-        print(type(pos), pos)
+        # print(type(pos), pos)
         data = pos.tolist()
-        print(type(data), data)
+        # print(type(data), data)
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()
         folder_path_for_location = self.location_path
@@ -466,6 +469,19 @@ class ReadWrite:
         distances_path = generate_str_num_mask_dt(mask_id)
         distances_path = os.path.join(folder_path_for_sonar_dist_s, distances_path)
         write_to_csv(distances_path, distances)
+
+    def write_sonar_classes(self, mask_id, classes):
+        """
+        write the measured distance and the real distance.
+        :param mask_id: id of the grape
+        :param classes: measured, real distance from sonar to grape
+        """
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        folder_path_for_sonar_classes = self.classes
+        distances_path = generate_str_num_mask_dt(mask_id)
+        distances_path = os.path.join(folder_path_for_sonar_classes, distances_path)
+        write_to_csv(distances_path, classes)
 
     def write_tb(self):
         if g_param.process_type == "work" or g_param.process_type == "load":
