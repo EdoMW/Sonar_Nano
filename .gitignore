@@ -5,6 +5,7 @@ __pycache__/
 # */.idea/tasks.xml
 */.idea
 */Code
+weights
 */your_file.jpeg
 */mask_rcnn
 */npzs

@@ -1,12 +1,12 @@
 from __future__ import print_function
 import cv2 as cv
-import argparse
+# import argparse
 import random as rng
 import matplotlib.pyplot as plt
-import matplotlib
+# import matplotlib
 import scipy
 from termcolor import colored
-import itertools
+# import itertools
 
 from Target_bank import check_if_in_TB, add_to_target_bank, sort_by_and_check_for_grapes, sort_by_rect_size
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
@@ -41,7 +41,7 @@ num_of_pixels = 100
 
 if g_param.work_place == "field":
     # Root directory of the project
-    ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master/")
+    ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master")
 
     import warnings
 
@@ -49,16 +49,24 @@ if g_param.work_place == "field":
 
     # Import Mask RCNN
     sys.path.append(ROOT_DIR)  # To find local version of the library
-    from mrcnn import utils
-    from mrcnn.config import Config
-    import mrcnn.model as modellib
-    from mrcnn import visualize
-    from mrcnn.model import log
+    from self_utils.utils import *
+    import self_utils.model as modellib
+    from self_utils.config import Config
+    from self_utils.visualize import *
+    from self_utils.model import log
+
+    # from mrcnn import utils
+    # from mrcnn.config import Config
+    # import mrcnn.model as modellib
+    # from mrcnn import visualize
+    # from mrcnn.model import log
     import imgaug
 
     # Import COCO config
-    sys.path.append(os.path.join(ROOT_DIR, "samples/coco"))  # To find local version
-    import coco
+    sys.path.append(os.path.join(ROOT_DIR, r"samples\coco"))  # To find local versio
+    print(sys.path)
+    print("HelloRon")
+    from pycocotools import coco
 
     # Directory to save logs and trained model
     MODEL_DIR = os.path.join(ROOT_DIR, "logs")
@@ -965,7 +973,7 @@ def arrange_data(width_0, height_0, corner_points):
 
 def check_if_in_list(temp_box, list_a):
     """
-    Check if new element is already in the list (allow 3 pix to each corner separately tolerance)
+    Check if new element is already in the list (allow tolerance of up to 3 pixels from each corner separately)
     :param temp_box: new element to check
     :param list_a: list of element
     :return: True if it is a new point
@@ -1033,7 +1041,8 @@ def good_manual_image():
 def take_manual_image():
     """
     Saves extra image during the experiment.
-    validate that the image taken was good (press 1 to confirm or 0 to take another one.
+    validate that the image taken was good (press 1 to confirm or 0 to take another one).
+    to use in exp, should be inserted after move to spray.
     """
     image_number = g_param.image_number
     plt.clf()  # clean the canvas
@@ -1086,10 +1095,10 @@ def take_picture_and_run():
     else:
         image_path = g_param.read_write_object.load_image_path()
 
-    parser = argparse.ArgumentParser(
-        description='Code for Creating Bounding rotated boxes and ellipses for contours tutorial.')
-    parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(
+    #     description='Code for Creating Bounding rotated boxes and ellipses for contours tutorial.')
+    # parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
+    # args = parser.parse_args()
 
     # fOR FIELD simulation in lab
     if g_param.work_place == "field":
@@ -1220,7 +1229,7 @@ def take_picture_and_run():
             add_to_target_bank(grape)
 
     if g_param.work_place == "lab_grapes":
-        if not g_param.manual_work: # for exp. only manual grape detection
+        if not g_param.manual_work:  # for exp. only manual grape detection
         # for lab
             rng.seed(12345)
 
@@ -1243,9 +1252,9 @@ def take_picture_and_run():
                     height_a = int(minRect[i][1][1])
                     area = width_a * height_a
                     color_index = 30
-                    tresh_size = 10_000
-                    if (width_a / (height_a + 0.001) > 0.2) and (
-                            height_a / (width_a + 0.001) > 0.2) and tresh_size < area:  # and tresh_size < area < 200_000:
+                    tresh_size_min, tresh_size_max = 8_000, 200_000
+                    if (width_a / (height_a + 0.001) > 0.2) and ( height_a / (width_a + 0.001) > 0.2) and \
+                            tresh_size_min < area < tresh_size_max:  # and tresh_size < area < 200_000:
                         # להכפיל את הזוית ב-1
                         boxes.append(minRect[i])
                         corner_points.append(box)
@@ -1255,16 +1264,15 @@ def take_picture_and_run():
                 # cv.imshow("show boxes", rgb)
                 # cv.waitKey()
                 # cv.destroyAllWindows()
-
+            rgb = cv.cvtColor(rgb, cv.COLOR_BGR2RGB)
             hsv = cv.cvtColor(rgb, cv.COLOR_RGB2HSV)
             cv.destroyAllWindows()
-            mask = cv.inRange(hsv, (38, 38, 38), (68, 255, 255))
-
+            mask = cv.inRange(hsv, (35, 38, 38), (68, 255, 255))
             imask = mask > 0
             green = np.zeros_like(rgb, np.uint8)
             green[imask] = rgb[imask]
             temp_bgr = cv.cvtColor(green, cv.COLOR_HSV2RGB)
-            rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
+            # rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
             src_gray = cv.cvtColor(temp_bgr, cv.COLOR_RGB2GRAY)
             thresh = 100  # initial threshold
             boxes, corner_points = [], []
@@ -1328,8 +1336,12 @@ def take_picture_and_run():
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             det_rotated_boxes.append(box_in_meter)
             # change mask[:,:,b] to None if not working on manual mode
-            grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                     mask[:, :, b], det_box, None, corners_in_meter, corner_points, None, None]
+            if g_param.manual_work:
+                grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
+                         mask[:, :, b], det_box, None, corners_in_meter, corner_points, None, None]
+            else:
+                grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
+                         None, det_box, None, corners_in_meter, corner_points, None, None]
             add_to_target_bank(grape)
 
         # for field usage with CNN

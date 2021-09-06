@@ -344,12 +344,13 @@ def add_to_target_bank(target):
     too_close = check_close_to_edge(target)
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
     grape_base = g_param.trans.grape_base(target[0], target[1])
-    ans, temp_target_index = check_if_in_TB(temp_grape_world, target)
-    if ans:
-        closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target)
-        if closer_to_center or too_close:  # not sprayed and closer to center
-            g_param.TB[temp_target_index].grape_world = temp_grape_world
-            g_param.TB[temp_target_index].grape_base = grape_base
+    grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target)
+    if grape_in_TB:
+        pass
+        # closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target)
+        # if closer_to_center or too_close:  # not sprayed and closer to center
+        #     g_param.TB[temp_target_index].grape_world = temp_grape_world
+        #     g_param.TB[temp_target_index].grape_base = grape_base
     else:
         if not too_close:
             # print("the grape not in TB yet")
