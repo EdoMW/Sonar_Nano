@@ -6,6 +6,7 @@ __pycache__/
 */.idea
 */Code
 weights
+/venv
 */your_file.jpeg
 */mask_rcnn
 */npzs
