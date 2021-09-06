@@ -22,7 +22,7 @@ direction = None
 # safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
 safety_dist = 0
 time_to_move_platform = False
-image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
+image_cnn_path = r'weights\2021_weights.h5'
 cnn_config = None
 min_spray_dist = 0.10
 max_spray_dist = 0.25
@@ -36,7 +36,7 @@ z_min = -0.35
 y_max = 0.6
 sonar_x_length = 0.075
 sprayer_x_length = 0.095
-base_rotation_ang = 180  # 180 for lab 225 for volcani
+base_rotation_ang = 180  # 180 for lab 225 for volcani #TODO check this!!!!!!!!!!!!!!
 
 """
 steps_gap: determines how many horizontal steps should be done.

@@ -8,7 +8,6 @@ __pycache__/
 weights
 /venv
 */your_file.jpeg
-*/mask_rcnn
 */npzs
 1.jpg
 1.npy
