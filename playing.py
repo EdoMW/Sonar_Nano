@@ -4,67 +4,89 @@ import os
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+from termcolor import colored
+import glob, shutil
 
+N = 4
+for n in range(N):
+    print((n+1)/(N+1))
 
+# print("Real grape?")
+# one = "\033[1m" + "0" + "\033[0m"
+# zero = "\033[1m" + "1" + "\033[0m"
+# a = [(500, 500)] * 12
+# # real_grape = input(colored("Yes: ", "cyan") + "press " + one + colored(" No: ", "red") + "Press " + zero + " ")
+# print(a[-6:])
+#
 
-a = np.zeros((2,10))
-for i in range(2):
-    for j in range(10):
-        if j % 2 == 0:
-            if i % 2 == 1:
-                a[i][j] = j * 2
-            else:
-                a[i][j] = j*2 + 1
-        else:
-            if i % 2 == 0:
-                a[i][j] = j * 2
-            else:
-                a[i][j] = j * 2 + 1
-
-def get_index(index):
-    """
-    :param index: index of current image
-    :return: low image idx, high image idx
-    """
-    if index % 2 == 0:
-        lpi_temp = index * 2
-        hpi_temp = lpi_temp + 1
-    else:
-        lpi_temp = index * 2 + 1
-        hpi_temp = lpi_temp - 1
-    return lpi_temp, hpi_temp
-
-
-def build_array(step_size):
-    """
-    builds array to take image from
-    :param step_size:
-    :return:
-    """
-    direction = 0  # even = up, odd = down
-    b = []
-    for i in range(0, 10, step_size):
-        lpi, hpi = get_index(i)
-        if direction % 2 == 0:
-            b.append(lpi)
-            b.append(hpi)
-        else:
-            b.append(hpi)
-            b.append(lpi)
-        direction += 1
-    return b
-
-
-def get_image_num(imgae_num, step):
-    b = build_array(step)
-    return b[imgae_num]
-
-step_direction = ["right", "up", "right", "down"]  # the order of movement
-
-for i in range(10):
-    num = get_image_num(i, 1)
-    direction = step_direction[(num + 1) % 4]
-    print(num, direction)
+# a = [[1],[3],[2]]
+# b = [[1],[3],[5],[2]]
+# a = a + b
+# print(a)
+# import itertools
+# # a = [['a','b'], ['c']]
+# print(list(itertools.chain.from_iterable(a)))
+# #
+#
+#
+# a = np.zeros((2,10))
+# for i in range(2):
+#     for j in range(10):
+#         if j % 2 == 0:
+#             if i % 2 == 1:
+#                 a[i][j] = j * 2
+#             else:
+#                 a[i][j] = j*2 + 1
+#         else:
+#             if i % 2 == 0:
+#                 a[i][j] = j * 2
+#             else:
+#                 a[i][j] = j * 2 + 1
+#
+# def get_index(index):
+#     """
+#     :param index: index of current image
+#     :return: low image idx, high image idx
+#     """
+#     if index % 2 == 0:
+#         lpi_temp = index * 2
+#         hpi_temp = lpi_temp + 1
+#     else:
+#         lpi_temp = index * 2 + 1
+#         hpi_temp = lpi_temp - 1
+#     return lpi_temp, hpi_temp
+#
+#
+# def build_array(step_size):
+#     """
+#     builds array to take image from
+#     :param step_size:
+#     :return:
+#     """
+#     direction = 0  # even = up, odd = down
+#     b = []
+#     for i in range(0, 10, step_size):
+#         lpi, hpi = get_index(i)
+#         if direction % 2 == 0:
+#             b.append(lpi)
+#             b.append(hpi)
+#         else:
+#             b.append(hpi)
+#             b.append(lpi)
+#         direction += 1
+#     return b
+#
+#
+# def get_image_num(imgae_num, step):
+#     b = build_array(step)
+#     return b[imgae_num]
+#
+# step_direction = ["right", "up", "right", "down"]  # the order of movement
+#
+# for i in range(10):
+#     num = get_image_num(i, 1)
+#     direction = step_direction[(num + 1) % 4]
+#     print(num, direction)
 
 
 
@@ -83,7 +105,7 @@ for i in range(10):
 # ans = np.all(a)
 #
 # print(round(233, -1))
-# print(np.all(a))  # TODO use it on boxes, corners
+# print(np.all(a))
 #
 # x = [[100, 200], [200, 300], [1000], [23, [123, 223]]]
 # c = np.hstack(x)

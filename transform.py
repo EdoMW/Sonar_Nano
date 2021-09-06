@@ -2,6 +2,7 @@ import math
 import numpy as np
 import g_param
 import time
+np.set_printoptions(precision=3)
 
 
 def ang_vec2rot(rv):
@@ -17,13 +18,21 @@ def ang_vec2rot(rv):
     return rot
 
 
+def rotation_coordinate_sys(x, y, angle):
+    radians_ang = np.radians(angle % 360)
+    x_tag = x * math.cos(radians_ang) + y * math.sin(radians_ang)
+    y_tag = -x * math.sin(radians_ang) + y * math.cos(radians_ang)
+    return x_tag, y_tag
+
+
 class Trans:
     def __init__(self):
         self.t_cam2tcp = T_C_TCP = np.array(
             [[0.7071, -0.7071, 0, 0.08216], [0.7071, 0.7071, 0, -0.060677], [0, 0, 1, 0],
              [0, 0, 0, 1]])  # FIXME: Old values
         # T_TCP_C = np.array([[0.7071, -0.7071, 0, 0.065], [0.7071, 0.7071, 0, -0.075], [0, 0, 1, 0], [0, 0, 0, 1]])
-        self.v_sonar_tcp = np.array([0.152735, -0.00282843, 0])
+        # self.v_sonar_tcp = np.array([0.152735, -0.00282843, 0])
+        self.v_sonar_tcp = np.array([0.04, 0.075, 0])
         self.v_spray_tcp = np.array([-0.0311127, -0.10323759, 0.12])
         # Vm_TCP = np.array([-0.045, -0.1, 0.12])
         # Vs_TCP = np.array([0.11, 0.07, 0])
@@ -33,8 +42,11 @@ class Trans:
         self.t_tcp2base = np.identity(4)
         self.ang_vec_tcp = np.array([])
         self.capture_pos = np.array([])
-
+        self.prev_capture_pos = np.array([])
     # Turns axis angles  into rotation matrix
+
+    def set_prev_capture_pos(self, location):
+        self.prev_capture_pos = location.copy()
 
     def set_capture_pos(self, location):
         self.capture_pos = location
@@ -59,8 +71,10 @@ class Trans:
     # TODO- Omer - change the cam2word matrix due to platform steps
     def grape_world(self, x_cam, y_cam):
         grape_cam = np.array([float(x_cam), float(y_cam), 0, 1])
-        grape_world = np.matmul(self.t_cam2world, grape_cam)
-        grape_world[1] = grape_world[1] + g_param.sum_platform_steps
+        grape_world = np.matmul(self.t_cam2world, grape_cam) # TODO: also for z axis.
+        delta_x, delta_y = rotation_coordinate_sys(0, -g_param.sum_platform_steps, g_param.base_rotation_ang)
+        grape_world[0] = grape_world[0] + delta_x
+        grape_world[1] = grape_world[1] + delta_y
         return grape_world[:-1]
 
     def grape_base(self, x_cam, y_cam):
@@ -70,9 +84,7 @@ class Trans:
 
     def tcp_base(self, tcp):
         tcp = np.append(tcp, 1)
-        print("1tcp ", tcp)
         tcp_base = np.matmul(self.t_tcp2base, tcp)
-        print("2tcp_base ", tcp_base)
         tcp_base = np.concatenate((tcp_base[:-1], self.ang_vec_tcp), axis=0)
         return tcp_base
 
@@ -85,11 +97,8 @@ class Trans:
 
     def aim_spray(self, x_cam, y_cam, distance):
         dist = distance - g_param.safety_dist
-        print("????????????????????????????????", dist)
         grape_cam = np.array([float(x_cam), float(y_cam), dist, 1])
         grape_tcp = np.matmul(self.t_cam2tcp, grape_cam)
-        print("nnnnnnnnnnnnnnnnnnnnnnnn", grape_tcp)
         grape_tcp = grape_tcp[:-1]
         new_tcp = grape_tcp - self.v_spray_tcp
-        print("nnnnnnnnnnnnnnnnnnnnnnnn", new_tcp)
         return new_tcp

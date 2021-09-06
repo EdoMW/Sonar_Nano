@@ -1,3 +1,6 @@
+import os
+
+manual_work = False
 TB = []
 masks_image = None
 half_width_meter = 0.34
@@ -5,36 +8,42 @@ half_height_meter = 0.2
 show_images = None
 spray_sonar = True
 trans = None
-avg_dist = 0.75  # 75
-platform_step_size = 0
+avg_dist = 0.55  # 75
+platform_step_size = 0.5
 sum_platform_steps = 0  # sum of all platform steps
-last_grape_dist = 0.75
-step_size = 0.10
-height_step_size = 0.9  # parameter to_tune
-# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO
+last_grape_dist = 0.55
+step_size = 0.1
+height_step_size = 1.5  # parameter to_tune
+# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO (after exp)
 image_number = 0
 plat_position_step_number = 0
 read_write_object = None
 direction = None
-safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
+# safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
+safety_dist = 0
 time_to_move_platform = False
 image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
 cnn_config = None
-min_spray_dist = 0.15
-max_spray_dist = 0.2
+min_spray_dist = 0.10
+max_spray_dist = 0.25
+min_vel = 0.2
+max_vel = 0.5
+const_vel = max_vel
 # UR5 limitation:
-max_euclid_dist = 0.98
-z_max = 0.82
-z_min = 0.22
+max_euclid_dist = 0.97
+z_max = 0.85
+z_min = -0.35
 y_max = 0.6
 sonar_x_length = 0.075
+sprayer_x_length = 0.095
+base_rotation_ang = 180  # 180 for lab 225 for volcani
 
 """
 steps_gap: determines how many horizontal steps should be done.
-for example, if step size is 0.1m and we want to keep it that wat (default) than steps_gap = 1.
+for example, if step size is 0.1m and we want to keep it that (default) than steps_gap = 1.
 if an experiment wants to test step size of 0.2m, than steps_gap should be equal to 2.
 """
-steps_gap = 3
+steps_gap = 1
 """
 work_place: lab/field/lab_grapes
 process_type: work/record/load
@@ -44,8 +53,8 @@ load- load all the date that was recorded.
 change parameters if necessary.
 """
 
-process_type = "work"  # TODO-add save of the TB before ending the program. also descriptive statistic
-work_place = "lab_grapes"  # lab. to know which function of image processing to use.
+process_type = 'load'  # TODO!!!!-add save of the TB before ending the program.
+work_place = "field"  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():
@@ -129,6 +138,16 @@ def get_image_num_sim(image_num):
     return b[image_num]
 
 
+def empty_npz_dir():
+    """
+    Delete all mask npz files from previous run
+    """
+    path = r'D:\Users\NanoProject\Sonar_Nano\npzs'
+    file_list = [f for f in os.listdir(path)]
+    for f in file_list:
+        os.remove(os.path.join(path, f))
+
+
 def init():
     """
     initializes all global variables.
@@ -136,6 +155,9 @@ def init():
     global TB, masks_image, show_images, trans, avg_dist, time_to_move_platform, plat_position_step_number, \
         image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size, \
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
-        image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max
+        image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
+        manual_work, base_rotation_ang
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
+    empty_npz_dir()
+

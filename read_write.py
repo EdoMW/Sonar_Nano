@@ -8,6 +8,7 @@ import numpy as np
 import shutil
 from time import sleep
 from pprint import pprint
+np.set_printoptions(precision=3)
 
 take_last_exp = True  # take the exp that was conducted the latest
 
@@ -55,16 +56,6 @@ def get_latest_dir():
         print("Experiments dir is empty. taking last exp from old experiments")
         directory = r'D:\Users\NanoProject\old_experiments'
         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
-        # return 'exp_data_10_53'
-    # if g_param.process_type == "load":
-    #     if take_last_exp:
-    #         directory = r'D:\Users\NanoProject\experiments'
-    #         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
-    #     else:
-    #         print("Simulations dir is empty. taking last exp from old simulations")
-    #         directory = r'D:\Users\NanoProject\old_simulations'
-    #         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
-
 
 
 def generate_str_num_mask_dt(mask_id):
@@ -136,30 +127,35 @@ def write_txt_config(sim_directory_path):
     x.close()
 
 
-def write_np_csv(mask_path, mask):
+def write_np_compressed(mask_path, mask):
     """
     saves both npy, npz files of the mask
     :param mask_path: path to save the masks at
     :param mask: np nd
     :return:
     """
-    mask_path = mask_path[0:-8] + '.npy'
-    np.save(mask_path, mask)
-    npz_path = mask_path[:-1] + 'z'
+    npz_path = mask_path[0:-8] + '.npz'
     np.savez_compressed(npz_path, mask)
+    # mask_path = mask_path[0:-8] + '.npy'
+    # np.save(mask_path, mask)
+    # npz_path = mask_path[:-1] + 'z'
+    # np.savez_compressed(npz_path, mask)
 
 
 def calc_image_number():
+    """
+    calc image number to load in "load" mode
+    """
     image_number = g_param.image_number
     skip = g_param.steps_gap
     if image_number % 4 == 2 or image_number % 4 == 3:
         pass
 
 
-
 def move_old_directory():
     """
     Empty experiments, simulations directories
+    if error occur- change manuel the name of folder with same HH:MM in old_experiments dir
     """
     source_dir = r'D:\Users\NanoProject\experiments'
     target_dir = r'D:\Users\NanoProject\old_experiments'
@@ -186,6 +182,7 @@ class ReadWrite:
         self.masks_path = None
         self.sonar_path = None
         self.distances = None
+        self.classes = None
         self.class_sonar_path = None
         self.dist_sonar_path = None
         self.s_dist_sonar_path = None
@@ -197,9 +194,15 @@ class ReadWrite:
         self.transformations_path_t_tcp2base = None
         self.transformations_path_t_cam2base = None
         self.transformations_path_t_cam2world = None
+        self.rgb_image_resized = None
+        self.rgb_image_orig = None
+        self.rgb_image_manual = None
         self.exp_date_time = get_latest_dir()
 
     def create_directory(self):
+        """
+        create the relevant directory
+        """
         if g_param.process_type == "record":
             self.create_directories()
             return
@@ -231,10 +234,11 @@ class ReadWrite:
         os.mkdir(path)
 
         directory_1, directory_2, directory_3 = "locations", "rgb_images", "masks"
-        sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3 = "class_sonar", "dist_sonar", "distances"
+        sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3, sub_dir_sonar_4 = "class_sonar", "dist_sonar", "distances", "classes"
         sub_dir_sonar_2_1, sub_dir_sonar_2_2 = "s_dist_sonar", "t_dist_sonar"
         directory_4, directory_5, directory_6, directory_7 = "sonar", "transformations", "platform", "TB"
         sub_dir_1, sub_dir_2, sub_dir_3, sub_dir_4 = "ang_vec_tcp", "t_tcp2base", "t_cam2base", "t_cam2world"
+        sub_dir_img_1, sub_dir_img_2, sub_dir_img_3 = "resized", "original", "manual"
 
         path_1 = os.path.join(path, directory_1)
         path_2 = os.path.join(path, directory_2)
@@ -244,27 +248,35 @@ class ReadWrite:
         path_6 = os.path.join(path, directory_6)
         path_7 = os.path.join(path, directory_7)
 
-        path_4_1 = os.path.join(path_4, sub_dir_sonar_1)
+        path_2_1 = os.path.join(path_2, sub_dir_img_1)
+        path_2_2 = os.path.join(path_2, sub_dir_img_2)
+        path_2_3 = os.path.join(path_2, sub_dir_img_3)
 
+        path_4_1 = os.path.join(path_4, sub_dir_sonar_1)
         path_4_2 = os.path.join(path_4, sub_dir_sonar_2)
         path_4_2_1 = os.path.join(path_4_2, sub_dir_sonar_2_1)  # s
         path_4_2_2 = os.path.join(path_4_2, sub_dir_sonar_2_2)  # t
         path_4_3 = os.path.join(path_4, sub_dir_sonar_3)  # distance and real distance
+        path_4_4 = os.path.join(path_4, sub_dir_sonar_4)  # class and real class
 
         path_5_1 = os.path.join(path_5, sub_dir_1)
         path_5_2 = os.path.join(path_5, sub_dir_2)
         path_5_3 = os.path.join(path_5, sub_dir_3)
         path_5_4 = os.path.join(path_5, sub_dir_4)
 
-        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7,
-                   path_4_1, path_4_2, path_4_3, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3, path_5_4]
+        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7, path_2_1, path_2_2, path_2_3, path_4_1,
+                   path_4_2, path_4_3, path_4_4, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3, path_5_4]
         for folder in folders:
             os.mkdir(folder)
         self.location_path = path_1
         self.rgb_images_path = path_2
+        self.rgb_image_resized = path_2_1
+        self.rgb_image_orig = path_2_2
+        self.rgb_image_manual = path_2_3
         self.masks_path = path_3
         self.sonar_path = path_4
         self.distances = path_4_3
+        self.classes = path_4_4
         self.transformations_path = path_5
         self.platform_path = path_6
         self.TB_path = path_7
@@ -293,21 +305,41 @@ class ReadWrite:
         mask_parent_path = self.masks_path
         mask_path = generate_str_num_mask_dt(mask_id)
         mask_path = os.path.join(mask_parent_path, mask_path)
-        write_np_csv(mask_path, mask)
+        write_np_compressed(mask_path, mask)
 
-    def save_rgb_image(self, frame):
+    def save_manual_image(self, original_frame):
         """
+        :param original_frame: frame in original resolution
+        :return:
+        """
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        folder_path_for_manual_images = self.rgb_image_manual
+        img_name = 'num_dt.jpeg'
+        img_name = img_name.replace("num", str(g_param.image_number))
+        img_name = img_name.replace("dt", str(get_local_time_3()))
+        image_path_manual = os.path.join(folder_path_for_manual_images, img_name)
+        plt.imsave(image_path_manual, original_frame)
+        plt.clf()  # clears figure
+        plt.close()  # closes figure
+
+    def save_rgb_image(self, frame, original_frame):
+        """
+        :param original_frame: frame in original resolution
         :param frame: The image that was taken successfully
         :return:
         """
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
-        folder_path_for_images = self.rgb_images_path
+        folder_path_for_images = self.rgb_image_resized
+        folder_path_for_orig_images = self.rgb_image_orig
         img_name = 'num_dt.jpeg'
         img_name = img_name.replace("num", str(g_param.image_number))
         img_name = img_name.replace("dt", str(get_local_time_3()))
-        image_path = os.path.join(folder_path_for_images, img_name)
-        plt.imsave(image_path, frame)  # saves frame in image_path
+        image_path_resized = os.path.join(folder_path_for_images, img_name)
+        image_path_original = os.path.join(folder_path_for_orig_images, img_name)
+        plt.imsave(image_path_original, original_frame)
+        plt.imsave(image_path_resized, frame)  # saves frame in image_path
         plt.clf()  # clears figure
         plt.close()  # closes figure
 
@@ -377,9 +409,9 @@ class ReadWrite:
         :param pos: current position of the robot
         :return:
         """
-        print(type(pos), pos)
+        # print(type(pos), pos)
         data = pos.tolist()
-        print(type(data), data)
+        # print(type(data), data)
         # opening the csv file in 'w+' mode
         current_time = get_local_time_4()
         folder_path_for_location = self.location_path
@@ -437,6 +469,19 @@ class ReadWrite:
         distances_path = generate_str_num_mask_dt(mask_id)
         distances_path = os.path.join(folder_path_for_sonar_dist_s, distances_path)
         write_to_csv(distances_path, distances)
+
+    def write_sonar_classes(self, mask_id, classes):
+        """
+        write the measured distance and the real distance.
+        :param mask_id: id of the grape
+        :param classes: measured, real distance from sonar to grape
+        """
+        if g_param.process_type == "work" or g_param.process_type == "load":
+            return
+        folder_path_for_sonar_classes = self.classes
+        distances_path = generate_str_num_mask_dt(mask_id)
+        distances_path = os.path.join(folder_path_for_sonar_classes, distances_path)
+        write_to_csv(distances_path, classes)
 
     def write_tb(self):
         if g_param.process_type == "work" or g_param.process_type == "load":

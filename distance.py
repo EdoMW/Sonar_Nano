@@ -88,7 +88,16 @@ def distance2(sig, mask_id):
             dist = abs((t[peaks[0]] - t[peaks[2]])) * 340 / 2
         # dist = abs((t[peaks[0]] - t[peaks[1]])) * 340 / 2
     except IndexError:
-        dist = float(input("Please enter distance to grape in Meters"))
+        while True:
+            dist = input("Please enter distance to grape in Meters: ")
+            try:
+                float(dist)
+                if float(dist) < 0.35:
+                    print("Check again. grape is too close")
+                else:
+                    break
+            except ValueError:
+                print("enter float number")
 
     # Old version: Edo 11.4.21 changed to try,catch + input
     # new_peaks = peaks[1:]

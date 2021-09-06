@@ -5,5 +5,12 @@ __pycache__/
 # */.idea/tasks.xml
 */.idea
 */Code
+weights
+/venv
 */your_file.jpeg
 */mask_rcnn
+*/npzs
+1.jpg
+1.npy
+single_process.py
+single_process1.py
