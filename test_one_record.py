@@ -18,8 +18,8 @@ def test_spec(spec_imgs, weight_file_name):
     num_classes = (3,)
     input_shape = spec_imgs[0].shape # need to be (36, 1030) after adding zero columns
 
-    CNN_c = CNN_Classifier(input_shape, num_classes, filter_size, num_filters, task='classification', load=True,
-                           weight_file=weight_file_name)
+    CNN_c = CNN_Classifier(input_shape, num_classes, filter_size, num_filters, task='classification', load=True)
+                           # weight_file=weight_file_name)
 
     preds_3classes = CNN_c.predict(np.array(spec_imgs))
     preds_2classes = [y[0] > 0.5 for y in preds_3classes]

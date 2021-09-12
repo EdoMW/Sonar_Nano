@@ -14,6 +14,7 @@ from keras.optimizers import Adadelta, SGD, Adam, RMSprop
 # from imblearn.under_sampling import NearMiss
 from keras.callbacks import History, ModelCheckpoint
 
+
 def generator(from_list_x, from_list_y, batch_size):
     assert len(from_list_x) == len(from_list_y)
     total_size = len(from_list_x)
@@ -41,7 +42,8 @@ class Round(Layer):
 
 class CNN_Classifier():
     def __init__(self, input_shape, num_classes, filter_size=3, n_filters=10, task='classification',
-                 load=False, load_dir=r'C:\Users\Administrator\PycharmProjects\SonarNano\weights', weight_file = '\saved_CNN_clasifier.h5'):
+                 load=False, load_dir=r'D:\Users\NanoProject\Sonar_Nano\weights',
+                 weight_file='\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'):
         """
         Parameters:
           input_shape: (tuple) tuple of input shape. (e.g. If input is 6s raw waveform with sampling rate = 16kHz, (96000,) is the input_shape)
@@ -112,7 +114,9 @@ class CNN_Classifier():
         else:
             x_reshaped = x
 
-        out = Conv2D(self.n_filters, (self.kernel_size, self.kernel_size), padding='same', input_shape=self.input_shape)(x_reshaped)
+        # FIXME - PROBLEM IS HERE!!!!!!!!!!! IN 118
+        out = Conv2D(self.n_filters, (self.kernel_size, self.kernel_size), padding='same',
+                     input_shape=self.input_shape)(x_reshaped)
         out = BatchNormalization(axis=-1)(out)
         out = Activation("relu")(out)
         out = MaxPooling2D(pool_size=(2, 2), padding='same')(out)
@@ -137,7 +141,7 @@ class CNN_Classifier():
         self.manual_loss = loss
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, BATCH_SIZE=4, epochs=100, optimizer=Adadelta(), save=True,
-            save_dir=r'C:\Users\Administrator\PycharmProjects\SonarNano\weights', class_weights = None):
+            save_dir=r'C:\Users\Administrator\PycharmProjects\SonarNano\weights', class_weights=None):
         # set default losses if not defined
         if self.manual_loss is not None:
             loss = self.manual_loss
@@ -161,10 +165,11 @@ class CNN_Classifier():
             else:
                 # checkpointer = ModelCheckpoint(filepath=saved, monitor='val_loss', verbose=1, save_weights_only=True,
                 #                                save_best_only=True)
-                checkpointer = ModelCheckpoint(filepath=saved, monitor='val_accuracy', verbose=1, save_weights_only=True,
-                                               save_best_only=True, mode = 'max')
-                #checkpointer = ModelCheckpoint(filepath=saved, monitor='val_loss', verbose=1, save_weights_only=True,
-                                               # period=5)
+                checkpointer = ModelCheckpoint(filepath=saved, monitor='val_accuracy', verbose=1,
+                                               save_weights_only=True,
+                                               save_best_only=True, mode='max')
+                # checkpointer = ModelCheckpoint(filepath=saved, monitor='val_loss', verbose=1, save_weights_only=True,
+                # period=5)
             history = History()
             callbacks = [history, checkpointer]
         else:
@@ -205,7 +210,7 @@ class CNN_Classifier():
         return K.mean(x, axis=(1, 2))
 
     def global_average_pooling_shape(self, input_shape):
-        return (input_shape[0],input_shape[3])
+        return (input_shape[0], input_shape[3])
 
     def get_attention_model(self):
         prev_model = self.model

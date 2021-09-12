@@ -43,7 +43,7 @@ def get_local_time_2():
     return datetime.now().strftime("%H_%M")
 
 
-def get_latest_dir():
+def  get_latest_dir():
     # return 0  # FIXME
     """
     if take_last_exp = True (default) it will return the last exp dir. AND
@@ -220,7 +220,8 @@ class ReadWrite:
         os.mkdir(path_sim)
         self.simulations = path_sim
 
-    def create_directories(self):  # TODO: add Date to the name of the directory
+    def create_directories(self):
+        # FIXME uncomment next 2 lines
         if g_param.process_type == "work" or g_param.process_type == "load":
             return
         """
@@ -572,10 +573,11 @@ class ReadWrite:
         :return: recording of class
         """
         image_number = get_image_num_sim(g_param.image_number)
-        directory = self.class_sonar_path
+        directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         path = os.path.join(path, 'sonar')
+        path = os.path.join(path, 'class_sonar')
         records_list = os.listdir(path)
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
@@ -589,10 +591,12 @@ class ReadWrite:
         :return:
         """
         image_number = get_image_num_sim(g_param.image_number)
-        directory = self.dist_sonar_path
+        directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         path = os.path.join(path, 'sonar')
+        path = os.path.join(path, 'dist_sonar')
+        path = os.path.join(path, 't_dist_sonar')
         records_list = os.listdir(path)
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
@@ -605,10 +609,12 @@ class ReadWrite:
         :return: the s of the dist activation
         """
         image_number = get_image_num_sim(g_param.image_number)
-        directory = self.dist_sonar_path
+        directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         path = os.path.join(path, 'sonar')
+        path = os.path.join(path, 'dist_sonar')
+        path = os.path.join(path, 's_dist_sonar')
         records_list = os.listdir(path)
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
@@ -621,15 +627,17 @@ class ReadWrite:
         :return: measured distance by sonar, real distance
         """
         image_number = get_image_num_sim(g_param.image_number)
-        directory = self.dist_sonar_path
+        directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         path = os.path.join(path, 'sonar')
+        path = os.path.join(path, 'distances') #FIXME
         records_list = os.listdir(path)
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
         distances = np.genfromtxt(path, delimiter=",")
         return distances[0], distances[1]
+
 
     def load_mask(self, mask_id):
         """
@@ -637,7 +645,7 @@ class ReadWrite:
         :return: mask
         """
         image_number = get_image_num_sim(g_param.image_number)
-        directory = self.masks_path
+        directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         path = os.path.join(path, 'masks')
@@ -645,5 +653,6 @@ class ReadWrite:
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
         mask = np.load(path)
+        mask = mask.f.arr_0
         return mask
 

@@ -54,6 +54,7 @@ if g_param.work_place == "field":
     from self_utils.config import Config
     from self_utils.visualize import *
     from self_utils.model import log
+    from self_utils import visualize
 
     # from mrcnn import utils
     # from mrcnn.config import Config
@@ -65,7 +66,6 @@ if g_param.work_place == "field":
     # Import COCO config
     sys.path.append(os.path.join(ROOT_DIR, r"samples\coco"))  # To find local versio
     print(sys.path)
-    print("HelloRon")
     from pycocotools import coco
 
     # Directory to save logs and trained model
@@ -124,7 +124,7 @@ if g_param.work_place == "field":
 
         MASK_SHAPE = [28, 28]
         # very important to define correctly!!!!!
-        BACKBONE = "resnet50"
+        BACKBONE = "resnet101"
 
         BACKBONE_STRIDES = [4, 8, 16, 32, 64]
 
@@ -291,7 +291,7 @@ if g_param.work_place == "field":
     with tf.device("/gpu:0"):
         model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
-    weights_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
+    weights_path = r'D:\Users\NanoProject\Sonar_Nano\weights\2021_weights.h5'
     print("Loading weights ", weights_path)
     g_param.cnn_config = g_param.get_cnn_config(GrapeConfig())
     model.load_weights(weights_path, by_name=True)
@@ -747,7 +747,8 @@ def ueye_take_picture_2(image_number):
         # In order to display the image in an OpenCV window we need to...
         # ...extract the data of our image memory
         pic_array_1 = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
-        time.sleep(0.1)
+        # time.sleep(0.1)
+        time.sleep(0.5)
         pic_array = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
 
         # ...reshape it in an numpy array...
@@ -1358,6 +1359,8 @@ def take_picture_and_run():
         show_in_moved_window("check image taken", img, None)
         cv.waitKey()
         cv.destroyAllWindows()
+        # cv.imshow("before detection", arr[0])
+        # cv.waitKey()
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)
         r = results[0]

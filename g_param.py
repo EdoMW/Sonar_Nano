@@ -22,7 +22,7 @@ direction = None
 # safety_dist = 0.20  # distance of spraying (in lab!! needs to be changed)
 safety_dist = 0
 time_to_move_platform = False
-image_cnn_path = r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5'
+image_cnn_path = r'weights\2021_weights.h5'
 cnn_config = None
 min_spray_dist = 0.10
 max_spray_dist = 0.25
@@ -36,7 +36,7 @@ z_min = -0.35
 y_max = 0.6
 sonar_x_length = 0.075
 sprayer_x_length = 0.095
-base_rotation_ang = 180  # 180 for lab 225 for volcani
+base_rotation_ang = 180  # 180 for lab 225 for volcani #TODO check this!!!!!!!!!!!!!!
 
 """
 steps_gap: determines how many horizontal steps should be done.
@@ -45,16 +45,19 @@ if an experiment wants to test step size of 0.2m, than steps_gap should be equal
 """
 steps_gap = 1
 """
-work_place: lab/field/lab_grapes
+work_place: lab/field/lab_grapes:
+
+lab) white shapes on blue background.
+field) real grapes in field
+lab_grapes) plastic grapes on white background
 process_type: work/record/load
 work- don't save any data except the Final TB 
 record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-
-process_type = 'load'  # TODO!!!!-add save of the TB before ending the program.
-work_place = "field"  # lab. to know which function of image processing to use.
+process_type = 'load'
+work_place = 'field'  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():
@@ -114,12 +117,13 @@ def get_index(index):
 def build_array(step_size_sim):
     """
     builds array to take image from
+    range is 0-50 because max size of the array is 41.
     :param step_size_sim:
     :return:
     """
     move_direction = 0  # even = up, odd = down
     b = []
-    for i in range(0, 500, step_size_sim):
+    for i in range(0, 50, step_size_sim):
         lpi, hpi = get_index(i)
         if move_direction % 2 == 0:
             b.append(lpi)
