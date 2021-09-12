@@ -16,8 +16,10 @@ import Target_bank as TB_class
 import transform
 import read_write
 from sty import fg, Style, RgbFg
+from random import randint
 from termcolor import colored
 from transform import rotation_coordinate_sys
+import matplotlib.pyplot as plt
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
     point_meter_2_pixel, image_resize, take_manual_image
@@ -809,6 +811,7 @@ def mark_sprayed_and_display():
     """
     mark all grapes that already been sprayed with a red dot at their center.
     mark all grapes that are too high/low with orange dot.
+    mark all fake grapes blue dot.
     """
     print_line_sep_time()
     cam_0 = np.array([0, 0, 0, 1])
@@ -819,13 +822,17 @@ def mark_sprayed_and_display():
         target = g_param.TB[a]
         # sprayed and steel should appear in the image #
         if target.sprayed and abs(target.grape_world[1] - cam_0_base[1]) < half_image_left \
-                and target.in_range == "ok":
+                and target.in_range == "ok" and not target.fake_grape:
             g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
         # mark orange dot on grapes that are too high/low.
         if target.in_range == "high" or target.in_range == "low":
             g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(255, 165, 0), thickness=4)
+        if target.sprayed and abs(target.grape_world[1] - cam_0_base[1]) < half_image_left \
+                and target.in_range == "ok" and target.fake_grape:
+            g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
+                                            radius=4, color=(255, 0, 0), thickness=4)
     if g_param.show_images:
         show_in_moved_window("Checking status", g_param.masks_image, None)
         cv.waitKey()
@@ -895,19 +902,19 @@ def remove_by_visual(grape_index_to_check):
     else (if it's a noise), mark it as fake grape
     :param grape_index_to_check: the grape which is the current target
     """
-    if g_param.process_type == "load":
-        return False
+    # if g_param.process_type == "load": #TODO uncomment 2 lines
+    #     return False
 
     one = "\033[1m" + "0" + "\033[0m"
     zero = "\033[1m" + "1" + "\033[0m"
     real_grape = '1'  # next 7 lines commented for exp
-    # print("Real grape?")
-    # while True:
-    #     time.sleep(0.01)
-    #     real_grape = input(colored("Yes: ", "cyan") + "press " + zero +
-    #                        colored(" No: ", "red") + "Press " + one + " \n")
-    #     if real_grape == '0' or real_grape == '1':
-    #         break
+    print("Real grape?")
+    while True:
+        time.sleep(0.01)
+        real_grape = input(colored("Yes: ", "cyan") + "press " + zero +
+                           colored(" No: ", "red") + "Press " + one + " \n")
+        if real_grape == '0' or real_grape == '1':
+            break
     if real_grape == '0':
         update_database_no_grape(grape_index_to_check)
         return True
@@ -966,6 +973,32 @@ def switch_materiel():
         input("10 grapes were sprayed using this materiel. press enter after replacing the tank")
 
 
+def display_image_with_mask(image_path, mask, alpha = 0.7):
+    # image = cv.imread(image_path)
+    # image = cv.cvtColor(image,cv.COLOR_BGR2RGB)
+    if mask.ndim == 2:
+        mask = mask[:, :, np.newaxis]
+    image = image_path
+    im = image.copy()
+    print(image.shape)
+    print(mask.shape)
+    non_zeros = []
+    for i in range(len(mask[0][0] + 1)):
+        non_zeros.append(np.count_nonzero(mask[:,:,i]))
+    min_index = non_zeros.index(max(non_zeros))
+    for i in range(len(mask[0][0] + 1)):
+        # if i != min_index:
+        rgb = (randint(0,255), randint(0,255), randint(0,255))
+        mask_temp = mask[:,:,i].copy()
+        image[mask_temp==1] = rgb
+    plt.figure(figsize=(12,8))
+    plt.imshow(im)
+    plt.imshow(image, 'gray', interpolation='none', alpha=alpha, vmin = 1) # alpha: [0-1], 0 is 100% transperancy, 1 is 0%
+    plt.show()
+    time.sleep(5)
+    print("watched image?")
+
+
 if __name__ == '__main__':
     init_program()
     print(">>> Start position: ")
@@ -1022,7 +1055,7 @@ if __name__ == '__main__':
                     show_in_moved_window("Next target to be sprayed", g_param.masks_image, i)
                     cv.waitKey()
                     cv.destroyAllWindows()
-                grape = g_param.TB[i]  # 16 grape is the most to the right in the least, not sprayed
+                grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
                 not_grape = remove_by_visual(i)
                 if not_grape:
                     continue
@@ -1030,9 +1063,11 @@ if __name__ == '__main__':
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
                 # TODO: uncomment when working with sonar
-                g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20
-                # g_param.last_grape_dist, is_grape = 0.55, 1  # without sonar usage
-                switch_materiel()  # check if it is time to switch materiel
+                # g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20
+                g_param.last_grape_dist, is_grape = 0.55, 1  # without sonar usage
+                maskk = g_param.read_write_object.load_mask(grape.index) #TODO uncomment 2 lines to validate mask
+                display_image_with_mask(g_param.masks_image, maskk)
+                # switch_materiel()  # check if it is time to switch materiel
 
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes

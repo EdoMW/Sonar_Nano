@@ -747,7 +747,8 @@ def ueye_take_picture_2(image_number):
         # In order to display the image in an OpenCV window we need to...
         # ...extract the data of our image memory
         pic_array_1 = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
-        time.sleep(0.1)
+        # time.sleep(0.1)
+        time.sleep(0.5)
         pic_array = ueye.get_data(pcImageMemory, width, height, nBitsPerPixel, pitch, copy=False)
 
         # ...reshape it in an numpy array...

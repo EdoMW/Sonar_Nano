@@ -1,11 +1,101 @@
-import cv2
+import random
+
+import cv2 as cv
 import sys
 import os
 import warnings
-import numpy as np
 import matplotlib.pyplot as plt
 from termcolor import colored
 import glob, shutil
+import numpy as np
+from random import randint
+
+
+#
+#
+# images = os.listdir(r'D:\Users\NanoProject\old_experiments\exp_data_13_46\rgb_images\resized')
+# npzs_without = os.listdir(r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks')
+# npzs_without = [x.split('_')[0] for x in npzs_without]
+# npzs_without_int = [int(x.split('_')[0]) for x in npzs_without]
+# # npzs_without_int = sorted(npzs_without_int)
+# # npzs_without_int_str = [str(x) for x in npzs_without_int]
+# images = [x for x in images if x.split('_')[0] in npzs_without]
+#
+# npzs = os.listdir(r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks')
+# pairs = [list(x) for x in zip(npzs, images, npzs_without_int)]
+# import operator
+# pairs = sorted(pairs, key = lambda x: x[2])
+# print(pairs)
+#
+# for i in range(len(npzs)):
+#     path = r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks'
+#     npz_path = os.path.join(path, pairs[i][0])
+#     mask_npz = np.load(npz_path)
+#     mask = mask_npz.f.arr_0
+#     path = r'D:\Users\NanoProject\old_experiments\exp_data_13_46\rgb_images\resized'
+#     image_path = os.path.join(path, pairs[i][1])
+#     image = cv.imread(image_path)
+#     image = cv.cvtColor(image,cv.COLOR_BGR2RGB)
+#     redImg = np.zeros(image.shape, image.dtype)
+#     redImg[:,:] = (0, 0, 255)
+#     redMask = cv.bitwise_and(redImg, redImg, mask=mask)
+#     cv.addWeighted(redMask, 1, image, 1, 0, image)
+#     cv.imshow(f'{pairs[i][2]}', image)
+#     cv.waitKey()
+
+# image = image_path
+# im = image.copy()
+# print(image.shape)
+# print(mask.shape)
+# non_zeros = []
+# for i in range(len(mask[0][0] + 1)):
+#     non_zeros.append(np.count_nonzero(mask[:,:,i]))
+# min_index = non_zeros.index(max(non_zeros))
+# for i in range(len(mask[0][0] + 1)):
+#     # if i != min_index:
+#     rgb = (randint(0,255), randint(0,255), randint(0,255))
+#     mask_temp = mask[:,:,i].copy()
+#     image[mask_temp==1] = rgb
+# plt.figure(figsize=(12,8))
+# plt.imshow(im)
+# plt.imshow(image, 'gray', interpolation='none', alpha=alpha, vmin = 0.8) # alpha: [0-1], 0 is 100% transperancy, 1 is 0%
+# plt.show()
+
+#
+
+
+
+# ----------------Edo: checking speeds-------------------------
+#
+# # count amount of images
+# count = 0
+# path = r'C:\Users\Administrator\Desktop\experiments_backup\old_experiments'
+# path_images = r'C:\Users\Administrator\Desktop\experiments_backup\images'
+# single_count = 0
+# exp_lists = os.listdir(path)
+# for count, exp in enumerate(exp_lists):
+#     exp_path = os.path.join(path, exp)
+#     exp_path_images = exp_path + r'\rgb_images\original'
+#     images_list = os.listdir(exp_path_images)
+#     for i in range(len(images_list)):
+#         image = os.path.join(exp_path_images, images_list[i])
+#         shutil.copy(image, path_images)
+#         single_count += 1
+#     count += len(images_list)
+#     print(len(images_list))
+# print("count:", count)
+# print("single_count:", single_count)
+#
+#
+
+
+# ----------------Omer: checking speeds-------------------------
+
+
+import write_to_socket
+import read_from_socket
+
+
 
 N = 4
 for n in range(N):

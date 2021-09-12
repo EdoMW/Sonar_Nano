@@ -45,16 +45,19 @@ if an experiment wants to test step size of 0.2m, than steps_gap should be equal
 """
 steps_gap = 1
 """
-work_place: lab/field/lab_grapes
+work_place: lab/field/lab_grapes:
+
+lab) white shapes on blue background.
+field) real grapes in field
+lab_grapes) plastic grapes on white background
 process_type: work/record/load
 work- don't save any data except the Final TB 
 record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-
-process_type = 'load'  # TODO!!!!-add save of the TB before ending the program.
-work_place = "field"  # lab. to know which function of image processing to use.
+process_type = 'load'
+work_place = 'field'  # lab. to know which function of image processing to use.
 
 
 def calc_image_width():
@@ -114,12 +117,13 @@ def get_index(index):
 def build_array(step_size_sim):
     """
     builds array to take image from
+    range is 0-50 because max size of the array is 41.
     :param step_size_sim:
     :return:
     """
     move_direction = 0  # even = up, odd = down
     b = []
-    for i in range(0, 500, step_size_sim):
+    for i in range(0, 50, step_size_sim):
         lpi, hpi = get_index(i)
         if move_direction % 2 == 0:
             b.append(lpi)
