@@ -54,7 +54,7 @@ for dir in old_exps:
             path = img_path
             image_path = os.path.join(path, pairs[i][1])
             image = cv.imread(image_path)
-            image = cv.cvtColor(image,cv.COLOR_BGR2RGB)
+            # image = cv.cvtColor(image,cv.COLOR_BGR2RGB)
             redImg = np.zeros(image.shape, image.dtype)
             redImg[:,:] = (0, 0, 255)
             redMask = cv.bitwise_and(redImg, redImg, mask=mask)
