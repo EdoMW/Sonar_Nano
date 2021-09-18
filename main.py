@@ -1032,7 +1032,7 @@ if __name__ == '__main__':
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
-        capture_update_TB()  # 5 + 7-12 inside
+        capture_update_TB()  # 5 + 7-12 inside #  FIXME check image 5,6 (on test set)
         update_database_visualization()  # FIXME
         print_image_detials(step_direction[(g_param.image_number + 1) % 4])
         print(fg.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:])
@@ -1063,10 +1063,10 @@ if __name__ == '__main__':
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
                 # TODO: uncomment when working with sonar
-                # g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20
-                g_param.last_grape_dist, is_grape = 0.55, 1  # without sonar usage
-                maskk = g_param.read_write_object.load_mask(grape.index) #TODO uncomment 2 lines to validate mask
-                display_image_with_mask(g_param.masks_image, maskk)
+                g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20
+                # g_param.last_grape_dist, is_grape = 0.55, 1  # without sonar usage
+                # maskk = g_param.read_write_object.load_mask(grape.index) #TODO uncomment 2 lines to validate mask
+                # display_image_with_mask(g_param.masks_image, maskk)
                 # switch_materiel()  # check if it is time to switch materiel
 
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
@@ -1092,3 +1092,9 @@ if __name__ == '__main__':
             external_signal_all_done = check_end_program_time()
             # break
             # restart_target_bank()  # option to restart without initialize
+
+
+##### todo:
+"""
+check IoU between previously sprayed masks to new masks to be added (or between OBBs)
+"""
