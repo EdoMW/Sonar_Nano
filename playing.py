@@ -69,7 +69,7 @@ def show_images_with_masks():
 
 
 # show_images_with_masks() # TODO: make it for entire dir, dir of dirs
-
+#aaaaaaaa
 
 path = r'D:\Users\NanoProject\old_experiments'
 dirs = os.listdir(path)
