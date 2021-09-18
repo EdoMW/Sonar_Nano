@@ -1,14 +1,111 @@
 import random
-
 import cv2 as cv
 import sys
 import os
 import warnings
+
+import matplotlib
 import matplotlib.pyplot as plt
 from termcolor import colored
 import glob, shutil
 import numpy as np
 from random import randint
+import colorsys
+from PIL import Image
+
+
+def show_images_with_masks():
+    def random_colors(N, bright=True):
+        """
+        Generate random colors.
+        To get visually distinct colors, generate them in HSV space then
+        convert to RGB.
+        """
+        brightness = 1.0 if bright else 0.7
+        hsv = [(i / N, 1, brightness) for i in range(N)]
+        colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
+        random.shuffle(colors)
+        return colors
+
+
+    def apply_mask(image, mask, color, alpha=0.5):
+        """Apply the given mask to the image.
+        """
+        for c in range(3):
+            image[:, :, c] = np.where(mask == 1,
+                                      image[:, :, c] *
+                                      (1 - alpha) + alpha * color[c] * 255,
+                                      image[:, :, c])
+        return image
+
+    npz = np.load(r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks\38_14_22_28.npz')
+    image = cv.imread(r'D:\Users\NanoProject\old_experiments\exp_data_13_46\rgb_images\resized\38_14_22_28.jpeg')
+    masks = npz.f.arr_0
+    N = masks.shape[2]
+    colors = random_colors(N)
+    masked_image = image.astype(np.uint32).copy()
+    for i in range(N):
+        mask = masks[:, :, i]
+        masked_image = apply_mask(masked_image, mask, colors[i])
+    import matplotlib.pyplot as plt
+
+    auto_show = False
+    ax = None
+    if not ax:
+        _, ax = plt.subplots(1)
+        auto_show = True
+
+    # Generate random colors
+    colors = colors or random_colors(N)
+
+    # Show area outside image boundaries.
+    height, width = image.shape[:2]
+    ax.set_ylim(height + 10, -10)
+    ax.set_xlim(-10, width + 10)
+    ax.axis('off')
+    ax.set_title("aaa")
+    ax.imshow(masked_image.astype(np.uint8))
+    plt.show()
+
+
+# show_images_with_masks() # TODO: make it for entire dir, dir of dirs
+
+
+path = r'D:\Users\NanoProject\old_experiments'
+dirs = os.listdir(path)
+count = 0
+distances = []
+for dir in dirs:
+    path_2 = os.path.join(path, dir)
+    path_3 = os.path.join(path_2, "sonar")
+    path_4 = os.path.join(path_3, "distances")
+    distance = os.listdir(path_4)
+    if len(distance) > 0:
+        distances.append(dir)
+        count += 1
+
+print(count, distances)
+
+
+
+
+
+
+# p = r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks\38_14_22_28.npz'
+# # p = r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks\37_14_21_09.npz'
+# npz = np.load(p)
+# img_array = npz.f.arr_0[:,:,:]
+# img_array = img_array.astype('uint8')
+# print(type(img_array[1,1,0]))
+# np.savez_compressed(p, img_array)
+# im = Image.fromarray(img_array)
+#
+# # this might fail if `img_array` contains a data type that is not supported by PIL,
+# # in which case you could try casting it to a different dtype e.g.:
+# # im = Image.fromarray(img_array.astype(np.uint8))
+#
+# im.show()
+
 
 
 #
