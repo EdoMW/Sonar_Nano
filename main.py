@@ -569,7 +569,7 @@ def get_distances(mask_id, dist_from_sonar, real_dist):
     if g_param.process_type == "record":
         write_distances(mask_id, dist_from_sonar, real_dist)
     if g_param.process_type == "load":
-        measured, real = g_param.read_write_object.read_sonar_distances(mask_id)
+        measured, real = g_param.read_write_object.read_sonar_distances(mask_id , real_dist)
         print(f'Real distance to grape {real} will be used. value measured by sonar is {measured}')
         return real
     return real_dist
@@ -582,11 +582,13 @@ def get_classes(mask_id, class_from_sonar, real_class):
     if g_param.process_type == "record":
         write_classes(mask_id, class_from_sonar, real_class)
     if g_param.process_type == "load":
-        meas, real = g_param.read_write_object.read_sonar_class_from_csv(mask_id)
-        print(f'Real class {"grape" if is_grape else "not grape"} will be used.'
-              f' value measured by sonar is {"grape" if is_grape else "not grape"}')
-        return real
-    return real_class
+        # meas, real = g_param.read_write_object.read_sonar_class_from_csv(mask_id)
+        # print(f'Real class {"grape" if is_grape else "not grape"} will be used.'
+        #       f' value measured by sonar is {"grape" if is_grape else "not grape"}')
+        # real = g_param.read_write_object.read_sonar_class_from_csv(mask_id, class_from_sonar, real_class)
+        real = g_param.read_write_object.read_sonar_classes(mask_id, class_from_sonar)
+        return real, real
+    return real_class, real_class
 
 
 # calling the 2 sonar methods to get distance and validate existence of grapes
@@ -601,7 +603,7 @@ def update_database_no_grape_sonar_human(mask_id):
     pass
 
 
-def activate_sonar(mask_id):
+def activate_sonar(mask_id, not_grape):
     """
     activate sonar- read distance and grape/no grape.
     :return: distance to grape, grape (yes=1,no =0)
@@ -651,8 +653,10 @@ def activate_sonar(mask_id):
             # make it more efficent in 1 line ?
         # real_dist = float(real_dist) if real_dist != "" else dist_from_sonar
         distance = get_distances(mask_id, dist_from_sonar, real_dist)
-        grape_class = get_classes(mask_id, preds_2classes[1], real_class)
+        grape_class, grape_class = get_classes(mask_id, preds_2classes[1], real_class)
         # return distance, preds_2classes[1]  # make sure it converts to True/ False
+        if not not_grape:
+            return float(distance), 1.0
         return float(distance), grape_class  # make sure it converts to True/ False
     except Exception as e:
         while True:
@@ -1056,14 +1060,14 @@ if __name__ == '__main__':
                     cv.waitKey()
                     cv.destroyAllWindows()
                 grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
-                not_grape = remove_by_visual(i)
-                if not_grape:
+                not_grape = remove_by_visual(i)  # FIXME- add option- if manually confirmed, it's a grape
+                if not_grape:  # if it's not a grape, skip next part
                     continue
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
                 # TODO: uncomment when working with sonar
-                g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20
+                g_param.last_grape_dist, is_grape = activate_sonar(grape.index, not_grape)  # 20
                 # g_param.last_grape_dist, is_grape = 0.55, 1  # without sonar usage
                 # maskk = g_param.read_write_object.load_mask(grape.index) #TODO uncomment 2 lines to validate mask
                 # display_image_with_mask(g_param.masks_image, maskk)

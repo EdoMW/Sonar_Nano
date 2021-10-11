@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import numpy as np
 import shutil
+import io
+import pandas as pd
 from time import sleep
 from pprint import pprint
 np.set_printoptions(precision=3)
@@ -43,7 +45,7 @@ def get_local_time_2():
     return datetime.now().strftime("%H_%M")
 
 
-def  get_latest_dir():
+def get_latest_dir():
     # return 0  # FIXME
     """
     if take_last_exp = True (default) it will return the last exp dir. AND
@@ -169,6 +171,35 @@ def move_old_directory():
     if len(file_names) != 0:
         for file_name in file_names:
             shutil.move(os.path.join(source_dir, file_name), target_dir)
+
+
+def read_3d_text(path_to_file):
+    """
+    :param path_to_file: s record as string
+    :return: s, as 2D np array (array consists of flatten 2d arrays)
+    """
+    b = pd.read_csv(path_to_file, header=None)
+    first_item = True
+    list_of_2d = []
+    for k in range(len(b)):
+        chunk = b.iloc[k, 0]
+        chank_list = chunk.split('\n')
+        chank_list = [x.replace('[', '').replace(']', '') for x in chank_list]
+        for i in range(30):
+            chank_list[i] = chank_list[i].split(' ')
+            for j in range(0, 7):
+                if len(chank_list[i][j]) > 2:
+                    if chank_list[i][j].endswith('\r'):
+                        chank_list[i][j] = chank_list[i][j][:-2]
+                if i > 0 and first_item:
+                    chank_list[i] = chank_list[i][1:]
+                    first_item = False
+                chank_list[i][j] = float(chank_list[i][j])
+            chank_list[i] = np.array(chank_list[i])
+            first_item = True
+        list_of_2d.append(np.array(chank_list).flatten())
+    return np.array(list_of_2d)
+
 
 
 class ReadWrite:
@@ -618,11 +649,12 @@ class ReadWrite:
         records_list = os.listdir(path)
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
-        s = np.genfromtxt(path, delimiter=",")
+        s = read_3d_text(path)
         return s
 
-    def read_sonar_distances(self, mask_id):
+    def read_sonar_distances(self, mask_id, real_dist_calc):
         """
+        :param real_dist_calc: calculated/ measured distance
         :param mask_id: id of the mask
         :return: measured distance by sonar, real distance
         """
@@ -633,11 +665,32 @@ class ReadWrite:
         path = os.path.join(path, 'sonar')
         path = os.path.join(path, 'distances') #FIXME
         records_list = os.listdir(path)
+        if len(records_list) == 0:  # if dir is empty, take calculated/ measured distance
+            return real_dist_calc, real_dist_calc
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
         distances = np.genfromtxt(path, delimiter=",")
         return distances[0], distances[1]
 
+    def read_sonar_classes(self, mask_id, sonar_class):
+        """
+        :param sonar_class: class calculated by sonar CNN
+        :param mask_id: id of the mask
+        :return: Real class of the object
+        """
+        image_number = get_image_num_sim(g_param.image_number)
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        path = os.path.join(path, 'sonar')
+        path = os.path.join(path, 'classes')
+        records_list = os.listdir(path)
+        if len(records_list) == 0:  # if dir is empty, take calculated/ measured distance
+            return sonar_class, sonar_class
+        res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
+        path = os.path.join(path, res[0])
+        classes = np.genfromtxt(path, delimiter=",")
+        return classes[0], classes[1]
 
     def load_mask(self, mask_id):
         """
