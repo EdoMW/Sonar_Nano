@@ -25,7 +25,7 @@ from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_mov
     point_meter_2_pixel, image_resize, take_manual_image
 import write_to_socket
 import read_from_socket
-
+from self_utils.visualize import *
 
 np.set_printoptions(precision=3)
 
@@ -219,7 +219,7 @@ def move_const(size_of_step, direction_to_move, location):
     :param location:
     :return:
     """
-    old_location = np.copy(location)
+    # old_location = np.copy(location)
     size_of_step = calc_step_size(size_of_step)
     # print("move const ", step_size, " start at:", location)
     if g_param.process_type != "load":
@@ -569,7 +569,7 @@ def get_distances(mask_id, dist_from_sonar, real_dist):
     if g_param.process_type == "record":
         write_distances(mask_id, dist_from_sonar, real_dist)
     if g_param.process_type == "load":
-        measured, real = g_param.read_write_object.read_sonar_distances(mask_id)
+        measured, real = g_param.read_write_object.read_sonar_distances(mask_id , real_dist)
         print(f'Real distance to grape {real} will be used. value measured by sonar is {measured}')
         return real
     return real_dist
@@ -582,11 +582,13 @@ def get_classes(mask_id, class_from_sonar, real_class):
     if g_param.process_type == "record":
         write_classes(mask_id, class_from_sonar, real_class)
     if g_param.process_type == "load":
-        meas, real = g_param.read_write_object.read_sonar_class_from_csv(mask_id)
-        print(f'Real class {"grape" if is_grape else "not grape"} will be used.'
-              f' value measured by sonar is {"grape" if is_grape else "not grape"}')
-        return real
-    return real_class
+        # meas, real = g_param.read_write_object.read_sonar_class_from_csv(mask_id)
+        # print(f'Real class {"grape" if is_grape else "not grape"} will be used.'
+        #       f' value measured by sonar is {"grape" if is_grape else "not grape"}')
+        # real = g_param.read_write_object.read_sonar_class_from_csv(mask_id, class_from_sonar, real_class)
+        real = g_param.read_write_object.read_sonar_classes(mask_id, class_from_sonar)
+        return real, real
+    return real_class, real_class
 
 
 # calling the 2 sonar methods to get distance and validate existence of grapes
@@ -601,7 +603,7 @@ def update_database_no_grape_sonar_human(mask_id):
     pass
 
 
-def activate_sonar(mask_id):
+def activate_sonar(mask_id, not_grape):
     """
     activate sonar- read distance and grape/no grape.
     :return: distance to grape, grape (yes=1,no =0)
@@ -651,8 +653,10 @@ def activate_sonar(mask_id):
             # make it more efficent in 1 line ?
         # real_dist = float(real_dist) if real_dist != "" else dist_from_sonar
         distance = get_distances(mask_id, dist_from_sonar, real_dist)
-        grape_class = get_classes(mask_id, preds_2classes[1], real_class)
+        grape_class, grape_class = get_classes(mask_id, preds_2classes[1], real_class)
         # return distance, preds_2classes[1]  # make sure it converts to True/ False
+        if not not_grape:
+            return float(distance), 1.0
         return float(distance), grape_class  # make sure it converts to True/ False
     except Exception as e:
         while True:
@@ -856,10 +860,10 @@ def display_points(g_to_display):
     :return:
     """
     color_index = 10
-    for i in range(len(g_param.TB)):
+    for ii in range(len(g_param.TB)):
         color = (255 - color_index, 255 - color_index * 2, 255 - color_index * 3)
-        box = np.array(g_param.TB[i].p_corners)
-        if not g_param.TB[i].sprayed:
+        box = np.array(g_param.TB[ii].p_corners)
+        if not g_param.TB[ii].sprayed:
             cv.drawContours(g_param.masks_image, [box], 0, color)
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (int(g_to_display.p_corners[0][0]), int(g_to_display.p_corners[0][1])),
@@ -952,10 +956,10 @@ def update_database_visualization():
             g_param.TB[j].x_p = int(x_temp)
             g_param.TB[j].y_p = int(y_temp)
         else:
-            break  # check if it's necsery
+            break  # check if it's necessary
 
 
-def print_image_detials(step_dir):
+def print_image_details(step_dir):
     """
     prints image direction
     :param step_dir: direction of movement
@@ -999,6 +1003,13 @@ def display_image_with_mask(image_path, mask, alpha = 0.7):
     print("watched image?")
 
 
+def calc_gt_box(image_number):
+    mask_count = g_param.read_write_object.count_masks_in_image(image_number)
+    print(mask_count)
+    # for i in range(mask_count):
+    #     masks = g_param.read_write_object.load_mask()
+
+
 if __name__ == '__main__':
     init_program()
     print(">>> Start position: ")
@@ -1032,9 +1043,9 @@ if __name__ == '__main__':
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
-        capture_update_TB()  # 5 + 7-12 inside #  FIXME check image 5,6 (on test set)
+        capture_update_TB()  # 5 + 7-12 inside #
         update_database_visualization()  # FIXME
-        print_image_detials(step_direction[(g_param.image_number + 1) % 4])
+        print_image_details(step_direction[(g_param.image_number + 1) % 4])
         print(fg.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:])
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         # input("press enter for continue to spraying")
@@ -1045,6 +1056,17 @@ if __name__ == '__main__':
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
             for i in range(amount_of_grapes_to_spray):
+                # TODO- add evaluation mode which mark unlabeled masks as false detection,
+                #  and assign masks accordignly to the GT.
+                eval_mode = True
+                if eval_mode:
+                    gt_box = calc_gt_box(g_param.image_number)
+                    # display_differences(g_param.masks_image, gt_box, gt_class_id, gt_mask,
+                    #                     pred_box, pred_class_id, pred_score, pred_mask,
+                    #                     class_names, title="", ax=None,
+                    #                     show_mask=True, show_box=True,
+                    #                     iou_threshold=0.5, score_threshold=0.5)
+                    # compute_overlaps_masks(gt_mask, pred_masks)
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),
                                                  org=(int(g_param.TB[i].x_p), int(g_param.TB[i].y_p)),
@@ -1056,14 +1078,14 @@ if __name__ == '__main__':
                     cv.waitKey()
                     cv.destroyAllWindows()
                 grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
-                not_grape = remove_by_visual(i)
-                if not_grape:
+                not_grape = remove_by_visual(i)  # FIXME- add option- if manually confirmed, it's a grape
+                if not_grape:  # if it's not a grape, skip next part
                     continue
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
                 # TODO: uncomment when working with sonar
-                g_param.last_grape_dist, is_grape = activate_sonar(grape.index)  # 20
+                g_param.last_grape_dist, is_grape = activate_sonar(grape.index, not_grape)  # 20
                 # g_param.last_grape_dist, is_grape = 0.55, 1  # without sonar usage
                 # maskk = g_param.read_write_object.load_mask(grape.index) #TODO uncomment 2 lines to validate mask
                 # display_image_with_mask(g_param.masks_image, maskk)
