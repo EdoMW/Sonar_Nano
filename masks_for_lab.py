@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import scipy
 from termcolor import colored
 # import itertools
-
 from Target_bank import check_if_in_TB, add_to_target_bank, sort_by_and_check_for_grapes, sort_by_rect_size
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from numpy import *
@@ -16,12 +15,11 @@ from math import pi, cos, sin
 import sys
 from pyueye import ueye
 import numpy as np
-
+from operator import itemgetter
 np.set_printoptions(precision=3)
 import g_param
 import time
 import os
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import imutils
 from PIL import Image, ImageDraw, ImageDraw
@@ -1007,15 +1005,20 @@ def sort_results(results):
             "rois": results['rois'][i], "class_ids": results['class_ids'][i], "scores": np.array(results['scores'][i]),
             "masks": results['masks'][:, :, i], "bbox": bbox[i], "bbox_left_x": bbox[i][1],
         })
-    from operator import itemgetter
     res = sorted(res, key=itemgetter('bbox_left_x'), reverse=False)
     a, b, c, d = res[0]['rois'], res[0]['bbox'], res[0]['scores'], res[0]['masks']
+    # a, b, c, d = res[0]['rois'], res[0]['bbox'], res[0]['scores'], res[0]['masks'].reshape(1024, 1024, 1)
     if len(res) > 1:
         for i in range(1, len(res)):
-            a = np.dstack((a, res[i]['rois']))
-            b = np.dstack((b, res[i]['bbox']))
-            c = np.append(c, res[i]['scores'])
+            # a = np.dstack((a, res[i]['bbox']))
+            # b = np.dstack((b, res[i]['bbox']))
             d = np.dstack((d, res[i]['masks']))
+            a = np.vstack((a, res[i]['rois'].reshape(1, 4)))
+            b = np.vstack((b, res[i]['bbox'].reshape(1, 4)))
+            # d = np.vstack((d, res[i]['masks'].reshape(1024, 1024, 1)))
+            c = np.append(c, res[i]['scores'])
+    else:
+        d = d.reshape(1024, 1024)
     results = {"rois": a, "class_ids": results['class_ids'], "scores": c, "masks": d, "bbox": b,
                }
     return results
@@ -1364,7 +1367,7 @@ def take_picture_and_run():
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)
         r = results[0]
-        pred_masks = r["masks"]
+        pred_masks = r['masks']
         print("amount of grapes :", len(pred_masks[0][0]))
         print(fg.yellow + "wait" + fg.rs, "\n")
         if len(pred_masks[0][0]) > 0:
@@ -1372,11 +1375,14 @@ def take_picture_and_run():
             r = results[0]
             ax = get_ax(1)
             bbox = utils.extract_bboxes(r['masks']).astype('int32')
-            r = sort_results(r)
+            r = sort_results(r) # WORKING!!!! Finaly
+            if r['masks'].ndim < 3:
+                r['masks'] = r['masks'].reshape((1024, 1024, 1))
             img_with_masks = visualize.display_instances(im1, bbox, r['masks'], r['class_ids'],
                                                          dataset_test.class_names, r['scores'], ax=ax,
-                                                         title="Predictions")
+                                                         title="Predictions", show_bbox=True)
         images, boxes, mini_boxes, boxes_min, pixels_count_arr, com_list = [], [], [], [], [], []
+        pred_masks = r['masks']
         if len(pred_masks[0][0]) > 0:
             amount_of_mask_detacted = len(pred_masks[0][0])
             for i in range(amount_of_mask_detacted):

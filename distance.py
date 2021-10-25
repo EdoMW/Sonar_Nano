@@ -78,7 +78,7 @@ def distance2(sig, mask_id):
     """
     f, t, s = get_t_s(sig, mask_id)
     new_s = s[30, :] / np.max(s[30, :])
-    peaks, heights = find_peaks(new_s, height=0.4)
+    peaks, heights = find_peaks(new_s, height=0.3)
     # new_s = np.sum(s[15:40], axis=0)
     # peaks, heights = find_peaks(new_s, height=0.003, distance=5)
     try:

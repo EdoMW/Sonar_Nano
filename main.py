@@ -25,7 +25,7 @@ from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_mov
     point_meter_2_pixel, image_resize, take_manual_image
 import write_to_socket
 import read_from_socket
-
+from self_utils.visualize import *
 
 np.set_printoptions(precision=3)
 
@@ -219,7 +219,7 @@ def move_const(size_of_step, direction_to_move, location):
     :param location:
     :return:
     """
-    old_location = np.copy(location)
+    # old_location = np.copy(location)
     size_of_step = calc_step_size(size_of_step)
     # print("move const ", step_size, " start at:", location)
     if g_param.process_type != "load":
@@ -860,10 +860,10 @@ def display_points(g_to_display):
     :return:
     """
     color_index = 10
-    for i in range(len(g_param.TB)):
+    for ii in range(len(g_param.TB)):
         color = (255 - color_index, 255 - color_index * 2, 255 - color_index * 3)
-        box = np.array(g_param.TB[i].p_corners)
-        if not g_param.TB[i].sprayed:
+        box = np.array(g_param.TB[ii].p_corners)
+        if not g_param.TB[ii].sprayed:
             cv.drawContours(g_param.masks_image, [box], 0, color)
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (int(g_to_display.p_corners[0][0]), int(g_to_display.p_corners[0][1])),
@@ -956,10 +956,10 @@ def update_database_visualization():
             g_param.TB[j].x_p = int(x_temp)
             g_param.TB[j].y_p = int(y_temp)
         else:
-            break  # check if it's necsery
+            break  # check if it's necessary
 
 
-def print_image_detials(step_dir):
+def print_image_details(step_dir):
     """
     prints image direction
     :param step_dir: direction of movement
@@ -1003,6 +1003,13 @@ def display_image_with_mask(image_path, mask, alpha = 0.7):
     print("watched image?")
 
 
+def calc_gt_box(image_number):
+    mask_count = g_param.read_write_object.count_masks_in_image(image_number)
+    print(mask_count)
+    # for i in range(mask_count):
+    #     masks = g_param.read_write_object.load_mask()
+
+
 if __name__ == '__main__':
     init_program()
     print(">>> Start position: ")
@@ -1036,9 +1043,9 @@ if __name__ == '__main__':
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
-        capture_update_TB()  # 5 + 7-12 inside #  FIXME check image 5,6 (on test set)
+        capture_update_TB()  # 5 + 7-12 inside #
         update_database_visualization()  # FIXME
-        print_image_detials(step_direction[(g_param.image_number + 1) % 4])
+        print_image_details(step_direction[(g_param.image_number + 1) % 4])
         print(fg.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:])
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         # input("press enter for continue to spraying")
@@ -1049,6 +1056,17 @@ if __name__ == '__main__':
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
             for i in range(amount_of_grapes_to_spray):
+                # TODO- add evaluation mode which mark unlabeled masks as false detection,
+                #  and assign masks accordignly to the GT.
+                eval_mode = True
+                if eval_mode:
+                    gt_box = calc_gt_box(g_param.image_number)
+                    # display_differences(g_param.masks_image, gt_box, gt_class_id, gt_mask,
+                    #                     pred_box, pred_class_id, pred_score, pred_mask,
+                    #                     class_names, title="", ax=None,
+                    #                     show_mask=True, show_box=True,
+                    #                     iou_threshold=0.5, score_threshold=0.5)
+                    # compute_overlaps_masks(gt_mask, pred_masks)
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),
                                                  org=(int(g_param.TB[i].x_p), int(g_param.TB[i].y_p)),

@@ -33,6 +33,25 @@ from mrcnn import utils
 #  Visualization
 ############################################################
 
+def show_in_moved_window_1(win_name, img, i=None, x=0, y=0):  # lab
+    """
+    show image
+    :param win_name: name of the window
+    :param img: image to display
+    :param i: index of the grape
+    :param x: x coordinate of end left corner of the window
+    :param y: y coordinate of end left corner of the window
+    """
+    if img is not None:
+        target_bolded = img.copy()
+        cv2.namedWindow(win_name, cv2.WINDOW_AUTOSIZE)  # Create a named window
+        cv2.moveWindow(win_name, x, y)  # Move it to (x,y)
+        cv2.imshow(win_name, target_bolded)
+        cv2.waitKey()
+        cv2.destroyAllWindows()
+
+
+
 def display_images(images, titles=None, cols=4, cmap=None, norm=None,
                    interpolation=None):
     """Display the given set of images, optionally with titles.
@@ -104,7 +123,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         print("\n*** No instances to display *** \n")
     else:
         assert boxes.shape[0] == masks.shape[-1] == class_ids.shape[0]
-
+    if N == 1:
+        scores = np.array([scores])
     # If no axis is passed, create one and automatically call show()
     auto_show = False
     if not ax:
@@ -164,13 +184,52 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
-    cv2.imshow("image with masks", masked_image.astype(np.uint8))
-    cv2.moveWindow("image with masks", x=(-1040), y=(-5))
-    cv2.waitKey()
-    cv2.destroyAllWindows()
+    show_in_moved_window_1('image with masks!!!!', masked_image.astype(np.uint8))
+    # cv2.imshow("image with masks!!!!", masked_image.astype(np.uint8))
+    # cv2.moveWindow("image with masks", x=(-1040), y=(-5))
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
     if auto_show:
         plt.show()
     return masked_image.astype(np.uint8)
+
+
+def display_differences_eval(image,
+                        gt_box, gt_class_id, gt_mask,
+                        pred_box, pred_class_id, pred_score, pred_mask,
+                        class_names, title="", ax=None,
+                        show_mask=True, show_box=True,
+                        iou_threshold=0.5, score_threshold=0.5):
+    """Display ground truth and prediction instances on the same image."""
+    # Match predictions to ground truth
+    gt_match, pred_match, overlaps = utils.compute_matches(
+        gt_box, gt_class_id, gt_mask,
+        pred_box, pred_class_id, pred_score, pred_mask,
+        iou_threshold=iou_threshold, score_threshold=score_threshold)
+    # Ground truth = green. Predictions = red
+    colors = [(0, 1, 0, .8)] * len(gt_match) \
+             + [(1, 0, 0, 1)] * len(pred_match)
+    # Concatenate GT and predictions
+    class_ids = np.concatenate([gt_class_id, pred_class_id])
+    scores = np.concatenate([np.zeros([len(gt_match)]), pred_score])
+    boxes = np.concatenate([gt_box, pred_box])
+    masks = np.concatenate([gt_mask, pred_mask], axis=-1)
+    # Captions per instance show score/IoU
+    captions = ["" for m in gt_match] + ["{:.2f} / {:.2f}".format(
+        pred_score[i],
+        (overlaps[i, int(pred_match[i])]
+         if pred_match[i] > -1 else overlaps[i].max()))
+        for i in range(len(pred_match))]
+    # Set title if not provided
+    title = title or "Ground Truth and Detections\n GT=green, pred=red, captions: score/IoU"
+    # Display
+    display_instances(
+        image,
+        boxes, masks, class_ids,
+        class_names, scores, ax=ax,
+        show_bbox=show_box, show_mask=show_mask,
+        colors=colors, captions=captions,
+        title=title)
 
 
 def display_differences(image,

@@ -56,7 +56,7 @@ record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-process_type = 'load'
+process_type = 'work'
 work_place = 'field'  # lab. to know which function of image processing to use.
 
 

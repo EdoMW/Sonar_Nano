@@ -201,7 +201,6 @@ def read_3d_text(path_to_file):
     return np.array(list_of_2d)
 
 
-
 class ReadWrite:
     """
     For read and write functions. save the exp data in real time to be redone later.
@@ -597,6 +596,11 @@ class ReadWrite:
         step_size = np.genfromtxt(path, delimiter=',')
         return step_size
 
+    # FIXME: When detecting more objects than appears in the DB,
+    #        no object could be found (on the list comprehension line), which throws en error
+    #        (try to join a path with empty string).
+    #        one way to handle that is add a function that asks you to
+    #        manually insert details about the grape detected.
     def read_sonar_class_from_csv(self, mask_id):
         """
         reads sonar recording by image+mask_id
@@ -692,7 +696,21 @@ class ReadWrite:
         classes = np.genfromtxt(path, delimiter=",")
         return classes[0], classes[1]
 
-    def load_mask(self, mask_id):
+    def count_masks_in_image(self, image_number):
+        mage_number = get_image_num_sim(g_param.image_number)
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        if self.exp_date_time == 'exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation
+            path = os.path.join(path, 'masks')
+        else:
+            path = os.path.join(path, 'masks')
+            # path = os.path.join(path, 'masks_orig') # FIXME- uncomment this line and comment the above
+        records_list = os.listdir(path)
+        records_list = [i for i in records_list if i.startswith(str(image_number))]
+        return len(records_list)
+
+    def load_mask_file(self, mask_id):
         """
         :param mask_id: mask id to load
         :return: mask
