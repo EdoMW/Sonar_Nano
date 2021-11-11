@@ -147,6 +147,7 @@ def preprocess_one_record(record, counter, adding):
 
     return counter, X_test_per_rec
 
+
 if __name__ == '__main__':
     counter = 0
     X_test = []

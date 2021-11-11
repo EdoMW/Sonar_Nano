@@ -38,7 +38,7 @@ def print_by_id():
 class Target_bank:
 
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world,
-                 corners, p_corners, grape_base, pixels_count, com):
+                 corners, p_corners, grape_base, pixels_count, com, mask_score):
         """
         13 variables (for now)
         :param x: x center coordinate in meters
@@ -69,6 +69,7 @@ class Target_bank:
         self.rect_area = self.w_p * self.h_p  # in pixels
         self.sprayed = False
         self.mask = mask
+        self.mask_score = mask_score
         self.center_of_mass = com
         self.pixels_count = pixels_count  # in pixels
         self.distance = 0.75  # 0:default distance value, 1:from sonar
@@ -171,11 +172,11 @@ def calc_z_move():
 def update_grape_center(index):
     if g_param.image_number > 0:
         if g_param.TB[index].last_updated < g_param.image_number:
-            # print("# Updated! #")
-            # print("x : ", math.floor(g_param.image_number / 2) * g_param.step_size, " y : ", calc_z_move())
-            # print(">>>>>>>>>>",'\n', g_param.trans.capture_pos, '\n' , g_param.trans.prev_capture_pos, '\n', "<<<<<<<<<")
-            capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
-            prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0], g_param.trans.prev_capture_pos[1], -g_param.base_rotation_ang)[1]
+            capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],
+                                                    g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
+            prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0],
+                                                         g_param.trans.prev_capture_pos[1],
+                                                         -g_param.base_rotation_ang)[1]
             delta_x = capture_pos_r-prev_capture_pos_r
             # print("????????????????",delta_x)
             delta_y = g_param.trans.capture_pos[2] - g_param.trans.prev_capture_pos[2]
@@ -345,6 +346,8 @@ def add_to_target_bank(target):
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
     grape_base = g_param.trans.grape_base(target[0], target[1])
     grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target)
+    if g_param.eval_mode:
+        pass
     if grape_in_TB:
         pass
         # closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target)
@@ -361,9 +364,9 @@ def add_to_target_bank(target):
                 g_param.read_write_object.save_mask(target[5], Target_bank.grape_index)
                 mask_path = f'npzs/{g_param.image_number}_{Target_bank.grape_index}.npz'
                 np.savez_compressed(mask_path, target[5])
-                # savezcompressed (npz of the mask)
             Target_bank.grape_index += 1
         # print("not in TB yet but too close to edge")
+
 
 
 def sort_by_and_check_for_grapes(sorting_type):
@@ -450,7 +453,8 @@ def calculate_w_h(d, box_points):
 def update_by_real_distance(grape):
     """
     call the function ONLY if Sonar was activated
-    :param grape: the i'th grape
+    :param ind: index of the grape
+    :param grape: the i grape
     """
     # TODO (after exp): call the function that updates g_param.avg_dist with sonar_location
     grape.distance = g_param.last_grape_dist + g_param.sonar_x_length

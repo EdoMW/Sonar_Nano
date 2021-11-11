@@ -1,16 +1,10 @@
 from __future__ import print_function
 import cv2 as cv
-# import argparse
 import random as rng
-import matplotlib.pyplot as plt
-# import matplotlib
-import scipy
 from termcolor import colored
-# import itertools
-from Target_bank import check_if_in_TB, add_to_target_bank, sort_by_and_check_for_grapes, sort_by_rect_size
-from scipy.spatial import ConvexHull, convex_hull_plot_2d
+from Target_bank import add_to_target_bank
+from scipy.spatial import ConvexHull
 from numpy import *
-import math
 from math import pi, cos, sin
 import sys
 from pyueye import ueye
@@ -22,7 +16,7 @@ import time
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import imutils
-from PIL import Image, ImageDraw, ImageDraw
+from PIL import Image
 import scipy.misc
 from add_grapes import add_grapes
 from sty import fg, Style, RgbFg
@@ -158,7 +152,6 @@ if g_param.work_place == "field":
                     path=img_path)
 
         def load_mask(self, image_id):
-            import numpy as np
             """Generate instance masks for an image.
            Returns:
             masks: A bool array of shape [height, width, instance count] with
@@ -500,7 +493,6 @@ def minBoundingRect(hull_points_2d):
     corner_points[2] = dot([min_x, max_y], R)
     corner_points[3] = dot([max_x, max_y], R)
     # print "Bounding box corner points: \n", corner_points
-
     # print "Angle of rotation: ", angle, "rad  ", angle * (180/math.pi), "deg"
 
     return (angle, min_bbox[1], min_bbox[2], min_bbox[3], center_point,
@@ -1137,9 +1129,9 @@ def take_picture_and_run():
             minRect = [None] * len(contours)
             corners_rect = [None] * len(contours)
             # rect = ((center_x,center_y),(width,height),angle)
-            for i, c in enumerate(contours):
-                minRect[i] = cv.minAreaRect(c)
-                corners_rect[i] = cv.boxPoints(minRect[i])
+            for ii, cc in enumerate(contours):
+                minRect[ii] = cv.minAreaRect(cc)
+                corners_rect[ii] = cv.boxPoints(minRect[ii])
             drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
 
             for i, c in enumerate(contours):
@@ -1162,10 +1154,10 @@ def take_picture_and_run():
             # cv.waitKey()
             # cv.destroyAllWindows()
 
-        ## mask of green (36,25,25) ~ (86, 255,255)
+        # mask of green (36,25,25) ~ (86, 255,255)
         rgb = cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
         mask = cv.inRange(rgb, (40, 40, 50), (255, 255, 255))
-        ## slice the green
+        # slice the green
         imask = mask > 0
         green = np.zeros_like(img, np.uint8)
         green[imask] = img[imask]
@@ -1229,7 +1221,7 @@ def take_picture_and_run():
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             det_rotated_boxes.append(box_in_meter)
             grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                     None, det_box, None, corners_in_meter, corner_points, None, None]
+                     None, det_box, None, corners_in_meter, corner_points, None, None, 1.0]
             add_to_target_bank(grape)
 
     if g_param.work_place == "lab_grapes":
@@ -1342,10 +1334,10 @@ def take_picture_and_run():
             # change mask[:,:,b] to None if not working on manual mode
             if g_param.manual_work:
                 grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                         mask[:, :, b], det_box, None, corners_in_meter, corner_points, None, None]
+                         mask[:, :, b], det_box, None, corners_in_meter, corner_points, None, None, 1.0]
             else:
                 grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                         None, det_box, None, corners_in_meter, corner_points, None, None]
+                         None, det_box, None, corners_in_meter, corner_points, None, None, 1.0]
             add_to_target_bank(grape)
 
         # for field usage with CNN
@@ -1445,8 +1437,10 @@ def take_picture_and_run():
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             # det_rotated_boxes.append(box_in_meter)
+            mask_score = r['scores'][i]
             grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
-                     pred_masks[:, :, i], det_box, None, corners_in_meter, corner_points, pixels_count, com_list[i]]
+                     pred_masks[:, :, i], det_box, None, corners_in_meter, corner_points, pixels_count, com_list[i],
+                     mask_score]
             add_to_target_bank(grape)
 
     if g_param.work_place == "lab":

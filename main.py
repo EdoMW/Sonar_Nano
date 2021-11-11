@@ -6,8 +6,10 @@ import tensorflow as tf # Added next 2 lines insted
 
 import g_param
 import numpy as np
+import pandas as pd
 import cv2 as cv
 import DAQ_BG
+from self_utils import utils
 from test_one_record import test_spec
 from preprocessing_and_adding import preprocess_one_record
 from distance import distance2
@@ -19,6 +21,7 @@ from sty import fg, Style, RgbFg
 from random import randint
 from termcolor import colored
 from transform import rotation_coordinate_sys
+import scipy
 import matplotlib.pyplot as plt
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
@@ -28,7 +31,7 @@ import read_from_socket
 from self_utils.visualize import *
 
 np.set_printoptions(precision=3)
-
+pd.set_option("display.precision", 3)
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, show_in_moved_window
@@ -897,6 +900,7 @@ def init_program():
     """
     init_variables()
     init_arm_and_platform()
+    g_param.images_in_run = g_param.read_write_object.count_images()
 
 
 def remove_by_visual(grape_index_to_check):
@@ -977,7 +981,7 @@ def switch_materiel():
         input("10 grapes were sprayed using this materiel. press enter after replacing the tank")
 
 
-def display_image_with_mask(image_path, mask, alpha = 0.7):
+def display_image_with_mask(image_path, mask, alpha=0.7):
     # image = cv.imread(image_path)
     # image = cv.cvtColor(image,cv.COLOR_BGR2RGB)
     if mask.ndim == 2:
@@ -988,26 +992,48 @@ def display_image_with_mask(image_path, mask, alpha = 0.7):
     print(mask.shape)
     non_zeros = []
     for i in range(len(mask[0][0] + 1)):
-        non_zeros.append(np.count_nonzero(mask[:,:,i]))
+        non_zeros.append(np.count_nonzero(mask[:, :, i]))
     min_index = non_zeros.index(max(non_zeros))
     for i in range(len(mask[0][0] + 1)):
         # if i != min_index:
-        rgb = (randint(0,255), randint(0,255), randint(0,255))
-        mask_temp = mask[:,:,i].copy()
-        image[mask_temp==1] = rgb
-    plt.figure(figsize=(12,8))
+        rgb = (randint(0, 255), randint(0, 255), randint(0, 255))
+        mask_temp = mask[:, :, i].copy()
+        image[mask_temp == 1] = rgb
+    plt.figure(figsize=(12, 8))
     plt.imshow(im)
-    plt.imshow(image, 'gray', interpolation='none', alpha=alpha, vmin = 1) # alpha: [0-1], 0 is 100% transperancy, 1 is 0%
+    plt.imshow(image, 'gray', interpolation='none', alpha=alpha, vmin=1)  # alpha: [0-1], 0 is 100% transperancy, 1 is 0%
     plt.show()
     time.sleep(5)
     print("watched image?")
 
 
 def calc_gt_box(image_number):
+    ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master")
+    sys.path.append(ROOT_DIR)
+    center_of_masks, bboxs = [], []
     mask_count = g_param.read_write_object.count_masks_in_image(image_number)
     print(mask_count)
-    # for i in range(mask_count):
-    #     masks = g_param.read_write_object.load_mask()
+    masks = np.empty([1024, 1024, 1])
+    for m in range(mask_count):
+        mask = g_param.read_write_object.load_mask_file(m)
+        mask = np.reshape(mask, (1024, 1024, 1))
+        print(mask.shape)
+        bboxs.append(utils.extract_bboxes(mask).astype('int32'))
+        center_of_masks.append(np.asarray(scipy.ndimage.measurements.center_of_mass(mask[:, :]))[:2])
+        print("bbox: ", bboxs[0], " center_of_masks: ", center_of_masks[0])
+        if m > 0:
+            masks = np.dstack((masks, mask))
+    return masks, bboxs, center_of_masks
+
+
+def bbox_from_corners(corners):
+    corners = np.array(corners)
+    x1 = min(corners[:, 0])
+    x2 = max(corners[:, 0])
+    y1 = min(corners[:, 1])
+    y2 = max(corners[:, 1])
+    bbox = np.array([x1, y1, x2, y2]).reshape(1, 4)
+    return bbox
 
 
 if __name__ == '__main__':
@@ -1056,16 +1082,30 @@ if __name__ == '__main__':
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
             for i in range(amount_of_grapes_to_spray):
+                grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
                 # TODO- add evaluation mode which mark unlabeled masks as false detection,
-                #  and assign masks accordignly to the GT.
+                #  and assign masks accordingly to the GT.
                 eval_mode = True
-                if eval_mode:
-                    gt_box = calc_gt_box(g_param.image_number)
-                    # display_differences(g_param.masks_image, gt_box, gt_class_id, gt_mask,
-                    #                     pred_box, pred_class_id, pred_score, pred_mask,
-                    #                     class_names, title="", ax=None,
-                    #                     show_mask=True, show_box=True,
-                    #                     iou_threshold=0.5, score_threshold=0.5)
+                if g_param.eval_mode:
+                    gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
+                    if gt_mask.any():
+                        gt_box = np.array(gt_box).squeeze().reshape(1, 4)  # FIXME- RESHAPE
+                    else:
+                        gt_box = np.empty([])
+                    print("type bbox: ", type(gt_box), gt_box.shape)
+                    gt_class_id = np.array([1]*len(coms))
+                    pred_box = bbox_from_corners(grape.p_corners)
+                    pred_class_id = np.array([1]*len(coms))
+                    pred_score = np.array(grape.mask_score).reshape(1, 1)[0]  # FIXME- RESHAPE
+                    pred_mask = grape.mask.reshape(1024,1024, 1)  # FIXME- RESHAPE
+                    class_names = ['BG', 'grape_cluster']
+                    display_differences(g_param.masks_image, gt_box, gt_class_id, gt_mask,
+                                        pred_box, pred_class_id, pred_score, pred_mask,
+                                        class_names, title="", ax=None,
+                                        show_mask=True, show_box=True,
+                                        iou_threshold=0.5, score_threshold=0.5)
+                    print("worked?")
+                    print()
                     # compute_overlaps_masks(gt_mask, pred_masks)
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),
@@ -1077,7 +1117,6 @@ if __name__ == '__main__':
                     show_in_moved_window("Next target to be sprayed", g_param.masks_image, i)
                     cv.waitKey()
                     cv.destroyAllWindows()
-                grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
                 not_grape = remove_by_visual(i)  # FIXME- add option- if manually confirmed, it's a grape
                 if not_grape:  # if it's not a grape, skip next part
                     continue
@@ -1108,6 +1147,9 @@ if __name__ == '__main__':
                 not_finished = False
                 print("Finished- external signal all done")
                 break  # 23
+        if g_param.images_in_run - 1 <= g_param.image_number:
+            print(f"Finished, {g_param.images_in_run} images were taken on this batch.")
+            not_finished = False
         if steps_counter >= number_of_steps and step_direction[(g_param.plat_position_step_number + 1) % 4] == "right":
             g_param.time_to_move_platform = True
             print(print_line_sep_time(), '\n', " move platform", '\n')
@@ -1115,8 +1157,6 @@ if __name__ == '__main__':
             # break
             # restart_target_bank()  # option to restart without initialize
 
-
-##### todo:
 """
 check IoU between previously sprayed masks to new masks to be added (or between OBBs)
 """

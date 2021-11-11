@@ -701,13 +701,25 @@ class ReadWrite:
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
-        if self.exp_date_time == 'exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation
+        if self.exp_date_time == 'exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
             path = os.path.join(path, 'masks')
         else:
             path = os.path.join(path, 'masks')
             # path = os.path.join(path, 'masks_orig') # FIXME- uncomment this line and comment the above
         records_list = os.listdir(path)
         records_list = [i for i in records_list if i.startswith(str(image_number))]
+        return len(records_list)
+
+    def count_images(self):
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        if self.exp_date_time == 'exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
+            path = os.path.join(path, 'masks')
+        else:
+            path = os.path.join(path, 'masks')
+            # path = os.path.join(path, 'masks_orig') # FIXME- uncomment this line and comment the above
+        records_list = os.listdir(path)
         return len(records_list)
 
     def load_mask_file(self, mask_id):
