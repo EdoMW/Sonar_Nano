@@ -23,6 +23,7 @@ file.close()
 data = pd.read_pickle(path)[4]
 df = pd.DataFrame.from_dict(data).T
 df.reset_index(level=1, inplace=True)
+
 df.reset_index(level=0, inplace=True)
 df = df.drop(columns=['index', 2, 3])
 df = df.rename(columns={"level_1": "dataset", 0: "path", 1: "file_name"})
@@ -38,6 +39,7 @@ for i in range(len(df_1)):
     rlist = '/'.join(df_1[i:i+1].values.tolist()[0][2:])
     rlist = rlist + '/' + df_1[i:i+1].values.tolist()[0][1]
     path_to_test.append(rlist)
+path_to_test = ['/'.join(x.split('/')[:-1]) for x in path_to_test]
 print(len(path_to_test))
 print(path_to_test)
 

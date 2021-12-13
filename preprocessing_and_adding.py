@@ -39,7 +39,7 @@ def preprocess_one_record(record, counter, adding):
     #img = plt.pcolormesh(Sxx)
     # a_string = "C:/Users/Administrator/Desktop/spac/check17.jpeg"
     a_string = "D:/Users/NanoProject/spac/check17.jpeg"
-    print("print.shape", np.shape(Sxx))
+    # print("print.shape", np.shape(Sxx))
     plt.imsave(a_string, Sxx)
     cv.waitKey(0)
     cv.destroyAllWindows()

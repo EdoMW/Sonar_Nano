@@ -2,7 +2,7 @@ from __future__ import print_function
 import cv2 as cv
 import random as rng
 from termcolor import colored
-from Target_bank import add_to_target_bank
+from Target_bank import add_to_target_bank, box_points_to_np_array, calculate_w_h
 from scipy.spatial import ConvexHull
 from numpy import *
 from math import pi, cos, sin
@@ -21,6 +21,7 @@ import scipy.misc
 from add_grapes import add_grapes
 from sty import fg, Style, RgbFg
 
+
 fg.green = Style(RgbFg(31, 177, 31))
 fg.yellow = Style(RgbFg(255, 255, 70))
 
@@ -38,7 +39,6 @@ if g_param.work_place == "field":
     import warnings
 
     warnings.filterwarnings("ignore")
-
     # Import Mask RCNN
     sys.path.append(ROOT_DIR)  # To find local version of the library
     from self_utils.utils import *
@@ -48,18 +48,17 @@ if g_param.work_place == "field":
     from self_utils.model import log
     from self_utils import visualize
 
+
     # from mrcnn import utils
     # from mrcnn.config import Config
     # import mrcnn.model as modellib
     # from mrcnn import visualize
     # from mrcnn.model import log
-    import imgaug
-
+    # import imgaug #FIXME uncomment next 4 lines
     # Import COCO config
-    sys.path.append(os.path.join(ROOT_DIR, r"samples\coco"))  # To find local versio
-    print(sys.path)
-    from pycocotools import coco
-
+    sys.path.append(os.path.join(ROOT_DIR, r"samples\coco"))
+    print('sys path', sys.path)
+    # from pycocotools import coco
     # Directory to save logs and trained model
     MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 
@@ -86,7 +85,9 @@ if g_param.work_place == "field":
     DEFAULT_LOGS_DIR = MODEL_DIR
 
 
-    ############################################################
+
+
+############################################################
     #  Configurations
     ############################################################
 
@@ -327,27 +328,32 @@ def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
     return resized
 
 
+
+
 # def show_in_moved_window(win_name, img, i=None, x=(-1090), y=35): # lab
-def show_in_moved_window(win_name, img, i=None, x=0, y=0):  # lab
+def show_in_moved_window(win_name, img, i=None, x=0, y=0, time_display=0):  # lab
     """
     show image
     :param win_name: name of the window
     :param img: image to display
     :param i: index of the grape
-    :param x: x coordinate of end left corner of the window
-    :param y: y coordinate of end left corner of the window
+    :param x: x coordinate of left corner of the window
+    :param y: y coordinate of left corner of the window
+    :param time_display: how much time to wait before closing the window.
+    0 - wait for key press, else it's time in milliseconds
     """
     if img is not None:
         target_bolded = img.copy()
         if i is not None:
             # if not g_param.TB[i].sprayed:
             #     print("grape to display: ", g_param.TB[i])
-            cv.drawContours(target_bolded, [np.asarray(g_param.TB[i].p_corners)], 0, (15, 25, 253), thickness=3)
+            # cv.drawContours(target_bolded, [np.asarray(g_param.TB[i].p_corners)], 0, (15, 25, 253), thickness=3)
+            cv.drawContours(target_bolded, [np.asarray(g_param.TB[i].p_corners)], 0, (15, 253, 25), thickness=3)
         cv.namedWindow(win_name, cv.WINDOW_AUTOSIZE)  # Create a named window
         cv.moveWindow(win_name, x, y)  # Move it to (x,y)
         # cv.resizeWindow(win_name, 400, 512)
         cv.imshow(win_name, target_bolded)
-        cv.waitKey()
+        cv.waitKey(time_display)
         cv.destroyAllWindows()
 
 
@@ -404,234 +410,33 @@ def two_value_to_int_vec(vec):
     return corner_1_new
 
 
-def minBoundingRect(hull_points_2d):
-    # print "Input convex hull points: "
-    # print hull_points_2d
-
-    # Compute edges (x2-x1,y2-y1)
-    edges = zeros((len(hull_points_2d) - 1, 2))  # empty 2 column array
-    for i in range(len(edges)):
-        edge_x = hull_points_2d[i + 1, 0] - hull_points_2d[i, 0]
-        edge_y = hull_points_2d[i + 1, 1] - hull_points_2d[i, 1]
-        edges[i] = [edge_x, edge_y]
-    # print "Edges: \n", edges
-    # Calculate edge angles   atan2(y/x)
-    edge_angles = zeros((len(edges)))  # empty 1 column array
-    for i in range(len(edge_angles)):
-        edge_angles[i] = math.atan2(edges[i, 1], edges[i, 0])
-    # print "Edge angles: \n", edge_angles
-
-    # Check for angles in 1st quadrant
-    for i in range(len(edge_angles)):
-        edge_angles[i] = abs(edge_angles[i] % (math.pi / 2))  # want strictly positive answers
-    # print "Edge angles in 1st Quadrant: \n", edge_angles
-
-    # Remove duplicate angles
-    edge_angles = unique(edge_angles)
-    # print "Unique edge angles: \n", edge_angles
-
-    # Test each angle to find bounding box with smallest area
-    min_bbox = (0, sys.maxsize, 0, 0, 0, 0, 0, 0)  # rot_angle, area, width, height, min_x, max_x, min_y, max_y
-    for i in range(len(edge_angles)):
-
-        # Create rotation matrix to shift points to baseline
-        # R = [ cos(theta)      , cos(theta-PI/2)
-        #       cos(theta+PI/2) , cos(theta)     ]
-        R = array([[math.cos(edge_angles[i]), math.cos(edge_angles[i] - (math.pi / 2))],
-                   [math.cos(edge_angles[i] + (math.pi / 2)), math.cos(edge_angles[i])]])
-        # print "Rotation matrix for ", edge_angles[i], " is \n", R
-
-        # Apply this rotation to convex hull points
-        rot_points = dot(R, transpose(hull_points_2d))  # 2x2 * 2xn
-        # print "Rotated hull points are \n", rot_points
-
-        # Find min/max x,y points
-        min_x = nanmin(rot_points[0], axis=0)
-        max_x = nanmax(rot_points[0], axis=0)
-        min_y = nanmin(rot_points[1], axis=0)
-        max_y = nanmax(rot_points[1], axis=0)
-        # print "Min x:", min_x, " Max x: ", max_x, "   Min y:", min_y, " Max y: ", max_y
-
-        # Calculate height/width/area of this bounding rectangle
-        width = max_x - min_x
-        height = max_y - min_y
-        area = width * height
-        # print "Potential bounding box ", i, ":  width: ", width, " height: ", height, "  area: ", area
-
-        # Store the smallest rect found first (a simple convex hull might have 2 answers with same area)
-        if (area < min_bbox[1]):
-            min_bbox = (edge_angles[i], area, width, height, min_x, max_x, min_y, max_y)
-        # Bypass, return the last found rect
-        # min_bbox = ( edge_angles[i], area, width, height, min_x, max_x, min_y, max_y )
-
-    # Re-create rotation matrix for smallest rect
-    angle = min_bbox[0]
-    R = array([[math.cos(angle), math.cos(angle - (math.pi / 2))], [math.cos(angle + (math.pi / 2)), math.cos(angle)]])
-    # print "Projection matrix: \n", R
-
-    # Project convex hull points onto rotated frame
-    proj_points = dot(R, transpose(hull_points_2d))  # 2x2 * 2xn
-    # print "Project hull points are \n", proj_points
-
-    # min/max x,y points are against baseline
-    min_x = min_bbox[4]
-    max_x = min_bbox[5]
-    min_y = min_bbox[6]
-    max_y = min_bbox[7]
-    # print "Min x:", min_x, " Max x: ", max_x, "   Min y:", min_y, " Max y: ", max_y
-
-    # Calculate center point and project onto rotated frame
-    center_x = (min_x + max_x) / 2
-    center_y = (min_y + max_y) / 2
-    center_point = dot([center_x, center_y], R)
-    # print "Bounding box center point: \n", center_point
-
-    # Calculate corner points and project onto rotated frame
-    corner_points = zeros((4, 2))  # empty 2 column array
-    corner_points[0] = dot([max_x, min_y], R)
-    corner_points[1] = dot([min_x, min_y], R)
-    corner_points[2] = dot([min_x, max_y], R)
-    corner_points[3] = dot([max_x, max_y], R)
-    # print "Bounding box corner points: \n", corner_points
-    # print "Angle of rotation: ", angle, "rad  ", angle * (180/math.pi), "deg"
-
-    return (angle, min_bbox[1], min_bbox[2], min_bbox[3], center_point,
-            corner_points)  # rot_angle, area, width, height, center_point, corner_points
-
-
-def output_dict(npas):
-    """
-    mrbbs (minimum rodated bounding box s ) is a list of dicitnoray
-    that contains the next parameters:
-    rot_angle, area, width, height, center_point, corner_points
-    """
-    mrbbs = []
-    for i in range(0, len(npas)):
-        mrbb = minBoundingRect(npas[i])
-        center_point = two_value_to_int_vec(mrbb[4])
-        first_corner = two_value_to_int_vec(mrbb[5][0])
-        second_corner = two_value_to_int_vec(mrbb[5][1])
-        third_corner = two_value_to_int_vec(mrbb[5][2])
-        forth_corner = two_value_to_int_vec(mrbb[5][3])
-        corners = []
-        corners.append(first_corner)
-        corners.append(second_corner)
-        corners.append(third_corner)
-        corners.append(forth_corner)
-        fixed_angle = (mrbb[0] * 180) / pi
-        mmrns_dic = {"rot_angle": fixed_angle, "area": mrbb[1],
-                     "width": mrbb[2], "height": mrbb[3],
-                     "center_point": center_point,
-                     "corner_points": corners}
-        mrbbs.append(mmrns_dic)
-    return mrbbs
-
-
+# def output_dict(npas):
+#     """
+#     mrbbs (minimum rodated bounding box s ) is a list of dicitnoray
+#     that contains the next parameters:
+#     rot_angle, area, width, height, center_point, corner_points
+#     """
+#     mrbbs = []
+#     for i in range(0, len(npas)):
+#         mrbb = minBoundingRect(npas[i])
+#         center_point = two_value_to_int_vec(mrbb[4])
+#         first_corner = two_value_to_int_vec(mrbb[5][0])
+#         second_corner = two_value_to_int_vec(mrbb[5][1])
+#         third_corner = two_value_to_int_vec(mrbb[5][2])
+#         forth_corner = two_value_to_int_vec(mrbb[5][3])
+#         corners = []
+#         corners.append(first_corner)
+#         corners.append(second_corner)
+#         corners.append(third_corner)
+#         corners.append(forth_corner)
+#         fixed_angle = (mrbb[0] * 180) / pi
+#         mmrns_dic = {"rot_angle": fixed_angle, "area": mrbb[1],
+#                      "width": mrbb[2], "height": mrbb[3],
+#                      "center_point": center_point,
+#                      "corner_points": corners}
+#         mrbbs.append(mmrns_dic)
+#     return mrbbs
 # computing intersaction between rotated bounding boxes
-
-
-class Vector:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    def __add__(self, v):
-        if not isinstance(v, Vector):
-            return NotImplemented
-        return Vector(self.x + v.x, self.y + v.y)
-
-    def __sub__(self, v):
-        if not isinstance(v, Vector):
-            return NotImplemented
-        return Vector(self.x - v.x, self.y - v.y)
-
-    def cross(self, v):
-        if not isinstance(v, Vector):
-            return NotImplemented
-        return self.x * v.y - self.y * v.x
-
-
-class Line:
-    # ax + by + c = 0
-    def __init__(self, v1, v2):
-        self.a = v2.y - v1.y
-        self.b = v1.x - v2.x
-        self.c = v2.cross(v1)
-
-    def __call__(self, p):
-        return self.a * p.x + self.b * p.y + self.c
-
-    def intersection(self, other):
-        # See e.g.     https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Using_homogeneous_coordinates
-        if not isinstance(other, Line):
-            return NotImplemented
-        w = self.a * other.b - self.b * other.a
-        return Vector(
-            (self.b * other.c - self.c * other.b) / w,
-            (self.c * other.a - self.a * other.c) / w
-        )
-
-
-def rectangle_vertices(cx, cy, w, h, r):
-    angle = pi * r / 180
-    dx = w / 2
-    dy = h / 2
-    dxcos = dx * cos(angle)
-    dxsin = dx * sin(angle)
-    dycos = dy * cos(angle)
-    dysin = dy * sin(angle)
-    return (
-        Vector(cx, cy) + Vector(-dxcos - -dysin, -dxsin + -dycos),
-        Vector(cx, cy) + Vector(dxcos - -dysin, dxsin + -dycos),
-        Vector(cx, cy) + Vector(dxcos - dysin, dxsin + dycos),
-        Vector(cx, cy) + Vector(-dxcos - dysin, -dxsin + dycos)
-    )
-
-
-def intersection_area(r1, r2):
-    # r1 and r2 are in (center, width, height, rotation) representation
-    # First convert these into a sequence of vertices
-
-    rect1 = rectangle_vertices(*r1)
-    rect2 = rectangle_vertices(*r2)
-
-    # Use the vertices of the first rectangle as
-    # starting vertices of the intersection polygon.
-    intersection = rect1
-
-    # Loop over the edges of the second rectangle
-    for p, q in zip(rect2, rect2[1:] + rect2[:1]):
-        if len(intersection) <= 2:
-            break  # No intersection
-
-        line = Line(p, q)
-
-        # Any point p with line(p) <= 0 is on the "inside" (or on the boundary),
-        # any point p with line(p) > 0 is on the "outside".
-
-        # Loop over the edges of the intersection polygon,
-        # and determine which part is inside and which is outside.
-        new_intersection = []
-        line_values = [line(t) for t in intersection]
-        for s, t, s_value, t_value in zip(
-                intersection, intersection[1:] + intersection[:1],
-                line_values, line_values[1:] + line_values[:1]):
-            if s_value <= 0:
-                new_intersection.append(s)
-            if s_value * t_value < 0:
-                # Points are on opposite sides.
-                # Add the intersection of the lines to new_intersection.
-                intersection_point = line.intersection(Line(s, t))
-                new_intersection.append(intersection_point)
-
-        intersection = new_intersection
-
-    # Calculate area
-    if len(intersection) <= 2:
-        return 0
-
-    return 0.5 * sum(p.x * q.y - p.y * q.x for p, q in
-                     zip(intersection, intersection[1:] + intersection[:1]))
 
 
 # GT_rotated_boxes
@@ -671,7 +476,6 @@ class calcs():
             sum_of_squers += ((list_to_calc[i] - x_avg) * (list_to_calc[i] - x_avg))
         sigma = sqrt((1 / (len(list_to_calc) - 1)) * sum_of_squers)
         return sigma
-
 
 def ueye_take_picture_2(image_number):
     # Variables
@@ -841,32 +645,32 @@ def point_meter_2_pixel(d, point):
     cen_poi_y_0 = cen_poi_y_0 + int(1024 / 2)
     return np.array([cen_poi_x_0, cen_poi_y_0])
 
-
-def box_points_to_np_array(d, corner):
-    p1 = point_pixels_2_meter(d, corner)
-    p1 = np.array(p1)
-    p1 = np.insert(arr=p1, obj=2, values=1, axis=0)
-    return p1
-
-
-def calculate_w_h(d, box_points):
-    """
-    calculates the width and height of the box.
-    I used the same method as the cv.minAreaRect way of calculating H,W
-    :param d: distance to grape
-    :param box_points: [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
-    :return: w,h in meters
-    """
-    p1 = box_points_to_np_array(d, box_points[0])
-    p2 = box_points_to_np_array(d, box_points[1])
-    p3 = box_points_to_np_array(d, box_points[2])
-    p4 = box_points_to_np_array(d, box_points[3])
-    w = np.linalg.norm(p1 - p2)
-    h = np.linalg.norm(p2 - p3)
-    if w > h:
-        h, w = w, h
-        p1, p2, p3, p4 = p1, p4, p3, p2
-    return w, h, [p1, p2, p3, p4]
+#
+# def box_points_to_np_array(d, corner):
+#     p1 = point_pixels_2_meter(d, corner)
+#     p1 = np.array(p1)
+#     p1 = np.insert(arr=p1, obj=2, values=1, axis=0)
+#     return p1
+#
+#
+# def calculate_w_h(d, box_points):
+#     """
+#     calculates the width and height of the box.
+#     I used the same method as the cv.minAreaRect way of calculating H,W
+#     :param d: distance to grape
+#     :param box_points: [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]
+#     :return: w,h in meters
+#     """
+#     p1 = box_points_to_np_array(d, box_points[0])
+#     p2 = box_points_to_np_array(d, box_points[1])
+#     p3 = box_points_to_np_array(d, box_points[2])
+#     p4 = box_points_to_np_array(d, box_points[3])
+#     w = round(np.linalg.norm(p1 - p2), 3)
+#     h = round(np.linalg.norm(p2 - p3), 3)
+#     if w > h:
+#         h, w = w, h
+#         p1, p2, p3, p4 = p1, p4, p3, p2
+#     return w, h, [p1, p2, p3, p4]
 
 
 def meter_2_pixel(d, i):
@@ -1351,9 +1155,11 @@ def take_picture_and_run():
         img = im0
         img_with_masks = img.copy()
         arr = [im0]
-        show_in_moved_window("check image taken", img, None)
-        cv.waitKey()
-        cv.destroyAllWindows()
+        # TODO: uncomment to see image taken
+        # show_in_moved_window("check image taken", img, None)
+        # cv.waitKey()
+        # cv.destroyAllWindows()
+
         # cv.imshow("before detection", arr[0])
         # cv.waitKey()
         # use THE MASK R-CNN for real grapes: next 93 lines
@@ -1370,6 +1176,7 @@ def take_picture_and_run():
             r = sort_results(r) # WORKING!!!! Finaly
             if r['masks'].ndim < 3:
                 r['masks'] = r['masks'].reshape((1024, 1024, 1))
+            rgb_im1 = cv.cvtColor(im1.copy(), cv.COLOR_BGR2RGB)
             img_with_masks = visualize.display_instances(im1, bbox, r['masks'], r['class_ids'],
                                                          dataset_test.class_names, r['scores'], ax=ax,
                                                          title="Predictions", show_bbox=True)
@@ -1386,7 +1193,6 @@ def take_picture_and_run():
                 im.save("your_file.jpeg")
                 image = cv.imread("your_file.jpeg")
                 gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-
                 # threshold the image,
                 thresh = cv.threshold(gray, 200, 255, cv.THRESH_BINARY)[1]
                 # find contours in thresholded image, then grab the largest
@@ -1419,7 +1225,7 @@ def take_picture_and_run():
             boxes = boxes + obbs_list
             boxes_min = boxes_min + corners_list
             amount_of_mask_detacted += len(obbs_list)
-
+            print('At least 1 to spray, ', amount_of_mask_detacted)
         for i in range(amount_of_mask_detacted):
             pixels_count = pixels_count_arr[i]
             box_min = boxes_min[i]
@@ -1437,7 +1243,12 @@ def take_picture_and_run():
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             # det_rotated_boxes.append(box_in_meter)
-            mask_score = r['scores'][i]
+            print("r['scores'].shape", r['scores'].shape)
+            mask_score = None
+            if amount_of_mask_detacted == 1:
+                mask_score = r['scores']
+            else:
+                mask_score = r['scores'][i]
             grape = [box_in_meter[0], box_in_meter[1], box_in_meter[2], box_in_meter[3], box_in_meter[4],
                      pred_masks[:, :, i], det_box, None, corners_in_meter, corner_points, pixels_count, com_list[i],
                      mask_score]
@@ -1455,5 +1266,7 @@ def take_picture_and_run():
 
 
 if __name__ == '__main__':
+
     g_param.masks_image = None
     take_picture_and_run()
+

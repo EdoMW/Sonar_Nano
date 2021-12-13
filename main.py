@@ -1,12 +1,9 @@
 import sys
-import tensorflow as tf # Added next 2 lines insted
+import tensorflow as tf  # Added next 2 lines insted
 # import tensorflow.compat.v1 as tf
 # tf.disable_v2_behavior()
 
 
-import g_param
-import numpy as np
-import pandas as pd
 import cv2 as cv
 import DAQ_BG
 from self_utils import utils
@@ -22,16 +19,18 @@ from random import randint
 from termcolor import colored
 from transform import rotation_coordinate_sys
 import scipy
-import matplotlib.pyplot as plt
+import g_param
+import numpy as np
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
     point_meter_2_pixel, image_resize, take_manual_image
+
 import write_to_socket
 import read_from_socket
 from self_utils.visualize import *
 
-np.set_printoptions(precision=3)
-pd.set_option("display.precision", 3)
+# np.set_printoptions(precision=3)
+# pd.set_option("display.precision", 3)
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, show_in_moved_window
@@ -92,7 +91,7 @@ def read_position():
 
 
 def move2sonar(grape_1):
-    input("Press Enter to move to sonar")
+    # input("Press Enter to move to sonar") # Uncomment if field
     print(fg.yellow + "wait" + fg.rs, "\n")
     x_cam, y_cam = grape_1.x_center, grape_1.y_center
     tcp = g_param.trans.aim_sonar(x_cam, y_cam)
@@ -281,7 +280,7 @@ def init_arm_and_platform():
         ws_rob.move_command(False, start_pos, 4, velocity)
         # check_update_move(start_pos)
         move_platform()
-        input("Finish moving platform? ")
+        # input("Finish moving platform? ") #uncomment in field
         if external_signal_all_done is True:
             return
         g_param.time_to_move_platform = False
@@ -443,14 +442,15 @@ def spray_process(grape_to_spray):
         distance_from_target, num_of_paths = calc_spray_distance(grape_to_spray, 0.25)
         spray_distance = g_param.last_grape_dist - distance_from_target
         spray_velocity = calc_spray_velocity(spray_distance)
-        print(f"spray properties: \nDistance from target: {round(distance_from_target,3)}\n"
+        print(f"spray properties: \nDistance from target: {round(distance_from_target, 3)}\n"
               f"Number of paths: {num_of_paths}"
-              f" \n Speed: {round(spray_velocity,3)}")
+              f" \n Speed: {round(spray_velocity, 3)}")
         aimed_spray = move2spray(grape_to_spray, spray_distance)  # 25+26
         if aimed_spray:
             spray_procedure(grape_to_spray, 1, spray_velocity, num_of_paths)
     else:
         pass
+
 
 # ____________________________________
 # ---------- visualizations ----------
@@ -572,7 +572,7 @@ def get_distances(mask_id, dist_from_sonar, real_dist):
     if g_param.process_type == "record":
         write_distances(mask_id, dist_from_sonar, real_dist)
     if g_param.process_type == "load":
-        measured, real = g_param.read_write_object.read_sonar_distances(mask_id , real_dist)
+        measured, real = g_param.read_write_object.read_sonar_distances(mask_id, real_dist)
         print(f'Real distance to grape {real} will be used. value measured by sonar is {measured}')
         return real
     return real_dist
@@ -648,7 +648,9 @@ def activate_sonar(mask_id, not_grape):
         dist_from_sonar = round(distance2(record, mask_id), 3)
         # real dist, real distance measured: to the outer edge of the sonar (10 CM from the Flach)
         print(f'Distance measured by the sonar is :{dist_from_sonar} meters.')
-        real_dist = input(f' press enter to confirm, or enter real distance (in meters): ')
+        # TODO: uncomment to enter it manually
+        # real_dist = input(f' press enter to confirm, or enter real distance (in meters): ')
+        real_dist = 0.6
         if real_dist != "":
             real_dist = float(real_dist)
         else:
@@ -664,9 +666,9 @@ def activate_sonar(mask_id, not_grape):
     except Exception as e:
         while True:
             print("There was a problem with the sonar. enter distance and class manually")
-            distance = 0.6
+            distance = 0.53
             grape_class = 1
-            #TODO un comment this 2 lines when finish checking
+            # TODO un comment this 2 lines when finish checking
             # distance = input("Enter distance (from camera) in meters: ")
             # grape_class = input("Enter grape class. 1 for grape, 0 otherwise. : ")
             try:
@@ -676,7 +678,7 @@ def activate_sonar(mask_id, not_grape):
                 continue
             try:
                 int(grape_class)  # -0.075 because we measure from the camera.
-                distance = float(distance) - 0.075
+                # distance = float(distance) - 0.075 # Removed for simulation testing
                 return float(distance), int(grape_class)
             except ValueError:
                 print('entered wrong type of class value.')
@@ -716,7 +718,8 @@ def move_platform():
         while True:
             print("Current platform step size: ", g_param.platform_step_size, '\n',
                   "insert number in Meters to change it or press Enter to continue")
-            temp_step_size = input("Enter platform step size")
+            # temp_step_size = input("Enter platform step size") # Uncomment for exp
+            temp_step_size = ""
             try:
                 if temp_step_size == "":
                     break
@@ -777,7 +780,7 @@ def update_database_sprayed(index_of_grape):
     :param index_of_grape:
     """
     g_param.TB[index_of_grape].sprayed = True
-    print(g_param.TB[-6:])
+    # print(g_param.TB[-6:]) # Uncomment to print Target bank
     g_param.TB[index_of_grape].mask = None  # (to save space in memory)
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (g_param.TB[index_of_grape].x_p, g_param.TB[index_of_grape].y_p),
@@ -810,7 +813,6 @@ def count_un_sprayed():
         for ind in range(len(g_param.TB)):
             if g_param.TB[ind].sprayed is False and not g_param.TB[ind].wait_another_step:
                 amount += 1
-    print(amount)
     return amount
 
 
@@ -840,16 +842,88 @@ def mark_sprayed_and_display():
                 and target.in_range == "ok" and target.fake_grape:
             g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(255, 0, 0), thickness=4)
+
     if g_param.show_images:
-        show_in_moved_window("Checking status", g_param.masks_image, None)
-        cv.waitKey()
-        cv.destroyAllWindows()
+        plot_tracking_map()
+        show_in_moved_window("Checking status", g_param.masks_image, None, 0, 0, g_param.auto_time_display)
+
+
+def calc_single_axis_limits(axis):
+    """
+    calc the values and range between the 2 points that are the farthest away from each other on a single axis.
+    :return: min and max value of values on this axis.
+    """
+    min_lim_x, max_lim_x = g_param.TB[0].grape_world[axis], g_param.TB[0].grape_world[axis]
+    for grape_ind in range(len(g_param.TB)):
+        if g_param.TB[grape_ind].grape_world[axis] < min_lim_x:
+            min_lim_x = g_param.TB[grape_ind].grape_world[axis]
+        if g_param.TB[grape_ind].grape_world[axis] > max_lim_x:
+            max_lim_x = g_param.TB[grape_ind].grape_world[axis]
+    min_max_range = max_lim_x - min_lim_x
+    print('calc axis: ', float(min_lim_x - 0.5 * min_max_range), float(max_lim_x + 0.5 * min_max_range))
+    if axis == 0:  # for x (distance) axis, for visualization only.
+        return float(min_lim_x - 5.5 * min_max_range), float(max_lim_x + 2.5 * min_max_range)
+    return float(min_lim_x - 0.5 * min_max_range), float(max_lim_x + 0.5 * min_max_range)
+
+
+def calc_axis_limits():
+    """
+    Calculate the limits of each axis on the 3d plot
+    """
+    g_param.x_lim = calc_single_axis_limits(0)
+    g_param.y_lim = calc_single_axis_limits(1)
+    g_param.z_lim = calc_single_axis_limits(2)
+
+
+def get_projections():
+    """
+    For each grape on the map (TB), add x,y,z coordinates to a list to be displayed on the 3D plot.
+    :return:
+    """
+    x_list, y_list, z_list = [], [], []
+    for item in range(len(g_param.TB)):
+        x_list.append(g_param.TB[item].grape_world[0])
+        y_list.append(g_param.TB[item].grape_world[1])
+        z_list.append(g_param.TB[item].grape_world[2])
+    return x_list, y_list, z_list
+
+
+def plot_tracking_map():
+    """
+    Visualize all grapes centers on a 3d map.
+    """
+    x_cors, y_cors, z_cors = [], [], []
+    for i in range(len(g_param.TB)):
+        x_cor, y_cor, z_cor = g_param.TB[i].grape_world[0], g_param.TB[i].grape_world[1], g_param.TB[i].grape_world[2]
+        x_cors.append(x_cor)
+        y_cors.append(y_cor)
+        z_cors.append(z_cor)
+    fig, ax = plt.subplots(figsize=(12, 12))
+    ax = fig.add_subplot(projection='3d')
+
+    if len(g_param.TB) < 5:
+        calc_axis_limits()
+    ax.set_xlim(g_param.x_lim)
+    ax.set_ylim(g_param.y_lim)
+    ax.set_zlim(g_param.z_lim)
+
+    x, y, z = get_projections() # r+ = red pluses, g+ = green pluses, k+ =
+    ax.plot(x, z, 'r+', zdir='y', zs=g_param.y_lim[1])
+    ax.plot(y, z, 'g+', zdir='-x', zs=g_param.x_lim[0])
+    ax.plot(x, y, 'y+', zdir='-z', zs=g_param.z_lim[0])
+
+    ax.scatter(x_cors, y_cors, z_cors)  # vmin=0, vmax=1000
+    ax.set_xlabel('X Label - distance')
+    ax.set_ylabel('Y Label - advancement')
+    ax.set_zlabel('Z Label - height')
 
 
 def check_end_program_time():
     eleven = "\033[1m" + "11" + "\033[0m"
     enter = "\033[1m" + "Enter" + "\033[0m"
-    temp_input = input(f"Press {eleven} to end the program. Press {enter} to continue.")
+    # Uncomment for allow manual exit points for the program
+    # temp_input = input(f"Press {eleven} to end the program. Press {enter} to continue.")
+    temp_input = ""
     if temp_input == "11":
         log_statistics()
         return True
@@ -919,8 +993,10 @@ def remove_by_visual(grape_index_to_check):
     print("Real grape?")
     while True:
         time.sleep(0.01)
-        real_grape = input(colored("Yes: ", "cyan") + "press " + zero +
-                           colored(" No: ", "red") + "Press " + one + " \n")
+        # TODO: uncomment for manually decide
+        # real_grape = input(colored("Yes: ", "cyan") + "press " + zero +
+        #                    colored(" No: ", "red") + "Press " + one + " \n")
+        real_grape = '1'
         if real_grape == '0' or real_grape == '1':
             break
     if real_grape == '0':
@@ -953,9 +1029,11 @@ def update_database_visualization():
     Update location of the center point of all grapes that could still appear in the image
     """
     for j in range(len(g_param.TB)):
+
         TB_class.update_grape_center(j)
         grape_temp = [g_param.TB[j].x_center, g_param.TB[j].y_center]
         x_temp, y_temp = point_meter_2_pixel(d=g_param.TB[j].distance, point=[grape_temp[0], grape_temp[1]])
+        print(g_param.TB[j].distance)
         if -2000 < x_temp < 2000:  # Update all grapes in database that still should appear in the image.
             g_param.TB[j].x_p = int(x_temp)
             g_param.TB[j].y_p = int(y_temp)
@@ -988,8 +1066,6 @@ def display_image_with_mask(image_path, mask, alpha=0.7):
         mask = mask[:, :, np.newaxis]
     image = image_path
     im = image.copy()
-    print(image.shape)
-    print(mask.shape)
     non_zeros = []
     for i in range(len(mask[0][0] + 1)):
         non_zeros.append(np.count_nonzero(mask[:, :, i]))
@@ -1001,8 +1077,9 @@ def display_image_with_mask(image_path, mask, alpha=0.7):
         image[mask_temp == 1] = rgb
     plt.figure(figsize=(12, 8))
     plt.imshow(im)
-    plt.imshow(image, 'gray', interpolation='none', alpha=alpha, vmin=1)  # alpha: [0-1], 0 is 100% transperancy, 1 is 0%
-    plt.show()
+    plt.imshow(image, 'gray', interpolation='none', alpha=alpha,
+               vmin=1)  # alpha: [0-1], 0 is 100% transperancy, 1 is 0%
+    # plt.show()
     time.sleep(5)
     print("watched image?")
 
@@ -1012,17 +1089,18 @@ def calc_gt_box(image_number):
     sys.path.append(ROOT_DIR)
     center_of_masks, bboxs = [], []
     mask_count = g_param.read_write_object.count_masks_in_image(image_number)
-    print(mask_count)
     masks = np.empty([1024, 1024, 1])
     for m in range(mask_count):
-        mask = g_param.read_write_object.load_mask_file(m)
-        mask = np.reshape(mask, (1024, 1024, 1))
-        print(mask.shape)
-        bboxs.append(utils.extract_bboxes(mask).astype('int32'))
-        center_of_masks.append(np.asarray(scipy.ndimage.measurements.center_of_mass(mask[:, :]))[:2])
-        print("bbox: ", bboxs[0], " center_of_masks: ", center_of_masks[0])
-        if m > 0:
-            masks = np.dstack((masks, mask))
+        try:
+            mask = g_param.read_write_object.load_mask_file(m)
+            mask = np.reshape(mask, (1024, 1024, 1))
+            bboxs.append(utils.extract_bboxes(mask).astype('int32'))
+            center_of_masks.append(np.asarray(scipy.ndimage.measurements.center_of_mass(mask[:, :]))[:2])
+            print("bbox: ", bboxs[0], " center_of_masks: ", center_of_masks[0])
+            if m > 0:
+                masks = np.dstack((masks, mask))
+        except AssertionError as msg:
+            print(msg)
     return masks, bboxs, center_of_masks
 
 
@@ -1032,7 +1110,8 @@ def bbox_from_corners(corners):
     x2 = max(corners[:, 0])
     y1 = min(corners[:, 1])
     y2 = max(corners[:, 1])
-    bbox = np.array([x1, y1, x2, y2]).reshape(1, 4)
+    # bbox = np.array([x1, y1, x2, y2]).reshape(1, 4)
+    bbox = np.array([y1, x1, y2, x2]).reshape(1, 4)
     return bbox
 
 
@@ -1049,22 +1128,16 @@ if __name__ == '__main__':
             direction = step_direction[g_param.plat_position_step_number % 4]
             if g_param.time_to_move_platform:
                 init_arm_and_platform()  # 3
-
                 first_run = True
                 steps_counter, g_param.plat_position_step_number = 0, 0
                 direction = "stay"
             g_param.direction = direction
             g_param.trans.set_prev_capture_pos(g_param.trans.capture_pos)
             move_const(g_param.step_size, direction, g_param.trans.capture_pos)
-            # move_const(g_param.step_sizegit , "right", current_location)  # try to move 1 step size
-            # if g_param.time_to_move_platform:
-            #     print('issue moving const ')
-            #     print_current_location(g_param.trans.capture_pos)
-            #     break
-
             if direction == "right":
                 steps_counter += 1
         else:
+
             first_run = False
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
@@ -1072,7 +1145,7 @@ if __name__ == '__main__':
         capture_update_TB()  # 5 + 7-12 inside #
         update_database_visualization()  # FIXME
         print_image_details(step_direction[(g_param.image_number + 1) % 4])
-        print(fg.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:])
+        # g.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:]) #print TB
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         # input("press enter for continue to spraying")
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
@@ -1088,24 +1161,30 @@ if __name__ == '__main__':
                 eval_mode = True
                 if g_param.eval_mode:
                     gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
-                    if gt_mask.any():
-                        gt_box = np.array(gt_box).squeeze().reshape(1, 4)  # FIXME- RESHAPE
-                    else:
-                        gt_box = np.empty([])
-                    print("type bbox: ", type(gt_box), gt_box.shape)
-                    gt_class_id = np.array([1]*len(coms))
+                    # if gt_mask.any():
+                    #     gt_box = np.array(gt_box).squeeze().reshape(1, 4)  # FIXME- RESHAPE
+                    # else:
+                    #     gt_box = np.zeros(shape=(1, 4))
+                    # print("type bbox: ", type(gt_box), gt_box.shape)
+                    gt_class_id = np.array([1] * len(coms))
                     pred_box = bbox_from_corners(grape.p_corners)
-                    pred_class_id = np.array([1]*len(coms))
+
+                    pred_class_id = np.array([1] * len(coms))
                     pred_score = np.array(grape.mask_score).reshape(1, 1)[0]  # FIXME- RESHAPE
-                    pred_mask = grape.mask.reshape(1024,1024, 1)  # FIXME- RESHAPE
+                    pred_mask = grape.mask.reshape(1024, 1024, 1)  # FIXME- RESHAPE
                     class_names = ['BG', 'grape_cluster']
-                    display_differences(g_param.masks_image, gt_box, gt_class_id, gt_mask,
-                                        pred_box, pred_class_id, pred_score, pred_mask,
-                                        class_names, title="", ax=None,
-                                        show_mask=True, show_box=True,
-                                        iou_threshold=0.5, score_threshold=0.5)
-                    print("worked?")
-                    print()
+                    if len(gt_box) > 0:
+                        display_differences(g_param.masks_image, gt_box, gt_class_id, gt_mask,
+                                            pred_box, pred_class_id, pred_score, pred_mask,
+                                            class_names, title="Pred vs. GT", ax=None,
+                                            show_mask=True, show_box=True,
+                                            iou_threshold=0.5, score_threshold=0.5)
+                    else:
+                        display_instances(g_param.masks_image, pred_box, pred_mask, np.array([1]), class_names,
+                                          scores=None, title="instances",
+                                          figsize=(16, 16), ax=None,
+                                          show_mask=True, show_bbox=True,
+                                          colors=None, captions=None)
                     # compute_overlaps_masks(gt_mask, pred_masks)
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),
@@ -1114,9 +1193,8 @@ if __name__ == '__main__':
                                                  color=(255, 255, 255), thickness=1, lineType=2)
                 display_points(g_to_display=g_param.TB[i])
                 if g_param.show_images:
-                    show_in_moved_window("Next target to be sprayed", g_param.masks_image, i)
-                    cv.waitKey()
-                    cv.destroyAllWindows()
+                    show_in_moved_window("Next target to be sprayed", g_param.masks_image, i, 0,
+                                         0, g_param.auto_time_display)
                 not_grape = remove_by_visual(i)  # FIXME- add option- if manually confirmed, it's a grape
                 if not_grape:  # if it's not a grape, skip next part
                     continue
@@ -1132,7 +1210,7 @@ if __name__ == '__main__':
 
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
-                    TB_class.update_by_real_distance(g_param.TB[i], i)  # 23,24 TODO: check
+                    TB_class.update_by_real_distance(i)  # 23,24 TODO: check
                     # spray_process(grape)
                     if g_param.time_to_move_platform:  # 27
                         break  #

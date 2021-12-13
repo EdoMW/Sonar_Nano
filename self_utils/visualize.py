@@ -20,22 +20,22 @@ import matplotlib.pyplot as plt
 from matplotlib import patches,  lines
 from matplotlib.patches import Polygon
 import IPython.display
+from self_utils import utils
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../")
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
-from mrcnn import utils
 
 
 ############################################################
 #  Visualization
 ############################################################
-
-def show_in_moved_window_1(win_name, img, i=None, x=0, y=0):  # lab
+def show_in_moved_window_1(win_name, img, i=None, x=0, y=0, wait_time=0):  # lab
     """
     show image
+    :param wait_time: time to wait before stop showing image
     :param win_name: name of the window
     :param img: image to display
     :param i: index of the grape
@@ -47,9 +47,8 @@ def show_in_moved_window_1(win_name, img, i=None, x=0, y=0):  # lab
         cv2.namedWindow(win_name, cv2.WINDOW_AUTOSIZE)  # Create a named window
         cv2.moveWindow(win_name, x, y)  # Move it to (x,y)
         cv2.imshow(win_name, target_bolded)
-        cv2.waitKey()
+        cv2.waitKey(wait_time)
         cv2.destroyAllWindows()
-
 
 
 def display_images(images, titles=None, cols=4, cmap=None, norm=None,
@@ -184,7 +183,9 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
-    show_in_moved_window_1('image with masks!!!!', masked_image.astype(np.uint8))
+    # print('masked_image', type(masked_image), masked_image.shape)
+    # rgb_masked_image = cv2.cvtColor(masked_image.astype(np.uint8).copy(), cv2.COLOR_RGB2BGR)
+    show_in_moved_window_1('image with masks!!!!', masked_image.astype(np.uint8), None, 0, 0, 1200)
     # cv2.imshow("image with masks!!!!", masked_image.astype(np.uint8))
     # cv2.moveWindow("image with masks", x=(-1040), y=(-5))
     # cv2.waitKey()

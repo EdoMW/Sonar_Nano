@@ -131,7 +131,7 @@ class CNN_Classifier():
         if self.scale_ratio != 1:
             predictions = Lambda(lambda x: x * self.scale_ratio, name='output_reshaped')(predictions)
         model = Model(inputs=x_reshaped, outputs=predictions)
-        model.summary()
+        # model.summary()
         return model
 
     def get_model(self):

@@ -5,13 +5,15 @@ TB = []
 masks_image = None
 half_width_meter = 0.34
 half_height_meter = 0.2
-show_images = None
+auto_time_display = 1_200  # time to display image automatically
+show_images = True
 spray_sonar = True
 trans = None
-avg_dist = 0.55  # 75
+
+avg_dist = 0.63  # 75
 platform_step_size = 0.5
 sum_platform_steps = 0  # sum of all platform steps
-last_grape_dist = 0.55
+last_grape_dist = 0.63
 step_size = 0.1
 height_step_size = 1.5  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO (after exp)
@@ -38,6 +40,9 @@ sonar_x_length = 0.075
 sprayer_x_length = 0.095
 base_rotation_ang = 180  # 180 for lab 225 for volcani #TODO check this!!!!!!!!!!!!!!
 images_in_run = 1  # amount of images in the current run
+x_lim = (0, 0.1)
+y_lim = (0, 0.1)
+z_lim = (0, 0.1)
 
 """
 steps_gap: determines how many horizontal steps should be done.
@@ -57,7 +62,7 @@ record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-process_type = 'load'
+process_type = 'work'
 work_place = 'field'  # lab. to know which function of image processing to use.
 eval_mode = True
 
@@ -162,7 +167,7 @@ def init():
         image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size, \
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
         image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
-        manual_work, base_rotation_ang, eval_mode, images_in_run
+        manual_work, base_rotation_ang, eval_mode, images_in_run, auto_time_display
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
     empty_npz_dir()

@@ -203,8 +203,10 @@ def add_grapes(rgb_image):
     mask, obbs_list, corners_list, npys_list = None, [], [], []
     img_rgb, scale, padding = read_image(rgb_image)
     while True:
-        check_for_more = input(" \n More grapes to add?" '\n'
-                               "if None press ENTER to continue. Else enter positive number: ")
+        # TODO: uncomment to have to option to manually add more grapes
+        # check_for_more = input(" \n More grapes to add?" '\n'
+        #                        "if None press ENTER to continue. Else enter positive number: ")
+        check_for_more = ""
         if check_for_more == "":
             break
         elif check_for_more.isdigit():

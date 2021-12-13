@@ -9,7 +9,6 @@ import cv2 as cv
 from transform import rotation_coordinate_sys
 # Define colors for printing
 from sty import fg, Style, RgbFg
-
 fg.orange = Style(RgbFg(255, 150, 50))
 fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
@@ -105,14 +104,14 @@ class Target_bank:
         f = " area: " + str(self.rect_area) + " "
         sp = " sprayed :" + str(e) + " "
         # wr = "wait_round: " + str(self.wait_another_step)
-        world_data = " x world " + str(round(self.x_center, 3)) + " y world " + str(round(self.y_center, 3)) + " "
-        x_base = "x base: " + str(round(self.grape_world[0], 3)) + " "
-        y_base = "y base: " + str(round(self.grape_world[1], 3)) + " "
-        z_base = "z base: " + str(round(self.grape_world[2], 3)) + " "
-        base_data = x_base + y_base + z_base + '\n'
+        base = " x base " + str(round(self.x_center, 3)) + " y base " + str(round(self.y_center, 3))
+        x_world = "x world: " + str(round(self.grape_world[0], 3)) + " "
+        y_world = "y world: " + str(round(self.grape_world[1], 3)) + " "
+        z_world = "z world: " + str(round(self.grape_world[2], 3)) + " "
+        world_data = x_world + y_world + z_world + '\n'
         angle = f" angle: {self.angle}"
         distance = f'distance: {self.distance}'
-        return ind + sp + fake_grape + world_data + base_data + w + h + angle + '\n'\
+        return ind + sp + fake_grape + world_data + base + w + h + angle + '\n'\
                + distance + dist_from_center + '\n'
         # return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
 
@@ -170,6 +169,14 @@ def calc_z_move():
 
 
 def update_grape_center(index):
+    """
+    To update camera coordinates of each grape cluster center points in meters, relative to the center of the image
+    in the TB after end effector movement (next capturing position).
+    y of base is equal to camera x (up to -/+)
+    z of base is equal to camera y (up to -/+)
+    :param index: index of the grape in TB
+    """
+
     if g_param.image_number > 0:
         if g_param.TB[index].last_updated < g_param.image_number:
             capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],
@@ -368,7 +375,6 @@ def add_to_target_bank(target):
         # print("not in TB yet but too close to edge")
 
 
-
 def sort_by_and_check_for_grapes(sorting_type):
     """
     Sort the array and return if there are targets to spray_procedure
@@ -442,8 +448,8 @@ def calculate_w_h(d, box_points):
     p2 = box_points_to_np_array(d, box_points[1])
     p3 = box_points_to_np_array(d, box_points[2])
     p4 = box_points_to_np_array(d, box_points[3])
-    w = np.linalg.norm(p1 - p2)
-    h = np.linalg.norm(p2 - p3)
+    w = round(np.linalg.norm(p1 - p2), 3)
+    h = round(np.linalg.norm(p2 - p3), 3)
     if w > h:
         h, w = w, h
         p1, p2, p3, p4 = p1, p4, p3, p2
@@ -454,7 +460,6 @@ def update_by_real_distance(grape):
     """
     call the function ONLY if Sonar was activated
     :param ind: index of the grape
-    :param grape: the i grape
     """
     # TODO (after exp): call the function that updates g_param.avg_dist with sonar_location
     grape.distance = g_param.last_grape_dist + g_param.sonar_x_length

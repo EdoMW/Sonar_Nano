@@ -45,11 +45,11 @@ warnings.filterwarnings("ignore")
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
-from mrcnn import utils
-from mrcnn.config import Config
-import mrcnn.model as modellib
-from mrcnn import visualize
-from mrcnn.model import log
+from self_utils import utils
+from self_utils.config import Config
+import self_utils.model as modellib
+from self_utils import visualize
+from self_utils.model import log
 
 # Import COCO config
 sys.path.append(os.path.join(ROOT_DIR, "samples/coco"))  # To find local version

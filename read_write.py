@@ -51,7 +51,8 @@ def get_latest_dir():
     if take_last_exp = True (default) it will return the last exp dir. AND
     :return: dir path of the exp to be analysed
     """
-    if take_last_exp and g_param.process_type == "record":
+    directory = r'D:\Users\NanoProject\experiments'
+    if take_last_exp and g_param.process_type == "record" and len(os.listdir(directory)) > 0:
         directory = r'D:\Users\NanoProject\experiments'
         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
     else:
@@ -227,7 +228,8 @@ class ReadWrite:
         self.rgb_image_resized = None
         self.rgb_image_orig = None
         self.rgb_image_manual = None
-        self.exp_date_time = get_latest_dir()
+        # self.exp_date_time = get_latest_dir()
+        self.exp_date_time = r"old_experiments\exp_data_13_46"
 
     def create_directory(self):
         """
@@ -540,6 +542,7 @@ class ReadWrite:
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         path = os.path.join(path, 'rgb_images')
+        path = os.path.join(path, 'resized')
         locations_list = os.listdir(path)
         res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
         path = os.path.join(path, res[0])
@@ -671,6 +674,8 @@ class ReadWrite:
         records_list = os.listdir(path)
         if len(records_list) == 0:  # if dir is empty, take calculated/ measured distance
             return real_dist_calc, real_dist_calc
+        else: # FIXME--- THIS ELSE IS ONLY FOR TESTING!
+            return real_dist_calc, real_dist_calc
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
         distances = np.genfromtxt(path, delimiter=",")
@@ -734,6 +739,7 @@ class ReadWrite:
         path = os.path.join(path, 'masks')
         records_list = os.listdir(path)
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
+        assert len(res) > 0, 'list is empty. no mask detected on this frame'
         path = os.path.join(path, res[0])
         mask = np.load(path)
         mask = mask.f.arr_0

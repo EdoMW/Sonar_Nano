@@ -340,7 +340,7 @@ class ProposalLayer(KE.Layer):
 
 def log2_graph(x):
     """Implementation of Log2. TF doesn't have a native implementation."""
-    return tf.log(x) / tf.log(2.0)
+    return tf.math.log(x) / tf.math.log(2.0)
 
 
 class PyramidROIAlign(KE.Layer):
@@ -772,6 +772,7 @@ def refine_detections_graph(rois, probs, deltas, window, config):
     detections = tf.concat([
         tf.gather(refined_rois, keep),
         tf.to_float(tf.gather(class_ids, keep))[..., tf.newaxis],
+        # tf.cast(tf.gather(class_ids, keep), dtype=tf.double)[..., tf.newaxis],
         tf.gather(class_scores, keep)[..., tf.newaxis]
         ], axis=1)
 
@@ -2060,7 +2061,7 @@ class MaskRCNN():
 
         # Add multi-GPU support.
         if config.GPU_COUNT > 1:
-            from mrcnn.parallel_model import ParallelModel
+            from self_utils.parallel_model import ParallelModel
             model = ParallelModel(model, config.GPU_COUNT)
 
         return model

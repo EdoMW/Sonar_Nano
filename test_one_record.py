@@ -43,18 +43,18 @@ if __name__ == '__main__':
     preds_3classes, preds_2classes = test_spec(x_test, weight_file_name)
     preds_3classes_012 = [np.argmax(y) for y in preds_3classes]
     preds_2classes_01 = 1*(~np.array(preds_2classes))
-    print(preds_3classes)
+    # print(preds_3classes)
     transmition_Chirp = DAQ_BG.chirp_gen(DAQ_BG.chirpAmp, DAQ_BG.chirpTime, DAQ_BG.f0, DAQ_BG.f_end, DAQ_BG.update_freq,
                                          DAQ_BG.trapRel)
     D = correlation_dist(transmition_Chirp, record)
 
 
-    print(np.shape(record))
+    # print(np.shape(record))
     pickle.dump(transmition_Chirp, open("transmition_Chirp.p", "wb"))
     pickle.dump(record, open("x_test_grape_only.p", "wb"))
 
 
-    print('record', record)
+    # print('record', record)
     plt.plot(record)
     plt.show()
 
