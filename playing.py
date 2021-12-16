@@ -12,16 +12,126 @@ import numpy as np
 # from random import randint
 # import colorsys
 from PIL import Image
-def a():
-    N = 50
-    x = np.random.rand(N)
-    y = np.random.rand(N)
-    colors = np.random.rand(N)
-    area = np.pi * (15 * np.random.rand(N))**2  # 0 to 15 point radii
-    plt.scatter(x, y, s=area, c=colors, alpha=0.5)
+
+x_lim = (0, 1)
+y_lim = (0, 1)
+z_lim = (0, 1)
+list_points = [[0.3, 0.3, 0],[0.4, 0.4, 0],[0,0,0],[.1, .1, .5], [0.3, 0.3, .2]]
+
+
+def calc_single_axis_limits(axis):
+    """
+    calc the values and range between the 2 points that are the farthest away from each other on a single axis.
+    :return: min and max value of values on this axis.
+    """
+    min_lim_x, max_lim_x = list_points[0][axis], list_points[0][axis]
+    for grape_ind in range(len(list_points)):
+        if list_points[grape_ind][axis] < min_lim_x:
+            min_lim_x = list_points[grape_ind][axis]
+        if list_points[grape_ind][axis] > max_lim_x:
+            max_lim_x = list_points[grape_ind][axis]
+    min_max_range = max_lim_x - min_lim_x
+    # print('calc axis: ', float(min_lim_x - 0.5 * min_max_range), float(max_lim_x + 0.5 * min_max_range))
+    if axis == 0:  # for x (distance) axis, for visualization only.
+        return float(min_lim_x - 5.5 * min_max_range), float(max_lim_x + 2.5 * min_max_range)
+    return float(min_lim_x - 0.5 * min_max_range), float(max_lim_x + 0.5 * min_max_range)
+
+
+def calc_axis_limits():
+    """
+    Calculate the limits of each axis on the 3d plot
+    """
+    x_lim = calc_single_axis_limits(0)
+    y_lim = calc_single_axis_limits(1)
+    z_lim = calc_single_axis_limits(2)
+
+
+def get_projections():
+    """
+    For each grape on the map (TB), add x,y,z coordinates to a list to be displayed on the 3D plot.
+    :return:
+    """
+    x_list, y_list, z_list = [], [], []
+    for item in range(len(list_points)):
+        x_list.append(list_points[item][0])
+        y_list.append(list_points[item][1])
+        z_list.append(list_points[item][2])
+    return x_list, y_list, z_list
+
+
+def plot_tracking_map():
+    """
+    Visualize all grapes centers on a 3d map.
+    This function generates a plot that represents the TB in 3D.
+    """
+    x_cors, y_cors, z_cors = [], [], []
+    for i in range(len(list_points)):
+        x_cor, y_cor, z_cor = list_points[i][0], list_points[i][1], list_points[i][2]
+        x_cors.append(x_cor)
+        y_cors.append(y_cor)
+        z_cors.append(z_cor)
+    fig, ax = plt.subplots(figsize=(12, 12))
+    ax = fig.add_subplot(projection='3d')
+
+    # if len(list_points) < 5:
+    #     calc_axis_limits()
+    # ax.set_xlim(g_param.x_lim)
+    # ax.set_ylim(g_param.y_lim)
+    # ax.set_zlim(g_param.z_lim)
+
+    # project each points on all planes.
+    x, y, z = get_projections()
+    ax.plot(x, z, '+', c='r', zdir='y', zs=y_lim[1])  # red pluses (+) on XZ plane
+    ax.plot(y, z, 's', c='g', zdir='-x', zs=x_lim[0])  # red squares on YZ plane
+    ax.plot(x, y, '*', c='b', zdir='-z', zs=z_lim[0])  # red pluses (*) on XY plane
+
+    # labels titles
+    ax.set_xlabel('X Label - distance')
+    ax.set_ylabel('Y Label - advancement (moving from left to right)')
+    ax.set_zlabel('Z Label - height')
+
+    # change color of each plane
+    ax.w_yaxis.set_pane_color((1.0, 0, 0.1))  # xy plane is red
+    ax.w_xaxis.set_pane_color((0, 1.0, 0, 0.1))  # xy plane is green
+    ax.w_zaxis.set_pane_color((0, 0, 1.0, 0.1))  # xy plane is blue
+
+    # xx, yy = np.meshgrid([-3, 0, 3], [-3, 0, 3])
+    # # zz = xx - yy
+    # # yy = zz * 0.5
+    # zz = xx - yy
+    yy, zz = np.meshgrid(range(2), range(2))
+    xx = yy
+
+
+    s = ax.scatter(x_cors, y_cors, z_cors, s=400, marker='o')  # x,y,z coordinates, size of each point, colors.
+    # controls the alpha channel. all points have the same value, ignoring their distance
+    s.set_edgecolors = s.set_facecolors = lambda *args: None
+    ax.title.set_text(f'Imgae number 1')
+    elev = 20.0
+    azim = 80.5
+    ax.view_init(elev, azim)
+    ax.plot_surface(xx, yy, zz, alpha=0.3)
+    print(x, y, z)
+    # ax.plot_trisurf(x, y, z)
+    # ax.plot_surface(xx, yy, zz_1, alpha=0.5)
     plt.show()
 
-a()
+plot_tracking_map()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # import cv2
 # import numpy as np
 # import matplotlib.pyplot as plt

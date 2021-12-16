@@ -1,8 +1,8 @@
+
 import sys
 import tensorflow as tf  # Added next 2 lines insted
 # import tensorflow.compat.v1 as tf
 # tf.disable_v2_behavior()
-
 
 import cv2 as cv
 import DAQ_BG
@@ -20,7 +20,7 @@ from termcolor import colored
 from transform import rotation_coordinate_sys
 import scipy
 import g_param
-import numpy as np
+import math
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
     point_meter_2_pixel, image_resize, take_manual_image
@@ -60,11 +60,11 @@ start_pos = np.array([-0.3, -0.24198481, 0.46430055, -0.6474185, -1.44296026, 0.
 # start_pos = np.array([-0.173, 0.364, 0.542, -1.144, -1.035, -0.128])
 step_size = g_param.step_size
 # number_of_steps = math.floor(step_size / 0.1)  # amount of steps before platform move
-number_of_steps = 3
+number_of_steps = 3  # FIXME - on the exp the value was 3.
 steps_counter = 0
 moving_direction = "right"  # right/left
 sleep_time = 5
-step_direction = ["right", "up", "right", "down"]  # the order of movement
+step_direction = ["right", "up", "right", "down"]  # the order of movement # ["right", "up", "right", "down"] !!!
 direction = None
 g_param.init()
 first_run = True
@@ -231,6 +231,11 @@ def move_const(size_of_step, direction_to_move, location):
             location[1] = location[1] + delta_y
             ws_rob.move_command(False, location, sleep_time, velocity)
             # check_update_move(location)
+        elif direction_to_move == "left": # added for tests in lab.
+            delta_x, delta_y = rotation_coordinate_sys(0, size_of_step, g_param.base_rotation_ang)
+            location[0] = location[0] + delta_x
+            location[1] = location[1] + delta_y
+            ws_rob.move_command(False, location, sleep_time, velocity)
         elif direction_to_move == "up":
             location[2] = location[2] + size_of_step
             ws_rob.move_command(False, location, sleep_time, velocity)
@@ -290,6 +295,8 @@ def init_arm_and_platform():
         g_param.trans.set_capture_pos(current_location)
         g_param.trans.update_cam2base(current_location)  # 4
     else:
+        move_platform()
+        g_param.time_to_move_platform = False
         current_location = g_param.read_write_object.read_location_from_csv()
         g_param.trans.set_capture_pos(current_location)
         g_param.trans.update_cam2base(current_location)
@@ -642,8 +649,8 @@ def activate_sonar(mask_id, not_grape):
             real_class = True
         # real_class = True
         # Sonar distance prediction
-        transmition_Chirp = DAQ_BG.chirp_gen(DAQ_BG.chirpAmp, DAQ_BG.chirpTime, DAQ_BG.f0, DAQ_BG.f_end,
-                                             DAQ_BG.update_freq, DAQ_BG.trapRel)
+        # transmition_Chirp = DAQ_BG.chirp_gen(DAQ_BG.chirpAmp, DAQ_BG.chirpTime, DAQ_BG.f0, DAQ_BG.f_end,
+        #                                      DAQ_BG.update_freq, DAQ_BG.trapRel)
         # D = correlation_dist(transmition_Chirp, record)
         dist_from_sonar = round(distance2(record, mask_id), 3)
         # real dist, real distance measured: to the outer edge of the sonar (10 CM from the Flach)
@@ -718,7 +725,7 @@ def move_platform():
         while True:
             print("Current platform step size: ", g_param.platform_step_size, '\n',
                   "insert number in Meters to change it or press Enter to continue")
-            # temp_step_size = input("Enter platform step size") # Uncomment for exp
+            temp_step_size = input("Enter platform step size") # Uncomment for exp
             temp_step_size = ""
             try:
                 if temp_step_size == "":
@@ -748,6 +755,7 @@ def move_platform():
 def calc_step_size(step_size_to_move):
     """
     :param step_size_to_move: step size
+
     :return: step size to move:
     if direction is up/down:
         move g_param.height_step_size * step_size_to_move.
@@ -826,6 +834,7 @@ def mark_sprayed_and_display():
     cam_0 = np.array([0, 0, 0, 1])
     cam_0_base = np.matmul(g_param.trans.t_cam2base, cam_0)
     print("TB after sorting \n", g_param.TB)
+
     half_image_left = g_param.half_width_meter
     for a in range(len(g_param.TB)):
         target = g_param.TB[a]
@@ -860,10 +869,10 @@ def calc_single_axis_limits(axis):
         if g_param.TB[grape_ind].grape_world[axis] > max_lim_x:
             max_lim_x = g_param.TB[grape_ind].grape_world[axis]
     min_max_range = max_lim_x - min_lim_x
-    print('calc axis: ', float(min_lim_x - 0.5 * min_max_range), float(max_lim_x + 0.5 * min_max_range))
-    if axis == 0:  # for x (distance) axis, for visualization only.
-        return float(min_lim_x - 5.5 * min_max_range), float(max_lim_x + 2.5 * min_max_range)
-    return float(min_lim_x - 0.5 * min_max_range), float(max_lim_x + 0.5 * min_max_range)
+    # print('calc axis: ', float(min_lim_x - 0.5 * min_max_range), float(max_lim_x + 0.5 * min_max_range))
+    # if axis == 0:  # for x (distance) axis, for visualization only.
+    #     return float(min_lim_x - 5.5 * min_max_range), float(max_lim_x + 2.5 * min_max_range)
+    return float(min_lim_x - 2.5 * min_max_range), float(max_lim_x + 2.5 * min_max_range)
 
 
 def calc_axis_limits():
@@ -891,34 +900,61 @@ def get_projections():
 def plot_tracking_map():
     """
     Visualize all grapes centers on a 3d map.
+    This function generates a plot that represents the TB in 3D.
     """
-    x_cors, y_cors, z_cors = [], [], []
+    x_cors, y_cors, z_cors, colors = [], [], [], []
     for i in range(len(g_param.TB)):
         x_cor, y_cor, z_cor = g_param.TB[i].grape_world[0], g_param.TB[i].grape_world[1], g_param.TB[i].grape_world[2]
         x_cors.append(x_cor)
         y_cors.append(y_cor)
         z_cors.append(z_cor)
-    fig, ax = plt.subplots(figsize=(12, 12))
-    ax = fig.add_subplot(projection='3d')
+        color = 'r' if g_param.TB[i].sprayed else 'g'
+        colors.append(color)
+    fig, ax = plt.subplots(figsize=(12, 12), subplot_kw={'projection': '3d'})
 
-    if len(g_param.TB) < 5:
+    if len(g_param.TB) < 14:
         calc_axis_limits()
     ax.set_xlim(g_param.x_lim)
     ax.set_ylim(g_param.y_lim)
     ax.set_zlim(g_param.z_lim)
 
-    x, y, z = get_projections() # r+ = red pluses, g+ = green pluses, k+ =
-    ax.plot(x, z, 'r+', zdir='y', zs=g_param.y_lim[1])
-    ax.plot(y, z, 'g+', zdir='-x', zs=g_param.x_lim[0])
-    ax.plot(x, y, 'y+', zdir='-z', zs=g_param.z_lim[0])
+    # project each points on all planes.
+    x, y, z = get_projections()
+    ax.plot(x, z, '+', c='r', zdir='y', zs=g_param.y_lim[1])  # red pluses (+) on XZ plane
+    ax.plot(y, z, 's', c='g', zdir='-x', zs=g_param.x_lim[0])  # red squares on YZ plane
+    ax.plot(x, y, '*', c='b', zdir='-z', zs=g_param.z_lim[0])  # red pluses (*) on XY plane
 
-    ax.scatter(x_cors, y_cors, z_cors)  # vmin=0, vmax=1000
+    # labels titles
     ax.set_xlabel('X Label - distance')
-    ax.set_ylabel('Y Label - advancement')
+    ax.set_ylabel('Y Label - advancement (moving from left to right)')
     ax.set_zlabel('Z Label - height')
+
+    # change color of each plane
+    ax.w_yaxis.set_pane_color((1.0, 0, 0.1))  # xy plane is red
+    ax.w_xaxis.set_pane_color((0, 1.0, 0, 0.1))  # xy plane is green
+    ax.w_zaxis.set_pane_color((0, 0, 1.0, 0.1))  # xy plane is blue
+
+    xx, yy = np.meshgrid([-3, 0, 3], [-3, 0, 3])
+    zz = yy
+    # plot plane that goes through z axis and perpendicular to xy plane. at 45 degrees (the line of x=y)
+    # ax.plot_surface(xx, yy, zz, alpha=0.5)
+    s = ax.scatter(x_cors, y_cors, z_cors, s=400, c=colors)  # x,y,z coordinates, size of each point, colors.
+    # controls the alpha channel. all points have the same value, ignoring their distance
+    s.set_edgecolors = s.set_facecolors = lambda *args: None
+    ax.title.set_text(f'Imgae number {g_param.image_number}')
+    # elev = 5.0
+    # azim = 135.5
+    # ax.view_init(elev, azim)
+
+    plt.show()
+
 
 
 def check_end_program_time():
+    """
+    check if to end program (before movement of the platform), log statistics and exit.
+    :return: True if end of program, False otherwise.
+    """
     eleven = "\033[1m" + "11" + "\033[0m"
     enter = "\033[1m" + "Enter" + "\033[0m"
     # Uncomment for allow manual exit points for the program
@@ -1084,12 +1120,12 @@ def display_image_with_mask(image_path, mask, alpha=0.7):
     print("watched image?")
 
 
-def calc_gt_box(image_number):
+def calc_gt_box_trail(image_number):
     ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master")
     sys.path.append(ROOT_DIR)
     center_of_masks, bboxs = [], []
     mask_count = g_param.read_write_object.count_masks_in_image(image_number)
-    masks = np.empty([1024, 1024, 1])
+    # masks = np.empty([1024, 1024, 1]) # for exp which is not 13_46
     for m in range(mask_count):
         try:
             mask = g_param.read_write_object.load_mask_file(m)
@@ -1099,6 +1135,22 @@ def calc_gt_box(image_number):
             print("bbox: ", bboxs[0], " center_of_masks: ", center_of_masks[0])
             if m > 0:
                 masks = np.dstack((masks, mask))
+        except AssertionError as msg:
+            print(msg)
+    return masks, bboxs, center_of_masks
+
+
+def calc_gt_box(image_number):
+    ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master")
+    sys.path.append(ROOT_DIR)
+    center_of_masks, bboxs = [], []
+    mask_count = g_param.read_write_object.count_masks_in_image(image_number)
+    masks = g_param.read_write_object.load_mask_file(image_number)
+    bboxs = utils.extract_bboxes(masks).astype('int32')
+    for m in range(mask_count):
+        try:
+            center_of_masks.append(np.asarray(scipy.ndimage.measurements.center_of_mass(masks[:, :, m]))[:2])
+            print("bbox: ", bboxs[m], " center_of_masks: ", center_of_masks[m])
         except AssertionError as msg:
             print(msg)
     return masks, bboxs, center_of_masks
@@ -1137,7 +1189,6 @@ if __name__ == '__main__':
             if direction == "right":
                 steps_counter += 1
         else:
-
             first_run = False
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
@@ -1158,7 +1209,7 @@ if __name__ == '__main__':
                 grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
                 # TODO- add evaluation mode which mark unlabeled masks as false detection,
                 #  and assign masks accordingly to the GT.
-                eval_mode = True
+                g_param.eval_mode = True
                 if g_param.eval_mode:
                     gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
                     # if gt_mask.any():
@@ -1219,6 +1270,7 @@ if __name__ == '__main__':
                     mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22
+
         else:  # 15- no grapes to spray_procedure
             print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes # every 4 movements and press 11.
@@ -1228,6 +1280,7 @@ if __name__ == '__main__':
         if g_param.images_in_run - 1 <= g_param.image_number:
             print(f"Finished, {g_param.images_in_run} images were taken on this batch.")
             not_finished = False
+
         if steps_counter >= number_of_steps and step_direction[(g_param.plat_position_step_number + 1) % 4] == "right":
             g_param.time_to_move_platform = True
             print(print_line_sep_time(), '\n', " move platform", '\n')

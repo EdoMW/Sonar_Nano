@@ -10,6 +10,7 @@ import io
 import pandas as pd
 from time import sleep
 from pprint import pprint
+
 np.set_printoptions(precision=3)
 
 take_last_exp = True  # take the exp that was conducted the latest
@@ -107,7 +108,7 @@ def write_txt_config(sim_directory_path):
     image_cnn_path = g_param.image_cnn_path
     cnn_config = g_param.cnn_config
     horizontal_step_size = g_param.step_size
-    param_list = [avg_dist, horizontal_step_size, str(round(height_step_size*horizontal_step_size, 2)),
+    param_list = [avg_dist, horizontal_step_size, str(round(height_step_size * horizontal_step_size, 2)),
                   platform_step_size, resolution, image_cnn_path]
     param_list_name = ["avg_dist", "horizontal_step_size", "height_step_size",
                        "platform_step_size", "resolution", "image_cnn_path"]
@@ -206,6 +207,7 @@ class ReadWrite:
     """
     For read and write functions. save the exp data in real time to be redone later.
     """
+
     def __init__(self):
         self.location_path = None
         self.simulations = None
@@ -609,6 +611,8 @@ class ReadWrite:
         reads sonar recording by image+mask_id
         :param mask_id: id of the mask
         :return: recording of class
+        in case there were no masks for this image id (on certain image), an exception will raise.
+        The handle of this type exception is just assigning the last grape distance, and saying it's a grape cluster.
         """
         image_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
@@ -670,11 +674,11 @@ class ReadWrite:
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
         path = os.path.join(path, 'sonar')
-        path = os.path.join(path, 'distances') #FIXME
+        path = os.path.join(path, 'distances')  # FIXME
         records_list = os.listdir(path)
         if len(records_list) == 0:  # if dir is empty, take calculated/ measured distance
             return real_dist_calc, real_dist_calc
-        else: # FIXME--- THIS ELSE IS ONLY FOR TESTING!
+        else:  # FIXME--- THIS ELSE IS ONLY FOR TESTING!
             return real_dist_calc, real_dist_calc
         res = [i for i in records_list if i.startswith(str(image_number) + "_" + str(mask_id))]
         path = os.path.join(path, res[0])
@@ -702,33 +706,37 @@ class ReadWrite:
         return classes[0], classes[1]
 
     def count_masks_in_image(self, image_number):
-        mage_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
-        if self.exp_date_time == 'exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
-            path = os.path.join(path, 'masks')
+        if self.exp_date_time == r'old_experiments\exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
+            path = os.path.join(path, 'masks_2')
         else:
             path = os.path.join(path, 'masks')
-            # path = os.path.join(path, 'masks_orig') # FIXME- uncomment this line and comment the above
-        records_list = os.listdir(path)
-        records_list = [i for i in records_list if i.startswith(str(image_number))]
-        return len(records_list)
+        masks_list = os.listdir(path)
+        res = [i for i in masks_list if i.startswith(str(image_number) + "_")]
+        path = os.path.join(path, res[0])
+        mask = np.load(path)
+        mask = mask.f.arr_0
+        return mask.shape[2]
 
     def count_images(self):
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
-        if self.exp_date_time == 'exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
-            path = os.path.join(path, 'masks')
-        else:
-            path = os.path.join(path, 'masks')
-            # path = os.path.join(path, 'masks_orig') # FIXME- uncomment this line and comment the above
+        path = os.path.join(path, r'rgb_images\original')
+        # TODO: Notice this 4 lines (only for dev, not for evaluation)
+        # if self.exp_date_time == 'exp_data_13_46':
+        #     path = os.path.join(path, 'masks')
+        # else:
+        #     path = os.path.join(path, 'masks')
+        # path = os.path.join(path, 'masks_orig') # FIXME- uncomment this line and comment the above
         records_list = os.listdir(path)
         return len(records_list)
 
-    def load_mask_file(self, mask_id):
+    def load_mask_file_trail(self, mask_id):
         """
+        Will work in a future version where each grape cluster has different mask.
         :param mask_id: mask id to load
         :return: mask
         """
@@ -745,3 +753,23 @@ class ReadWrite:
         mask = mask.f.arr_0
         return mask
 
+    def load_mask_file(self, mask_id):
+        """
+        :param mask_id: mask id to load
+        :return: mask
+        """
+        image_number = get_image_num_sim(g_param.image_number)
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        if self.exp_date_time == r'old_experiments\exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
+            path = os.path.join(path, 'masks_2')
+        else:
+            path = os.path.join(path, 'masks')
+        records_list = os.listdir(path)
+        res = [i for i in records_list if i.startswith(str(image_number) + "_")]
+        assert len(res) > 0, 'list is empty. no mask detected on this frame'
+        path = os.path.join(path, res[0])
+        mask = np.load(path)
+        mask = mask.f.arr_0
+        return mask
