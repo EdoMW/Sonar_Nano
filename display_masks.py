@@ -110,16 +110,16 @@ def display_instances(image, boxes, masks, class_ids, class_names,
                                   edgecolor=color, facecolor='none')
             ax.add_patch(p)
 
-        # Label
-        if not captions:
-            class_id = class_ids[i]
-            score = scores[i] if scores is not None else None
-            label = class_names[class_id]
-            caption = "{} {:.3f}".format(label, score) if score else label
-        else:
-            caption = captions[i]
-        ax.text(x1, y1 + 8, caption,
-                color='w', size=11, backgroundcolor="none")
+        # # Label
+        # if not captions:
+        #     class_id = class_ids[i]
+        #     score = scores[i] if scores is not None else None
+        #     label = class_names[class_id]
+        #     caption = "{} {:.3f}".format(label, score) if score else label
+        # else:
+        #     caption = captions[i]
+        # ax.text(x1, y1 + 8, caption,
+        #         color='w', size=11, backgroundcolor="none")
 
         # Mask
         mask = masks[:, :, i]
@@ -180,10 +180,24 @@ def load_image(image_number):
     return image
 
 
-for i in range(2):
+for i in range(1):
     masks = load_mask_file_1(i)
+    mask = masks[:, :, 0]
+    mask = mask.reshape(1024, 1024, 1)
     image = load_image(i)
-    boxes = utils.extract_bboxes(masks).astype('int32')
-    class_ids = np.array([1] * masks.shape[2])
+    # [num_instances, (y1, x1, y2, x2)].
+    boxes = utils.extract_bboxes(masks).astype('int32')[:1]
+    print(boxes)
+    class_ids = np.array([1] * masks.shape[2])[:1]
     class_names = ['BG', 'grape_cluster']
-    display_instances(image, boxes, masks, class_ids, class_names)
+
+    display_instances(image, boxes, mask, class_ids, class_names)
+
+"""
+todo:
+1) Order the masks (and boxes) from left to right
+2) Make it always the same color, from left to right.
+3) make "registration" for each mask in each image, meaning have an excel sheet, with 41 time steps (images)
+where in each time step, appear which grapes appear in the image.
+4) try to "stich" all image into one long (panoramic) image.
+"""
