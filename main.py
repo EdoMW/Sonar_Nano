@@ -1,9 +1,9 @@
-
 import sys
 import tensorflow as tf  # Added next 2 lines insted
 # import tensorflow.compat.v1 as tf
 # tf.disable_v2_behavior()
 
+import pandas as pd
 import cv2 as cv
 import DAQ_BG
 from self_utils import utils
@@ -23,7 +23,7 @@ import g_param
 import math
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
-    point_meter_2_pixel, image_resize, take_manual_image
+    point_meter_2_pixel, image_resize, take_manual_image, sort_results
 
 import write_to_socket
 import read_from_socket
@@ -34,7 +34,6 @@ from self_utils.visualize import *
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
 # from mask_rcnn import take_picture_and_run as capture_update_TB, show_in_moved_window
-
 
 ########################################################################################################################
 # parameters ###########################################################################################################
@@ -72,6 +71,8 @@ g_param.show_images = True  # g.show_images: if true, it is visualizes the proce
 external_signal_all_done = False
 not_finished = True
 velocity = 0.7
+g_param.table_of_matches = pd.DataFrame(-1, index=np.arange(5), columns=np.arange(41))
+g_param.table_of_stats = pd.DataFrame(0, index=['total', 'recall', 'precision'], columns=np.arange(41))
 
 
 # trans_volcani = np.array([[-0.7071, 0.7071, 0], [-0.7071, -0.7071, 0], [0, 0, 1]])
@@ -1193,7 +1194,45 @@ if __name__ == '__main__':
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
-        capture_update_TB()  # 5 + 7-12 inside #
+        prediction_masks, pred_score = capture_update_TB()  # 5 + 7-12 inside #
+        g_param.eval_mode = True
+        if g_param.eval_mode:
+            gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
+            gt_class_id = np.array([1] * len(coms))
+            r_dict_gt = {'masks': gt_mask, 'bbox': gt_box, 'rois': gt_box, 'scores': np.array([1] * gt_mask.shape[2]),
+                         'class_ids': np.array([1] * gt_mask.shape[2])}
+            r_dict_gt = sort_results(r_dict_gt)
+            # pred_box = bbox_from_corners(grape.p_corners)
+            gt_mask, gt_box, gt_class_id = r_dict_gt['masks'], r_dict_gt['bbox'], r_dict_gt['class_ids']
+            pred_boxes = utils.extract_bboxes(prediction_masks)
+
+            pred_class_id = np.array([1] * prediction_masks.shape[2])
+            # pred_score = np.array(grape.mask_score).reshape(1, 1)[0]  # FIXME- RESHAPE
+            # pred_mask = grape.mask.reshape(1024, 1024, 1)  # FIXME- RESHAPE
+            class_names = ['BG', 'grape_cluster']
+            if len(gt_box) > 0:
+                img_path = g_param.read_write_object.load_image_path()
+                img = cv.imread(img_path)
+                rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+                display_differences(rgb, gt_box, gt_class_id, gt_mask,
+                                    pred_boxes, pred_class_id, pred_score, prediction_masks,
+                                    class_names, title="Pred vs. GT", ax=None,
+                                    show_mask=True, show_box=True,
+                                    iou_threshold=0.5, score_threshold=0.5)
+            else:
+                display_instances(g_param.masks_image, pred_boxes, prediction_masks, np.array([1]), class_names,
+                                  scores=None, title="instances",  figsize=(16, 16), ax=None,
+                                  show_mask=True, show_bbox=True, colors=None, captions=None)
+            gt_match, pred_match, overlaps = utils.compute_matches(
+                gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
+                pred_score, prediction_masks, iou_threshold=0.5)
+            mAP, precisions, recalls, overlaps = utils.compute_ap(
+                gt_box, gt_class_id, gt_mask, pred_boxes,
+                pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)
+            indexs = pred_match > -1
+            for i in range(len(pred_match[indexs])):
+                g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
+            print(g_param.table_of_matches)
         update_database_visualization()  # FIXME
         print_image_details(step_direction[(g_param.image_number + 1) % 4])
         # g.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:]) #print TB
@@ -1209,34 +1248,6 @@ if __name__ == '__main__':
                 grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
                 # TODO- add evaluation mode which mark unlabeled masks as false detection,
                 #  and assign masks accordingly to the GT.
-                g_param.eval_mode = True
-                if g_param.eval_mode:
-                    gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
-                    # if gt_mask.any():
-                    #     gt_box = np.array(gt_box).squeeze().reshape(1, 4)  # FIXME- RESHAPE
-                    # else:
-                    #     gt_box = np.zeros(shape=(1, 4))
-                    # print("type bbox: ", type(gt_box), gt_box.shape)
-                    gt_class_id = np.array([1] * len(coms))
-                    pred_box = bbox_from_corners(grape.p_corners)
-
-                    pred_class_id = np.array([1] * len(coms))
-                    pred_score = np.array(grape.mask_score).reshape(1, 1)[0]  # FIXME- RESHAPE
-                    pred_mask = grape.mask.reshape(1024, 1024, 1)  # FIXME- RESHAPE
-                    class_names = ['BG', 'grape_cluster']
-                    if len(gt_box) > 0:
-                        display_differences(g_param.masks_image, gt_box, gt_class_id, gt_mask,
-                                            pred_box, pred_class_id, pred_score, pred_mask,
-                                            class_names, title="Pred vs. GT", ax=None,
-                                            show_mask=True, show_box=True,
-                                            iou_threshold=0.5, score_threshold=0.5)
-                    else:
-                        display_instances(g_param.masks_image, pred_box, pred_mask, np.array([1]), class_names,
-                                          scores=None, title="instances",
-                                          figsize=(16, 16), ax=None,
-                                          show_mask=True, show_bbox=True,
-                                          colors=None, captions=None)
-                    # compute_overlaps_masks(gt_mask, pred_masks)
                 # visualization
                 g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),
                                                  org=(int(g_param.TB[i].x_p), int(g_param.TB[i].y_p)),

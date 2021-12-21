@@ -328,8 +328,6 @@ def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
     return resized
 
 
-
-
 # def show_in_moved_window(win_name, img, i=None, x=(-1090), y=35): # lab
 def show_in_moved_window(win_name, img, i=None, x=0, y=0, time_display=0):  # lab
     """
@@ -442,7 +440,7 @@ def two_value_to_int_vec(vec):
 # GT_rotated_boxes
 # det_rotated_boxes
 # create new compute_overlaps to match rotated Bounding boxes
-class calcs():
+class calcs:
     def calc_angle_between_boxes(matched_gt_boxes, positive_ids,
                                  GT_rotated_boxes, det_rotated_boxes):
         angles = []
@@ -476,6 +474,7 @@ class calcs():
             sum_of_squers += ((list_to_calc[i] - x_avg) * (list_to_calc[i] - x_avg))
         sigma = sqrt((1 / (len(list_to_calc) - 1)) * sum_of_squers)
         return sigma
+
 
 def ueye_take_picture_2(image_number):
     # Variables
@@ -752,7 +751,7 @@ def fix_angle_to_0_180(width, height, ang):
     return ang
 
 
-def arrange_data(width_0, height_0, corner_points):
+def arrange_width_highet(width_0, height_0, corner_points):
     """
     :param width_0: w
     :param height_0: h
@@ -1016,7 +1015,7 @@ def take_picture_and_run():
             angle_0 = predicted_masks_to_mrbb[b][4] * -1
             corners_in_meter = predicted_masks_to_mrbb[b][5]
             corner_points = predicted_masks_to_mrbb[b][6]
-            width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
+            width_0, height_0, corner_points = arrange_width_highet(width_0, height_0, corner_points)
             # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
             # angle_0 = (angle_0*180)/pi
             det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[b][1][0]), int(boxes[b][1][1]), angle_0, None]
@@ -1127,7 +1126,7 @@ def take_picture_and_run():
             angle_0 = predicted_masks_to_mrbb[b][4] * -1
             corners_in_meter = predicted_masks_to_mrbb[b][5]
             corner_points = predicted_masks_to_mrbb[b][6]
-            width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
+            width_0, height_0, corner_points = arrange_width_highet(width_0, height_0, corner_points)
             # angle_0 = fix_angle_to_0_180(w=width_0, h=height_0, a=angle_0)
             # angle_0 = (angle_0*180)/pi
             det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[b][1][0]), int(boxes[b][1][1]), angle_0, None]
@@ -1166,6 +1165,7 @@ def take_picture_and_run():
         results = model.detect(arr, verbose=1)
         r = results[0]
         pred_masks = r['masks']
+        pred_scores = r['scores']
         print("amount of grapes :", len(pred_masks[0][0]))
         print(fg.yellow + "wait" + fg.rs, "\n")
         if len(pred_masks[0][0]) > 0:
@@ -1173,7 +1173,7 @@ def take_picture_and_run():
             r = results[0]
             ax = get_ax(1)
             bbox = utils.extract_bboxes(r['masks']).astype('int32')
-            r = sort_results(r) # WORKING!!!! Finaly
+            r = sort_results(r)  # WORKING!!!! Finally :-) (-:
             if r['masks'].ndim < 3:
                 r['masks'] = r['masks'].reshape((1024, 1024, 1))
             rgb_im1 = cv.cvtColor(im1.copy(), cv.COLOR_BGR2RGB)
@@ -1237,7 +1237,7 @@ def take_picture_and_run():
             width_0, height_0 = box[2], box[3]
             angle_0 = box[4] * -1
             corners_in_meter, corner_points = box[5], box[6]
-            width_0, height_0, corner_points = arrange_data(width_0, height_0, corner_points)
+            width_0, height_0, corner_points = arrange_width_highet(width_0, height_0, corner_points)
             # det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
             det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[i][1][0]), int(boxes[i][1][1]), angle_0, None]
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
@@ -1253,6 +1253,7 @@ def take_picture_and_run():
                      pred_masks[:, :, i], det_box, None, corners_in_meter, corner_points, pixels_count, com_list[i],
                      mask_score]
             add_to_target_bank(grape)
+        return pred_masks, pred_scores
 
     if g_param.work_place == "lab":
         display_image_with_masks(green)

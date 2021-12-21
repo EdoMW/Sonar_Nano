@@ -46,7 +46,8 @@ sonar_x_length = 0.075
 sprayer_x_length = 0.095
 base_rotation_ang = 225  # 180 for lab 225 for volcani # TODO- don't forget to change value!
 images_in_run = 1  # amount of images in the current run
-
+table_of_matches = None
+table_of_stats = None
 
 """
 steps_gap: determines how many horizontal steps should be done.
@@ -171,7 +172,8 @@ def init():
         image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size, \
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
         image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
-        manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim
+        manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim, table_of_matches,\
+        table_of_stats
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
     empty_npz_dir()

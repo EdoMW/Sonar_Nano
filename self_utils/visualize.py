@@ -185,11 +185,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     ax.imshow(masked_image.astype(np.uint8))
     # print('masked_image', type(masked_image), masked_image.shape)
     # rgb_masked_image = cv2.cvtColor(masked_image.astype(np.uint8).copy(), cv2.COLOR_RGB2BGR)
-    show_in_moved_window_1('image with masks!!!!', masked_image.astype(np.uint8), None, 0, 0, 0)
-    # cv2.imshow("image with masks!!!!", masked_image.astype(np.uint8))
-    # cv2.moveWindow("image with masks", x=(-1040), y=(-5))
-    # cv2.waitKey()
-    # cv2.destroyAllWindows()
+    show_in_moved_window_1('Green GT, Blue prediction', masked_image.astype(np.uint8), None, 0, 0, 0)
     if auto_show:
         plt.show()
     return masked_image.astype(np.uint8)

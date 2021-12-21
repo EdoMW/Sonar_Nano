@@ -2,14 +2,15 @@ import os
 import random
 import colorsys
 import cv2
-
-import numpy as np
+import scipy
 from skimage.measure import find_contours
 import matplotlib.pyplot as plt
 from matplotlib import patches, lines
 from matplotlib.patches import Polygon
 from self_utils import utils
-
+import numpy as np
+from operator import itemgetter
+import pandas as pd
 
 def random_colors(N, bright=True):
     """
@@ -93,10 +94,17 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     ax.set_ylim(height + 10, -10)
     ax.set_xlim(-10, width + 10)
     ax.axis('off')
-    ax.set_title(title)
-
-    masked_image = image.astype(np.uint32).copy()
+    ax.set_title(title, fontdict={'fontsize': 36, 'fontweight': 'medium'})
+    com_list = []
+    masked_image = image
     for i in range(N):
+        com = np.asarray(scipy.ndimage.measurements.center_of_mass(masks[:, :, i]))  # TODO- add to TB
+        com = np.round(com)
+        com_list.append(com)
+        masked_image = cv2.putText(img=masked_image, text=str(i),
+                                   org=(int(com_list[i][1]), int(com_list[i][0])),
+                                   fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=1,
+                                   color=(255, 255, 255), thickness=1, lineType=2)
         color = colors[i]
 
         # Bounding box
@@ -140,7 +148,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     ax.imshow(masked_image.astype(np.uint8))
     # print('masked_image', type(masked_image), masked_image.shape)
     # rgb_masked_image = cv2.cvtColor(masked_image.astype(np.uint8).copy(), cv2.COLOR_RGB2BGR)
-    show_in_moved_window_1('image with masks!!!!', masked_image.astype(np.uint8), None, 0, 0, 0)
+    show_in_moved_window_1(title
+                           , masked_image.astype(np.uint8), None, 0, 0, 0)
     # cv2.imshow("image with masks!!!!", masked_image.astype(np.uint8))
     # cv2.moveWindow("image with masks", x=(-1040), y=(-5))
     # cv2.waitKey()
@@ -148,6 +157,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     if auto_show:
         plt.show()
     return masked_image.astype(np.uint8)
+
 
 def load_mask_file_1(image_number):
     directory = r'old_experiments\exp_data_13_46'
@@ -180,24 +190,95 @@ def load_image(image_number):
     return image
 
 
-for i in range(1):
-    masks = load_mask_file_1(i)
-    mask = masks[:, :, 0]
-    mask = mask.reshape(1024, 1024, 1)
-    image = load_image(i)
-    # [num_instances, (y1, x1, y2, x2)].
-    boxes = utils.extract_bboxes(masks).astype('int32')[:1]
-    print(boxes)
-    class_ids = np.array([1] * masks.shape[2])[:1]
-    class_names = ['BG', 'grape_cluster']
+def sort_by_com(mask_arr):
+    com_list, com_y = [], []
+    for i in range(mask_arr.shape[2]):
+        com = np.asarray(scipy.ndimage.measurements.center_of_mass(mask_arr[:, :, i]))  # TODO- add to TB
+        com = np.round(com)
+        com_list.append(com)
+        com_y.append(com[1])
+    print(com_y)
+    com_y = np.array(com_y)
+    # com_y.sort()
+    arr1inds = np.flip(com_y.argsort())
+    sorted_arr1 = com_y[arr1inds[::-1]]
+    masks = mask_arr[:, :, arr1inds[::-1]]
+    return masks
 
-    display_instances(image, boxes, mask, class_ids, class_names)
+
+def sort_results(results):
+    """
+    sort the results of detection from left to right, and not by score.
+    :param results: dict of the results
+    :return: results (dict, same size), sorted.
+    """
+    bbox = utils.extract_bboxes(results['masks'])
+    bbox = bbox.astype('int32')
+    results['bbox'] = bbox
+    res = []
+    for i in range(len(results['scores'])):
+        res.append({
+            "rois": results['rois'][i], "class_ids": results['class_ids'][i], "scores": np.array(results['scores'][i]),
+            "masks": results['masks'][:, :, i], "bbox": bbox[i], "bbox_left_x": bbox[i][1],
+        })
+    res = sorted(res, key=itemgetter('bbox_left_x'), reverse=False)
+    a, b, c, d = res[0]['rois'], res[0]['bbox'], res[0]['scores'], res[0]['masks']
+    # a, b, c, d = res[0]['rois'], res[0]['bbox'], res[0]['scores'], res[0]['masks'].reshape(1024, 1024, 1)
+    if len(res) > 1:
+        for i in range(1, len(res)):
+            # a = np.dstack((a, res[i]['bbox']))
+            # b = np.dstack((b, res[i]['bbox']))
+            d = np.dstack((d, res[i]['masks']))
+            a = np.vstack((a, res[i]['rois'].reshape(1, 4)))
+            b = np.vstack((b, res[i]['bbox'].reshape(1, 4)))
+            # d = np.vstack((d, res[i]['masks'].reshape(1024, 1024, 1)))
+            c = np.append(c, res[i]['scores'])
+    else:
+        d = d.reshape(1024, 1024)
+    results = {"rois": a, "class_ids": results['class_ids'], "scores": c, "masks": d, "bbox": b,
+               }
+    return results
+
+
+skip = False
+if not skip:
+    for i in range(1, 2):
+        masks = load_mask_file_1(i)
+        r = {'masks': masks, 'bbox': utils.extract_bboxes(masks), 'rois': utils.extract_bboxes(masks),
+             'scores': np.array([1] * masks.shape[2]), 'class_ids': np.array([1] * masks.shape[2])}
+        r = sort_results(r)
+        masks = r['masks']
+        boxes = r['bbox']
+        class_ids = r['class_ids']
+        # masks = sort_by_com(masks)
+        mask = masks
+
+        # For deleting masks: (next 4 lines)
+        # mask_path_npz = r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks_3\7_13_51_24.npz'
+        # mask = masks[:, :, :0]
+        # np.savez_compressed(mask_path_npz, mask)
+
+        # boxes = utils.extract_bboxes(masks).astype('int32')
+        # print(boxes)
+        # class_ids = np.array([1] * masks.shape[2])
+        class_names = ['BG', 'grape_cluster']
+        image = load_image(i)
+        display_instances(image, boxes, mask, class_ids, class_names, title=f'{i}')
 
 """
 todo:
+0) fix image number 0. rightest grape is false detection. 
+
 1) Order the masks (and boxes) from left to right
 2) Make it always the same color, from left to right.
 3) make "registration" for each mask in each image, meaning have an excel sheet, with 41 time steps (images)
 where in each time step, appear which grapes appear in the image.
 4) try to "stich" all image into one long (panoramic) image.
 """
+
+d = pd.DataFrame(0, index=np.arange(4), columns=np.arange(13))
+arr = np.array([0, -1, 1, -1])
+indexs = arr > -1
+for i in range(len(arr[indexs])):
+    d.at[arr[indexs][i], 0] = 1
+# print(d)
