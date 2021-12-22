@@ -209,6 +209,9 @@ class ReadWrite:
     """
 
     def __init__(self):
+        self.tracking_path = None
+        self.gt_tracking = None
+        self.pred_tracking = None
         self.location_path = None
         self.simulations = None
         self.rgb_images_path = None
@@ -272,6 +275,8 @@ class ReadWrite:
         sub_dir_sonar_1, sub_dir_sonar_2, sub_dir_sonar_3, sub_dir_sonar_4 = "class_sonar", "dist_sonar", "distances", "classes"
         sub_dir_sonar_2_1, sub_dir_sonar_2_2 = "s_dist_sonar", "t_dist_sonar"
         directory_4, directory_5, directory_6, directory_7 = "sonar", "transformations", "platform", "TB"
+        directory_8 = 'tracking'
+        sub_dir_tracking_1, sub_dir_tracking_2 = 'gt', 'pred'
         sub_dir_1, sub_dir_2, sub_dir_3, sub_dir_4 = "ang_vec_tcp", "t_tcp2base", "t_cam2base", "t_cam2world"
         sub_dir_img_1, sub_dir_img_2, sub_dir_img_3 = "resized", "original", "manual"
 
@@ -282,6 +287,7 @@ class ReadWrite:
         path_5 = os.path.join(path, directory_5)
         path_6 = os.path.join(path, directory_6)
         path_7 = os.path.join(path, directory_7)
+        path_8 = os.path.join(path, directory_8)
 
         path_2_1 = os.path.join(path_2, sub_dir_img_1)
         path_2_2 = os.path.join(path_2, sub_dir_img_2)
@@ -299,8 +305,12 @@ class ReadWrite:
         path_5_3 = os.path.join(path_5, sub_dir_3)
         path_5_4 = os.path.join(path_5, sub_dir_4)
 
-        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7, path_2_1, path_2_2, path_2_3, path_4_1,
-                   path_4_2, path_4_3, path_4_4, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3, path_5_4]
+        path_8_1 = os.path.join(path_8, sub_dir_tracking_1)
+        path_8_2 = os.path.join(path_8, sub_dir_tracking_2)
+
+        folders = [path_1, path_2, path_3, path_4, path_5, path_6, path_7, path_8, path_2_1, path_2_2, path_2_3,
+                   path_4_1, path_4_2, path_4_3, path_4_4, path_4_2_1, path_4_2_2, path_5_1, path_5_2, path_5_3,
+                   path_5_4, path_8_1, path_8_2]
         for folder in folders:
             os.mkdir(folder)
         self.location_path = path_1
@@ -315,6 +325,8 @@ class ReadWrite:
         self.transformations_path = path_5
         self.platform_path = path_6
         self.TB_path = path_7
+        self.tracking_path = path_8
+
         self.class_sonar_path = path_4_1
         self.dist_sonar_path = path_4_2
         self.s_dist_sonar_path = path_4_2_1
@@ -323,12 +335,17 @@ class ReadWrite:
         self.transformations_path_t_tcp2base = path_5_2
         self.transformations_path_t_cam2base = path_5_3
         self.transformations_path_t_cam2world = path_5_4
+        self.gt_tracking = path_8_1
+        self.pred_tracking = path_8_2
 
     def create_simulation_config_file(self):
         """
         Create a txt file with the configurations used for this simulation
         """
         path_sim = self.simulations
+        # FIXME - NEEDS TO ADD ON LOAD MODE THE PATHS TO TRACKING (TRACKING, 2 SUB DIRS GT, PRED)
+        self.gt_tracking = path_8_1
+        self.pred_tracking = path_8_2
         write_txt_config(path_sim)
 
     def save_mask(self, mask, mask_id):
@@ -530,6 +547,28 @@ class ReadWrite:
             out = csv.writer(file)
             out.writerows(map(lambda x: [x], g_param.TB))
             file.close()
+
+    def write_tracking_gt(self, gt_track_df):
+        """
+        On load working mode, it write down the tracking gt to csv file.
+        :param gt_track_df: df to save (gt)
+        """
+        if g_param.process_type == "work" or g_param.process_type == "record":
+            return
+        folder_path_tracking_gt = self.gt_tracking
+        gt_tracking_path = os.path.join(folder_path_tracking_gt, 'tracking_gt.csv')
+        gt_track_df.to_csv(gt_tracking_path)
+
+    def write_tracking_pred(self, pred_track_df):
+        """
+        On load working mode, it write down the tracking gt to csv file.
+        :param pred_track_df: df to save (pred)
+        """
+        if g_param.process_type == "work" or g_param.process_type == "record":
+            return
+        folder_path_tracking_pred = self.pred_tracking
+        pred_tracking_path = os.path.join(folder_path_tracking_pred, 'tracking_pred.csv')
+        pred_track_df.to_csv(pred_tracking_path)
 
     # ------------------------------------------------------------------
     # ---------------------------- read --------------------------------

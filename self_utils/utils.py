@@ -645,7 +645,6 @@ def generate_pyramid_anchors(scales, ratios, feature_shapes, feature_strides,
 def trim_zeros(x):
     """It's common to have tensors larger than the available data and
     pad with zeros. This function removes rows that are all zeros.
-
     x: [rows, columns].
     """
     assert len(x.shape) == 2

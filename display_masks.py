@@ -212,6 +212,8 @@ def sort_results(results):
     :param results: dict of the results
     :return: results (dict, same size), sorted.
     """
+    if results['bbox'].shape[0] == 0:
+        return results
     bbox = utils.extract_bboxes(results['masks'])
     bbox = bbox.astype('int32')
     results['bbox'] = bbox
@@ -234,15 +236,17 @@ def sort_results(results):
             # d = np.vstack((d, res[i]['masks'].reshape(1024, 1024, 1)))
             c = np.append(c, res[i]['scores'])
     else:
-        d = d.reshape(1024, 1024)
+        d = d.reshape(1024, 1024, 1)
+        b = b.reshape(1, 4)
+    #     pass
     results = {"rois": a, "class_ids": results['class_ids'], "scores": c, "masks": d, "bbox": b,
                }
     return results
 
-
-skip = False
+skip = True
+# skip = False
 if not skip:
-    for i in range(1, 2):
+    for i in range(7, 9):
         masks = load_mask_file_1(i)
         r = {'masks': masks, 'bbox': utils.extract_bboxes(masks), 'rois': utils.extract_bboxes(masks),
              'scores': np.array([1] * masks.shape[2]), 'class_ids': np.array([1] * masks.shape[2])}
@@ -280,5 +284,43 @@ d = pd.DataFrame(0, index=np.arange(4), columns=np.arange(13))
 arr = np.array([0, -1, 1, -1])
 indexs = arr > -1
 for i in range(len(arr[indexs])):
-    d.at[arr[indexs][i], 0] = 1
+    d.at[arr[indexs][i], 0] = i
 # print(d)
+
+# masks = load_mask_file_1(3)
+# print(np.count_nonzero(masks))
+# print(masks.shape)
+
+
+def create_track_gt_df():
+    """
+    read the csv file that describes the 2d tracking of the grape clusters.
+    each column represent an image.
+    each row represent a grape cluster
+    the number (ranging 0 - 6) represnt the id of the grape in the frame (from left to right).
+
+    This function converts it to a "2d" table, with the columns (left to right):
+    frame  ID_in_frame  Cluster_ID.
+
+    a similar function exits for converting the detections that had IoU > 0.5 into the same type of table.
+
+    Later, a comparison should be made between these two tables.
+    """
+    gt_track = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_track.csv',
+                           header=None)
+    rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
+    frames_num = gt_track.shape[1]  # 41 images
+    table_3_l = []
+    # print('Frame | ID in Frame | Cluster ID')
+    for col in range(0, rows_num):
+        for row in range(0, frames_num):
+            if not pd.isna(gt_track[row][col]):
+                if float(gt_track[row][col]) or gt_track[row][col] == 0:
+                    # print(col, row, gt_track[row][col])
+                    table_3_l.append([col, row, gt_track[row][col]])
+
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'ID_in_frame', 'Cluster_ID'])
+    print(table_3)
+    return table_3  # could be replaced by writing to csv file.
+
+create_track_gt_df()

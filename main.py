@@ -29,6 +29,7 @@ import write_to_socket
 import read_from_socket
 from self_utils.visualize import *
 
+
 # np.set_printoptions(precision=3)
 # pd.set_option("display.precision", 3)
 # from Target_bank import print_grape
@@ -71,11 +72,73 @@ g_param.show_images = True  # g.show_images: if true, it is visualizes the proce
 external_signal_all_done = False
 not_finished = True
 velocity = 0.7
-g_param.table_of_matches = pd.DataFrame(-1, index=np.arange(5), columns=np.arange(41))
-g_param.table_of_stats = pd.DataFrame(0, index=['total', 'recall', 'precision'], columns=np.arange(41))
-
-
+g_param.table_of_matches = pd.DataFrame(-1, index=np.arange(12), columns=np.arange(41))
+g_param.table_of_stats = pd.DataFrame(0.0, index=['total_pred', 'total_gt', 'recall', 'precision'], columns=np.arange(41))
+track_gt_pred = pd.DataFrame(-1, index=np.arange(12), columns=np.arange(41))
 # trans_volcani = np.array([[-0.7071, 0.7071, 0], [-0.7071, -0.7071, 0], [0, 0, 1]])
+
+
+########################################################################################################################
+# ---------- tracking results analysis -------------
+
+
+def create_track_gt_df():
+    """
+    read the csv file that describes the 2d tracking of the grape clusters.
+    each column represent an image.
+    each row represent a grape cluster
+    the number (ranging 0 - 6) represnt the id of the grape in the frame (from left to right).
+
+    This function converts it to a "2d" table, with the columns (left to right):
+    frame  ID_in_frame  Cluster_ID.
+
+    a similar function exits for converting the detections that had IoU > 0.5 into the same type of table.
+
+    Later, a comparison should be made between these two tables.
+    """
+    gt_track = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_track.csv',
+                           header=None)
+    rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
+    frames_num = gt_track.shape[1]  # 41 images
+    table_3_l = []
+    # print('Frame | ID in Frame | Cluster ID')
+    for col in range(0, rows_num):
+        for row in range(0, frames_num):
+            if not pd.isna(gt_track[row][col]):
+                if float(gt_track[row][col]) or gt_track[row][col] == 0:
+                    # print(col, row, gt_track[row][col])
+                    table_3_l.append([col, row, gt_track[row][col]])
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'ID_in_frame', 'Cluster_ID'])
+    # print(table_3)
+    return table_3  # could be replaced by writing to csv file.
+
+
+def create_track_pred_df():
+    """
+    same as create_track_gt_df
+    """
+    gt_track = g_param.table_of_matches
+    rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
+    frames_num = gt_track.shape[1]  # 41 images
+    table_3_l = []
+    for col in range(0, rows_num):
+        for row in range(0, frames_num):
+            if gt_track[row][col] > -1:
+                table_3_l.append([row, col, gt_track[row][col]])
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'ID_in_frame', 'Cluster_ID'])
+    # table_3.to_csv(path_or_buf=g_param.read_write_object)
+    # print(table_3)
+    return table_3  # could be replaced by writing to csv
+
+
+
+
+# for image_col in range(41):
+#     columns = g_param.table_of_matches.at[arr[indexs][image_col], :].values
+#     arr = columns
+#     indexs = arr > -1
+#     for i in range(len(arr[indexs])):
+#         d.at[arr[indexs][i], 0] = i
 
 
 ########################################################################################################################
@@ -1213,7 +1276,7 @@ if __name__ == '__main__':
             if len(gt_box) > 0:
                 img_path = g_param.read_write_object.load_image_path()
                 img = cv.imread(img_path)
-                rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+                rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB) # FIXME -TODO: check from g_param.image_number = 3, 4.
                 display_differences(rgb, gt_box, gt_class_id, gt_mask,
                                     pred_boxes, pred_class_id, pred_score, prediction_masks,
                                     class_names, title="Pred vs. GT", ax=None,
@@ -1232,8 +1295,17 @@ if __name__ == '__main__':
             indexs = pred_match > -1
             for i in range(len(pred_match[indexs])):
                 g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
-            print(g_param.table_of_matches)
-        update_database_visualization()  # FIXME
+
+            g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
+            g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
+            g_param.table_of_stats.at['recall', g_param.image_number] = float(len(pred_match[indexs]) / gt_mask.shape[2])
+            g_param.table_of_stats.at['precision', g_param.image_number] = float(len(pred_match[indexs]) / prediction_masks.shape[2])
+            # print(g_param.table_of_matches)
+            # print(g_param.table_of_stats)
+            g_param.read_write_object.write_tracking_pred(create_track_pred_df())
+            g_param.read_write_object.write_tracking_gt(create_track_gt_df())
+
+        update_database_visualization()
         print_image_details(step_direction[(g_param.image_number + 1) % 4])
         # g.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:]) #print TB
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6

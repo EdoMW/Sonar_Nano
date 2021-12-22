@@ -794,6 +794,8 @@ def sort_results(results):
     bbox = utils.extract_bboxes(results['masks'])
     bbox = bbox.astype('int32')
     results['bbox'] = bbox
+    if results['bbox'].shape[0] == 0:
+        return results
     res = []
     for i in range(len(results['scores'])):
         res.append({
@@ -813,7 +815,8 @@ def sort_results(results):
             # d = np.vstack((d, res[i]['masks'].reshape(1024, 1024, 1)))
             c = np.append(c, res[i]['scores'])
     else:
-        d = d.reshape(1024, 1024)
+        d = d.reshape(1024, 1024, 1)
+        b = b.reshape(1, 4)
     results = {"rois": a, "class_ids": results['class_ids'], "scores": c, "masks": d, "bbox": b,
                }
     return results
