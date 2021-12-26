@@ -255,7 +255,13 @@ class ReadWrite:
         parent_dir_sim = r'D:\Users\NanoProject\simulations'
         path_sim = os.path.join(parent_dir_sim, directory)
         os.mkdir(path_sim)
+        path_tracking = os.path.join(parent_dir_sim, directory)
         self.simulations = path_sim
+        self.pred_tracking = os.path.join(path_sim,  r'tracking\pred')
+        self.gt_tracking =  os.path.join(path_sim,  r'tracking\gt')
+        os.mkdir(os.path.join(path_sim,  'tracking'))
+        os.mkdir(os.path.join(path_sim,  r'tracking\pred'))
+        os.mkdir(os.path.join(path_sim,  r'tracking\gt'))
 
     def create_directories(self):
         # FIXME uncomment next 2 lines
@@ -344,8 +350,6 @@ class ReadWrite:
         """
         path_sim = self.simulations
         # FIXME - NEEDS TO ADD ON LOAD MODE THE PATHS TO TRACKING (TRACKING, 2 SUB DIRS GT, PRED)
-        self.gt_tracking = path_8_1
-        self.pred_tracking = path_8_2
         write_txt_config(path_sim)
 
     def save_mask(self, mask, mask_id):
