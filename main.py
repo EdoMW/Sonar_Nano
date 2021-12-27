@@ -1,4 +1,6 @@
 import sys
+
+import cv2
 import tensorflow as tf  # Added next 2 lines insted
 # import tensorflow.compat.v1 as tf
 # tf.disable_v2_behavior()
@@ -1260,6 +1262,7 @@ if __name__ == '__main__':
         prediction_masks, pred_score = capture_update_TB()  # 5 + 7-12 inside #
         g_param.eval_mode = True
         if g_param.eval_mode:
+            # evaluate_detections()
             gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
             gt_class_id = np.array([1] * len(coms))
             r_dict_gt = {'masks': gt_mask, 'bbox': gt_box, 'rois': gt_box, 'scores': np.array([1] * gt_mask.shape[2]),
@@ -1273,17 +1276,17 @@ if __name__ == '__main__':
             # pred_score = np.array(grape.mask_score).reshape(1, 1)[0]  # FIXME- RESHAPE
             # pred_mask = grape.mask.reshape(1024, 1024, 1)  # FIXME- RESHAPE
             class_names = ['BG', 'grape_cluster']
+            img_path = g_param.read_write_object.load_image_path()
+            img = cv.imread(img_path)
+            rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
             if len(gt_box) > 0:
-                img_path = g_param.read_write_object.load_image_path()
-                img = cv.imread(img_path)
-                rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB) # FIXME -TODO: check from g_param.image_number = 3, 4.
                 display_differences(rgb, gt_box, gt_class_id, gt_mask,
                                     pred_boxes, pred_class_id, pred_score, prediction_masks,
                                     class_names, title="Pred vs. GT", ax=None,
                                     show_mask=True, show_box=True,
                                     iou_threshold=0.5, score_threshold=0.5)
             else:
-                display_instances(g_param.masks_image, pred_boxes, prediction_masks, np.array([1]), class_names,
+                display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
                                   scores=None, title="instances",  figsize=(16, 16), ax=None,
                                   show_mask=True, show_bbox=True, colors=None, captions=None)
             gt_match, pred_match, overlaps = utils.compute_matches(
@@ -1295,13 +1298,16 @@ if __name__ == '__main__':
             indexs = pred_match > -1
             for i in range(len(pred_match[indexs])):
                 g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
-
             g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
             g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
-            g_param.table_of_stats.at['recall', g_param.image_number] = float(len(pred_match[indexs]) / gt_mask.shape[2])
-            g_param.table_of_stats.at['precision', g_param.image_number] = float(len(pred_match[indexs]) / prediction_masks.shape[2])
-            # print(g_param.table_of_matches)
-            # print(g_param.table_of_stats)
+            if gt_mask.shape[2] > 0:
+                recall_val = float(len(pred_match[indexs]) / gt_mask.shape[2])
+                precision_val = float(len(pred_match[indexs]) / prediction_masks.shape[2])
+            else:
+                recall_val = -1
+                precision_val = -1
+            g_param.table_of_stats.at['recall', g_param.image_number] = recall_val
+            g_param.table_of_stats.at['precision', g_param.image_number] = precision_val
             g_param.read_write_object.write_tracking_pred(create_track_pred_df())
             g_param.read_write_object.write_tracking_gt(create_track_gt_df())
 

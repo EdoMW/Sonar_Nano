@@ -1180,7 +1180,7 @@ def take_picture_and_run():
             if r['masks'].ndim < 3:
                 r['masks'] = r['masks'].reshape((1024, 1024, 1))
             rgb_im1 = cv.cvtColor(im1.copy(), cv.COLOR_BGR2RGB)
-            img_with_masks = visualize.display_instances(im1, bbox, r['masks'], r['class_ids'],
+            img_with_masks = visualize.display_instances(rgb_im1, bbox, r['masks'], r['class_ids'],
                                                          dataset_test.class_names, r['scores'], ax=ax,
                                                          title="Predictions", show_bbox=True)
         images, boxes, mini_boxes, boxes_min, pixels_count_arr, com_list = [], [], [], [], [], []

@@ -183,9 +183,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
-    # print('masked_image', type(masked_image), masked_image.shape)
-    # rgb_masked_image = cv2.cvtColor(masked_image.astype(np.uint8).copy(), cv2.COLOR_RGB2BGR)
-    show_in_moved_window_1('Green GT, Blue prediction', masked_image.astype(np.uint8), None, 0, 0, 0)
+    rgb_masked_image = cv2.cvtColor(masked_image.astype(np.uint8).copy(), cv2.COLOR_RGB2BGR)
+    show_in_moved_window_1('Green GT, Red predictions', rgb_masked_image, None, 0, 0, 0)
     if auto_show:
         plt.show()
     return masked_image.astype(np.uint8)

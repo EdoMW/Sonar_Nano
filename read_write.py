@@ -258,7 +258,7 @@ class ReadWrite:
         path_tracking = os.path.join(parent_dir_sim, directory)
         self.simulations = path_sim
         self.pred_tracking = os.path.join(path_sim,  r'tracking\pred')
-        self.gt_tracking =  os.path.join(path_sim,  r'tracking\gt')
+        self.gt_tracking = os.path.join(path_sim,  r'tracking\gt')
         os.mkdir(os.path.join(path_sim,  'tracking'))
         os.mkdir(os.path.join(path_sim,  r'tracking\pred'))
         os.mkdir(os.path.join(path_sim,  r'tracking\gt'))
@@ -561,7 +561,7 @@ class ReadWrite:
             return
         folder_path_tracking_gt = self.gt_tracking
         gt_tracking_path = os.path.join(folder_path_tracking_gt, 'tracking_gt.csv')
-        gt_track_df.to_csv(gt_tracking_path)
+        gt_track_df.to_csv(gt_tracking_path, index=False)
 
     def write_tracking_pred(self, pred_track_df):
         """
@@ -572,7 +572,7 @@ class ReadWrite:
             return
         folder_path_tracking_pred = self.pred_tracking
         pred_tracking_path = os.path.join(folder_path_tracking_pred, 'tracking_pred.csv')
-        pred_track_df.to_csv(pred_tracking_path)
+        pred_track_df.to_csv(pred_tracking_path, index=False)
 
     # ------------------------------------------------------------------
     # ---------------------------- read --------------------------------

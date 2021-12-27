@@ -39,6 +39,7 @@ def show_in_moved_window_1(win_name, img, i=None, x=0, y=0, wait_time=0):  # lab
         target_bolded = img.copy()
         cv2.namedWindow(win_name, cv2.WINDOW_AUTOSIZE)  # Create a named window
         cv2.moveWindow(win_name, x, y)  # Move it to (x,y)
+        target_bolded = cv2.cvtColor(target_bolded, cv2.COLOR_BGR2RGB)
         cv2.imshow(win_name, target_bolded)
         cv2.waitKey(wait_time)
         cv2.destroyAllWindows()
@@ -243,10 +244,10 @@ def sort_results(results):
                }
     return results
 
-skip = True
+skip = False
 # skip = False
 if not skip:
-    for i in range(7, 9):
+    for i in range(22, 41):
         masks = load_mask_file_1(i)
         r = {'masks': masks, 'bbox': utils.extract_bboxes(masks), 'rois': utils.extract_bboxes(masks),
              'scores': np.array([1] * masks.shape[2]), 'class_ids': np.array([1] * masks.shape[2])}
