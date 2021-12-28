@@ -215,7 +215,7 @@ def add_grapes(rgb_image):
                 obbs_list.append(obbs_temp[grapes_added])
                 corners_list.append(corners_list_temp[grapes_added])
                 npys_list.append(npys_temp[grapes_added])
-    print(f'total of {len(npys_list)} grapes were added manually')
+    # print(f'total of {len(npys_list)} grapes were added manually')
     # if there were grapes to be added to the Data Base.
     if len(npys_list) > 0:
         # converting the array to np array in shape of [1024, 1024, N]

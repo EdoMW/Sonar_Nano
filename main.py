@@ -69,6 +69,8 @@ sleep_time = 5
 step_direction = ["right", "up", "right", "down"]  # the order of movement # ["right", "up", "right", "down"] !!!
 direction = None
 g_param.init()
+g_param.distances_gt = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_distances.csv', header=None)
+g_param.eval_mode = True
 first_run = True
 g_param.show_images = True  # g.show_images: if true, it is visualizes the process
 external_signal_all_done = False
@@ -92,7 +94,8 @@ def create_track_gt_df():
     the number (ranging 0 - 6) represnt the id of the grape in the frame (from left to right).
 
     This function converts it to a "2d" table, with the columns (left to right):
-    frame  ID_in_frame  Cluster_ID.
+    frame  Cluster_ID  ID_in_frame.
+    sorted by frame (image ID), than by Cluster_ID and than by ID_in_frame
 
     a similar function exits for converting the detections that had IoU > 0.5 into the same type of table.
 
@@ -109,9 +112,9 @@ def create_track_gt_df():
             if not pd.isna(gt_track[row][col]):
                 if float(gt_track[row][col]) or gt_track[row][col] == 0:
                     # print(col, row, gt_track[row][col])
-                    table_3_l.append([col, row, gt_track[row][col]])
-    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'ID_in_frame', 'Cluster_ID'])
-    # print(table_3)
+                    table_3_l.append([row, col,  gt_track[row][col]])
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'Cluster_ID', 'ID_in_frame'])
+    table_3 = table_3.sort_values(["frame", "Cluster_ID"], ascending=(True, True))
     return table_3  # could be replaced by writing to csv file.
 
 
@@ -127,12 +130,10 @@ def create_track_pred_df():
         for row in range(0, frames_num):
             if gt_track[row][col] > -1:
                 table_3_l.append([row, col, gt_track[row][col]])
-    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'ID_in_frame', 'Cluster_ID'])
-    # table_3.to_csv(path_or_buf=g_param.read_write_object)
-    # print(table_3)
-    return table_3  # could be replaced by writing to csv
-
-
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'Cluster_ID', 'ID_in_frame'])
+    table_3 = table_3.sort_values(["frame", "Cluster_ID"], ascending=(True, True))
+    g_param.pred_df = table_3
+    return table_3
 
 
 # for image_col in range(41):
@@ -679,11 +680,38 @@ def update_database_no_grape_sonar_human(mask_id):
     pass
 
 
-def activate_sonar(mask_id, not_grape):
+def get_dist_from_csv(index_of_tb):
+    """
+    will search for the matching grape cluster in the GT csv file and return the distance.
+    :param mask_id: mask ID in TB, global cluster ID
+    :return: distance (float), real_grape (boolean)
+    ['frame', 'Cluster_ID', 'ID_in_frame']
+    Return 0.6, False if grape not in GT.
+    else return estimated distance and True (REAL GRAPE)
+    """
+    cluster_id = g_param.pred_df.index[(g_param.pred_df['frame'] == g_param.image_number) &
+                          (g_param.pred_df['ID_in_frame'] == g_param.TB[index_of_tb].id_in_frame)].tolist()
+    if len(cluster_id) == 0:
+        return 0.6, False
+    return g_param.distances_gt.iloc[cluster_id].values[0][0], True
+
+
+def activate_sonar(mask_id, not_grape, index_of_tb):
     """
     activate sonar- read distance and grape/no grape.
     :return: distance to grape, grape (yes=1,no =0)
+    The original method (which includes the try, catch) is been done using the assumption that all the grapes
+    (with 100% certainty) are recorded during the experiment. Has it turned out, it's difficult to validate that,
+    because the separation between the rows in the images is not always clear enough, as well as the decision
+    'what counts as a grape cluster'.
+
+    For evaluation mode (for evaluating May exp) a different schema is executed:
+    For each grape detected in the current capturing position (image), if IoU between pred and GT grape cluster is above
+    the threshold (0.5), than a distance will be taken from the csv file corresponding to the GT distances file.
     """
+    if g_param.eval_mode:
+        distance, real_g = get_dist_from_csv(index_of_tb)
+        return distance, real_g # distance, real_g are true if grape is in the gt.
     try:
         counter = 0  # initiate flag
         record = get_class_record(mask_id)
@@ -777,6 +805,11 @@ def print_line_sep_time():
     t = time.localtime()
     current_time = time.strftime("%H:%M:%S", t)
     print('-' * 40, current_time, '-' * 40, '\n')
+    image_masks = []
+    for ind in range(len(g_param.TB)):
+        if g_param.TB[ind].last_updated == g_param.image_number:
+            image_masks.append([ind, g_param.TB[ind].index])
+    print(image_masks)
 
 
 def move_platform():
@@ -863,7 +896,7 @@ def update_database_sprayed(index_of_grape):
 
 def update_wait_another_round():
     """
-    for future work (already working- tested)
+    for future work - currently not in use, too many Hypotheses to check. (already working- tested)
     mark grapes that were not sprayed yet and would be closer to the center of the image in the next
     capture image position (next step).
     :return:
@@ -984,17 +1017,24 @@ def plot_tracking_map():
     ax.set_ylim(g_param.y_lim)
     ax.set_zlim(g_param.z_lim)
 
-    # project each points on all planes.
+    ax.zaxis.set_tick_params(labelsize=14)
+    ax.yaxis.set_tick_params(labelsize=14)
+    ax.xaxis.set_tick_params(labelsize=14)
+
+               # project each points on all planes.
     x, y, z = get_projections()
     ax.plot(x, z, '+', c='r', zdir='y', zs=g_param.y_lim[1])  # red pluses (+) on XZ plane
     ax.plot(y, z, 's', c='g', zdir='-x', zs=g_param.x_lim[0])  # red squares on YZ plane
     ax.plot(x, y, '*', c='b', zdir='-z', zs=g_param.z_lim[0])  # red pluses (*) on XY plane
 
     # labels titles
-    ax.set_xlabel('X Label - distance')
-    ax.set_ylabel('Y Label - advancement (moving from left to right)')
-    ax.set_zlabel('Z Label - height')
+    ax.set_xlabel('X - Distance [m]', fontsize=14)
+    ax.set_ylabel('Y - Path (left to right) [m]', fontsize=14)
+    ax.set_zlabel('Z - Height [m]', fontsize=14)
 
+    ax.xaxis.labelpad = 10
+    ax.yaxis.labelpad = 12
+    ax.zaxis.labelpad = 10
     # change color of each plane
     ax.w_yaxis.set_pane_color((1.0, 0, 0.1))  # xy plane is red
     ax.w_xaxis.set_pane_color((0, 1.0, 0, 0.1))  # xy plane is green
@@ -1013,7 +1053,6 @@ def plot_tracking_map():
     # ax.view_init(elev, azim)
 
     plt.show()
-
 
 
 def check_end_program_time():
@@ -1198,7 +1237,6 @@ def calc_gt_box_trail(image_number):
             mask = np.reshape(mask, (1024, 1024, 1))
             bboxs.append(utils.extract_bboxes(mask).astype('int32'))
             center_of_masks.append(np.asarray(scipy.ndimage.measurements.center_of_mass(mask[:, :]))[:2])
-            print("bbox: ", bboxs[0], " center_of_masks: ", center_of_masks[0])
             if m > 0:
                 masks = np.dstack((masks, mask))
         except AssertionError as msg:
@@ -1233,6 +1271,93 @@ def bbox_from_corners(corners):
     return bbox
 
 
+def keep_relevant_masks(prediction_masks):
+    """
+    The goal of the evaluation is to check the tracking system with respect to the masks that entered the TB
+    (not evaluating the performance of the network. it had been done separately (and can easily be done here is well).
+    This function returns the maks on this image that weren't removed by the tracking algorithm.
+    :param prediction_masks: prediction masks of the current image (before filtering by the TB).
+    :return: prediction_masks and their scores.
+    """
+    if prediction_masks.shape[2] == 0:
+        return prediction_masks, np.array([])
+    image_masks_ind = []
+    scores = []
+    indexes = []
+    for ind in range(len(g_param.TB)):
+        if g_param.TB[ind].last_updated == g_param.image_number:
+            mask = np.reshape(g_param.TB[ind].mask, (1024, 1024, 1))
+            if len(image_masks_ind) == 0:
+                masks = mask
+            else:
+                masks = np.dstack((masks, mask))
+            image_masks_ind.append([ind])
+            scores.append(g_param.TB[ind].mask_score)
+            indexes.append(g_param.TB[ind].index)
+    scores = np.array(scores)
+    return masks, scores, indexes
+
+
+def update_TB_id_in_frame(prediction_masks, pred_score, indexes):
+    for i in range(len(g_param.TB)):
+        for j in range(prediction_masks.shape[2]):
+            if np.all(g_param.TB[i].mask == prediction_masks[:,:,j]):
+                g_param.TB[i].id_in_frame = j
+
+
+def evaluate_detections(prediction_masks, pred_score):
+    if not g_param.eval_mode:
+        return
+    prediction_masks, pred_score, indexes = keep_relevant_masks(prediction_masks)
+    update_TB_id_in_frame(prediction_masks, pred_score, indexes)
+    gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
+    r_dict_gt = {'masks': gt_mask, 'bbox': gt_box, 'rois': gt_box, 'scores': np.array([1] * gt_mask.shape[2]),
+                 'class_ids': np.array([1] * gt_mask.shape[2])}
+    r_dict_gt = sort_results(r_dict_gt)
+    # pred_box = bbox_from_corners(grape.p_corners)
+    gt_mask, gt_box, gt_class_id = r_dict_gt['masks'], r_dict_gt['bbox'], r_dict_gt['class_ids']
+    pred_boxes = utils.extract_bboxes(prediction_masks)
+
+    pred_class_id = np.array([1] * prediction_masks.shape[2])
+    class_names = ['BG', 'grape_cluster']
+    img_path = g_param.read_write_object.load_image_path()
+    img = cv.imread(img_path)
+    rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    if len(gt_box) > 0:
+        display_differences(rgb, gt_box, gt_class_id, gt_mask,
+                            pred_boxes, pred_class_id, pred_score, prediction_masks,
+                            class_names, title="Pred vs. GT", ax=None,
+                            show_mask=True, show_box=True,
+                            iou_threshold=0.5, score_threshold=0.5)
+    else:
+        display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
+                          scores=None, title="instances",  figsize=(16, 16), ax=None,
+                          show_mask=True, show_bbox=True, colors=None, captions=None)
+    gt_match, pred_match, overlaps = utils.compute_matches(
+        gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
+        pred_score, prediction_masks, iou_threshold=0.5)
+    mAP, precisions, recalls, overlaps = utils.compute_ap(
+        gt_box, gt_class_id, gt_mask, pred_boxes,
+        pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)
+    indexs = pred_match > -1
+    for i in range(len(pred_match[indexs])):
+        g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
+    g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
+    g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
+    if gt_mask.shape[2] > 0:
+        recall_val = float(len(pred_match[indexs]) / gt_mask.shape[2])
+        precision_val = float(len(pred_match[indexs]) / prediction_masks.shape[2])
+    else:
+        recall_val = -1
+        precision_val = -1
+    g_param.table_of_stats.at['recall', g_param.image_number] = recall_val
+    g_param.table_of_stats.at['precision', g_param.image_number] = precision_val
+    g_param.read_write_object.write_tracking_pred(create_track_pred_df())
+    g_param.read_write_object.write_tracking_gt(create_track_gt_df())
+
+    return prediction_masks.shape[2]
+
+
 if __name__ == '__main__':
     init_program()
     print(">>> Start position: ")
@@ -1259,58 +1384,8 @@ if __name__ == '__main__':
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
-        prediction_masks, pred_score = capture_update_TB()  # 5 + 7-12 inside #
-        g_param.eval_mode = True
-        if g_param.eval_mode:
-            # evaluate_detections()
-            gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
-            gt_class_id = np.array([1] * len(coms))
-            r_dict_gt = {'masks': gt_mask, 'bbox': gt_box, 'rois': gt_box, 'scores': np.array([1] * gt_mask.shape[2]),
-                         'class_ids': np.array([1] * gt_mask.shape[2])}
-            r_dict_gt = sort_results(r_dict_gt)
-            # pred_box = bbox_from_corners(grape.p_corners)
-            gt_mask, gt_box, gt_class_id = r_dict_gt['masks'], r_dict_gt['bbox'], r_dict_gt['class_ids']
-            pred_boxes = utils.extract_bboxes(prediction_masks)
-
-            pred_class_id = np.array([1] * prediction_masks.shape[2])
-            # pred_score = np.array(grape.mask_score).reshape(1, 1)[0]  # FIXME- RESHAPE
-            # pred_mask = grape.mask.reshape(1024, 1024, 1)  # FIXME- RESHAPE
-            class_names = ['BG', 'grape_cluster']
-            img_path = g_param.read_write_object.load_image_path()
-            img = cv.imread(img_path)
-            rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-            if len(gt_box) > 0:
-                display_differences(rgb, gt_box, gt_class_id, gt_mask,
-                                    pred_boxes, pred_class_id, pred_score, prediction_masks,
-                                    class_names, title="Pred vs. GT", ax=None,
-                                    show_mask=True, show_box=True,
-                                    iou_threshold=0.5, score_threshold=0.5)
-            else:
-                display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
-                                  scores=None, title="instances",  figsize=(16, 16), ax=None,
-                                  show_mask=True, show_bbox=True, colors=None, captions=None)
-            gt_match, pred_match, overlaps = utils.compute_matches(
-                gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
-                pred_score, prediction_masks, iou_threshold=0.5)
-            mAP, precisions, recalls, overlaps = utils.compute_ap(
-                gt_box, gt_class_id, gt_mask, pred_boxes,
-                pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)
-            indexs = pred_match > -1
-            for i in range(len(pred_match[indexs])):
-                g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
-            g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
-            g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
-            if gt_mask.shape[2] > 0:
-                recall_val = float(len(pred_match[indexs]) / gt_mask.shape[2])
-                precision_val = float(len(pred_match[indexs]) / prediction_masks.shape[2])
-            else:
-                recall_val = -1
-                precision_val = -1
-            g_param.table_of_stats.at['recall', g_param.image_number] = recall_val
-            g_param.table_of_stats.at['precision', g_param.image_number] = precision_val
-            g_param.read_write_object.write_tracking_pred(create_track_pred_df())
-            g_param.read_write_object.write_tracking_gt(create_track_gt_df())
-
+        prediction_maskss, pred_scores = capture_update_TB()  # 5 + 7-12 inside #
+        amount_grapes_detected = evaluate_detections(prediction_maskss, pred_scores)
         update_database_visualization()
         print_image_details(step_direction[(g_param.image_number + 1) % 4])
         # g.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:]) #print TB
@@ -1319,15 +1394,22 @@ if __name__ == '__main__':
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
         if not first_run and g_param.image_number > 0:
             mark_sprayed_and_display()
+        dists = []
+        for i_d in range(len(g_param.TB)):
+            dists.append([i_d, g_param.TB[i_d].index, g_param.TB[i_d].distance])
+        # TODO: fix the way distance are beeing updated (I think the problem is in the selection of the right
+        # TODO: grape from the TB). check if to access all grapes that had not been sprayed yet, or
+        # TODO: all grapes that appear in the image.
+
+        print('distances \n', dists)
         if grape_ready_to_spray:  # 15- yes (change to sorting according to 14, rap the next lines in a function)
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
+            # if g_param.eval_mode:
+            #     amount_of_grapes_to_spray = amount_grapes_detected
             for i in range(amount_of_grapes_to_spray):
                 grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
-                # TODO- add evaluation mode which mark unlabeled masks as false detection,
-                #  and assign masks accordingly to the GT.
-                # visualization
-                g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),
+                g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),   # visualization
                                                  org=(int(g_param.TB[i].x_p), int(g_param.TB[i].y_p)),
                                                  fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
                                                  color=(255, 255, 255), thickness=1, lineType=2)
@@ -1335,19 +1417,18 @@ if __name__ == '__main__':
                 if g_param.show_images:
                     show_in_moved_window("Next target to be sprayed", g_param.masks_image, i, 0,
                                          0, g_param.auto_time_display)
-                not_grape = remove_by_visual(i)  # FIXME- add option- if manually confirmed, it's a grape
+                not_grape = remove_by_visual(i)
                 if not_grape:  # if it's not a grape, skip next part
                     continue
                 move2sonar(grape)  # 17
                 if g_param.time_to_move_platform:  # 18
                     break  # 19
                 # TODO: uncomment when working with sonar
-                g_param.last_grape_dist, is_grape = activate_sonar(grape.index, not_grape)  # 20
+                g_param.last_grape_dist, is_grape = activate_sonar(grape.index, not_grape, i)  # 20
                 # g_param.last_grape_dist, is_grape = 0.55, 1  # without sonar usage
                 # maskk = g_param.read_write_object.load_mask(grape.index) #TODO uncomment 2 lines to validate mask
                 # display_image_with_mask(g_param.masks_image, maskk)
                 # switch_materiel()  # check if it is time to switch materiel
-
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
                     TB_class.update_by_real_distance(i)  # 23,24 TODO: check

@@ -143,7 +143,6 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     masked_image = image.astype(np.uint32).copy()
     for i in range(N):
         color = colors[i]
-
         # Bounding box
         if not np.any(boxes[i]):
             # Skip this instance. Has no bbox. Likely lost in image cropping.
@@ -154,7 +153,6 @@ def display_instances(image, boxes, masks, class_ids, class_names,
                                 alpha=0.7, linestyle="dashed",
                                 edgecolor=color, facecolor='none')
             ax.add_patch(p)
-
         # Label
         if not captions:
             class_id = class_ids[i]

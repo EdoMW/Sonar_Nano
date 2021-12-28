@@ -5,18 +5,20 @@ TB = []
 masks_image = None
 half_width_meter = 0.34
 half_height_meter = 0.2
-auto_time_display = 100  # time to display image automatically
+auto_time_display = 0  # time to display image automatically
 show_images = True
 spray_sonar = True
 trans = None
+distances_gt = None
 
+pred_df = None
 avg_dist = 0.63  # 75
 platform_step_size = 0.5  # TODO (change to 0.5 for exp movement default)
 sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.63
 step_size = 0.1
 height_step_size = 1.5  # parameter to_tune
-# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) TODO (after exp)
+# avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) # for future work - (after exp)
 image_number = 0
 plat_position_step_number = 0
 read_write_object = None
@@ -173,8 +175,7 @@ def init():
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
         image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
         manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim, table_of_matches,\
-        table_of_stats
+        table_of_stats, distances_gt, pred_df
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
     empty_npz_dir()
-

@@ -441,7 +441,7 @@ def two_value_to_int_vec(vec):
 # det_rotated_boxes
 # create new compute_overlaps to match rotated Bounding boxes
 class calcs:
-    def calc_angle_between_boxes(matched_gt_boxes, positive_ids,
+    def calc_angle_between_boxes(self, matched_gt_boxes, positive_ids,
                                  GT_rotated_boxes, det_rotated_boxes):
         angles = []
         for i in range(0, len(matched_gt_boxes)):
@@ -449,11 +449,11 @@ class calcs:
             b = positive_ids[i]
             det_angle = det_rotated_boxes[a][4]
             GT_angle = GT_rotated_boxes[b][4]
-            angle = abs(det_angle - GT_angle)
-            angles.append(angle)
+            angle_rot = abs(det_angle - GT_angle)
+            angles.append(angle_rot)
         return angles
 
-    def mean_of_list(list_to_calc):
+    def mean_of_list(self, list_to_calc):
         if len(list_to_calc) < 1:
             return None
         sum = 0
@@ -977,9 +977,7 @@ def take_picture_and_run():
 
         mask, obbs_list, corners_list, img_rgb = add_grapes(rgb)  # adding new grapes that were not recognized
         corner_points = corner_points + corners_list
-
         boxes = boxes + obbs_list
-
         new_corner_points = []
         for elem in corner_points:
             if check_if_in_list(elem, new_corner_points):
@@ -1246,7 +1244,6 @@ def take_picture_and_run():
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             # det_rotated_boxes.append(box_in_meter)
-            print("r['scores'].shape", r['scores'].shape)
             mask_score = None
             if amount_of_mask_detacted == 1:
                 mask_score = r['scores']

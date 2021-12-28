@@ -14,20 +14,24 @@ from random import randint
 import colorsys
 from PIL import Image
 
-gt_track = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_track.csv',
-                       header=None)
-rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
-frames_num = gt_track.shape[1]  # 41 images
-table_3_l = []
-# print('Frame | ID in Frame | Cluster ID')
-for col in range(0, rows_num):
-    for row in range(0, frames_num):
-        if not pd.isna(gt_track[row][col]):
-            if float(gt_track[row][col]) or gt_track[row][col] == 0:
-                # print(col, row, gt_track[row][col])
-                table_3_l.append([col, row, gt_track[row][col]])
-table_3 = pd.DataFrame(table_3_l, columns=['frame', 'ID_in_frame', 'Cluster_ID'])
-print(table_3)
+g_param.distances_gt = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_distances.csv', header=None)
+print(distances_gt)
+
+
+# gt_track = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_track.csv',
+#                        header=None)
+# rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
+# frames_num = gt_track.shape[1]  # 41 images
+# table_3_l = []
+# # print('Frame | ID in Frame | Cluster ID')
+# for col in range(0, rows_num):
+#     for row in range(0, frames_num):
+#         if not pd.isna(gt_track[row][col]):
+#             if float(gt_track[row][col]) or gt_track[row][col] == 0:
+#                 # print(col, row, gt_track[row][col])
+#                 table_3_l.append([col, row, gt_track[row][col]])
+# table_3 = pd.DataFrame(table_3_l, columns=['frame', 'ID_in_frame', 'Cluster_ID'])
+# print(table_3)
 # return table_3  # could be replaced by writing to csv file.
 
 #
