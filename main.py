@@ -692,7 +692,7 @@ def get_dist_from_csv(index_of_tb):
     cluster_id = g_param.pred_df.index[(g_param.pred_df['frame'] == g_param.image_number) &
                           (g_param.pred_df['ID_in_frame'] == g_param.TB[index_of_tb].id_in_frame)].tolist()
     if len(cluster_id) == 0:
-        return 0.6, False
+        return 1.2, False
     return g_param.distances_gt.iloc[cluster_id].values[0][0], True
 
 
@@ -954,6 +954,7 @@ def mark_sprayed_and_display():
     if g_param.show_images:
         plot_tracking_map()
         show_in_moved_window("Checking status", g_param.masks_image, None, 0, 0, g_param.auto_time_display)
+        print('a')
 
 
 def calc_single_axis_limits(axis):
@@ -974,11 +975,12 @@ def calc_single_axis_limits(axis):
     return float(min_lim_x - 2.5 * min_max_range), float(max_lim_x + 2.5 * min_max_range)
 
 
+
 def calc_axis_limits():
     """
     Calculate the limits of each axis on the 3d plot
     """
-    g_param.x_lim = calc_single_axis_limits(0)
+    # g_param.x_lim = calc_single_axis_limits(0)
     g_param.y_lim = calc_single_axis_limits(1)
     g_param.z_lim = calc_single_axis_limits(2)
 
@@ -996,6 +998,13 @@ def get_projections():
     return x_list, y_list, z_list
 
 
+def three_d_color(index):
+    grape = g_param.TB[index]
+    if grape.fake_grape:
+        return 'b'
+    return 'r' if grape.sprayed else 'g'
+
+
 def plot_tracking_map():
     """
     Visualize all grapes centers on a 3d map.
@@ -1007,7 +1016,9 @@ def plot_tracking_map():
         x_cors.append(x_cor)
         y_cors.append(y_cor)
         z_cors.append(z_cor)
-        color = 'r' if g_param.TB[i].sprayed else 'g'
+        # FIXME, consider changing colors to real&sprayed/real&not sprayed/ not real
+        # color = 'r' if g_param.TB[i].sprayed else 'g'
+        color = three_d_color(i)
         colors.append(color)
     fig, ax = plt.subplots(figsize=(12, 12), subplot_kw={'projection': '3d'})
 
@@ -1280,7 +1291,10 @@ def keep_relevant_masks(prediction_masks):
     :return: prediction_masks and their scores.
     """
     if prediction_masks.shape[2] == 0:
-        return prediction_masks, np.array([])
+        return prediction_masks, np.array([]), None
+
+
+
     image_masks_ind = []
     scores = []
     indexes = []
@@ -1340,8 +1354,17 @@ def evaluate_detections(prediction_masks, pred_score):
         gt_box, gt_class_id, gt_mask, pred_boxes,
         pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)
     indexs = pred_match > -1
-    for i in range(len(pred_match[indexs])):
-        g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
+    # FIXME: UNCOMMENT- next 2 lines are writing the GT id_in_frame.
+    #  the next uncommented sections is writing the pred id_in_frame. the frame, cluster ID are matching.
+    # for i in range(len(pred_match[indexs])):
+    #     g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
+    count = 0
+    for i in range(len(pred_match)):
+        if pred_match[i] > -1:
+            g_param.table_of_matches.at[count, g_param.image_number] = i
+            count += 1
+    #TODO: find a way to sync pred, GT table of tracking.
+
     g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
     g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
     if gt_mask.shape[2] > 0:
@@ -1437,6 +1460,7 @@ if __name__ == '__main__':
                         break  #
                     move2capture()
                     update_database_sprayed(i)  # 28
+
                     mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22

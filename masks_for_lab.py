@@ -30,6 +30,7 @@ fg.yellow = Style(RgbFg(255, 255, 70))
 amount_of_tries = 3
 num_of_pixels = 100
 ####################################
+pred_masks, pred_scores = None, None
 
 
 if g_param.work_place == "field":
@@ -1253,7 +1254,7 @@ def take_picture_and_run():
                      pred_masks[:, :, i], det_box, None, corners_in_meter, corner_points, pixels_count, com_list[i],
                      mask_score]
             add_to_target_bank(grape)
-        return pred_masks, pred_scores
+
 
     if g_param.work_place == "lab":
         display_image_with_masks(green)
@@ -1264,6 +1265,7 @@ def take_picture_and_run():
     else:
         g_param.masks_image = img
     g_param.read_write_object.write_tb()
+    return pred_masks, pred_scores
 
 
 if __name__ == '__main__':

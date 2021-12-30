@@ -247,7 +247,7 @@ def sort_results(results):
 skip = False
 # skip = False
 if not skip:
-    for i in range(22, 41):
+    for i in range(0, 41):
         masks = load_mask_file_1(i)
         r = {'masks': masks, 'bbox': utils.extract_bboxes(masks), 'rois': utils.extract_bboxes(masks),
              'scores': np.array([1] * masks.shape[2]), 'class_ids': np.array([1] * masks.shape[2])}

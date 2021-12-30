@@ -664,17 +664,22 @@ def compute_matches(gt_boxes, gt_class_ids, gt_masks,
         overlaps: [pred_boxes, gt_boxes] IoU overlaps.
     """
     # Trim zero padding
-    # TODO: cleaner to do zero unpadding upstream
     gt_boxes = trim_zeros(gt_boxes)
     gt_masks = gt_masks[..., :gt_boxes.shape[0]]
     pred_boxes = trim_zeros(pred_boxes)
     pred_scores = pred_scores[:pred_boxes.shape[0]]
     # Sort predictions by score from high to low
-    indices = np.argsort(pred_scores)[::-1]
-    pred_boxes = pred_boxes[indices]
-    pred_class_ids = pred_class_ids[indices]
-    pred_scores = pred_scores[indices]
-    pred_masks = pred_masks[..., indices]
+    # FIXME- UNCOMMENT 5 LINES
+    """
+    I commented the next 5 lines to avoid sorting of the pred, gt by confidance score
+    (it is easier for the other calculations without it).
+    """
+
+    # indices = np.argsort(pred_scores)[::-1]
+    # pred_boxes = pred_boxes[indices]
+    # pred_class_ids = pred_class_ids[indices]
+    # pred_scores = pred_scores[indices]
+    # pred_masks = pred_masks[..., indices]
 
     # Compute IoU overlaps [pred_masks, gt_masks]
     overlaps = compute_overlaps_masks(pred_masks, gt_masks)
