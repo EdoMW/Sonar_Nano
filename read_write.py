@@ -564,6 +564,17 @@ class ReadWrite:
         gt_track_df.to_csv(gt_tracking_path, index=False)
         g_param.gt_track_df = gt_track_df
 
+    def write_tracking_pred_filterd(self, pred_track_df_fil):
+        """
+        On load working mode, it write down the tracking gt to csv file.
+        :param pred_track_df_fil: df to save (pred)
+        """
+        if g_param.process_type == "work" or g_param.process_type == "record":
+            return
+        folder_path_tracking_pred = self.pred_tracking
+        pred_tracking_path = os.path.join(folder_path_tracking_pred, 'tracking_pred_filtered.csv')
+        pred_track_df_fil.to_csv(pred_tracking_path, index=False)
+
     def write_tracking_pred(self, pred_track_df):
         """
         On load working mode, it write down the tracking gt to csv file.

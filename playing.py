@@ -10,8 +10,24 @@
 # from termcolor import colored
 # import glob, shutil
 import numpy as np
+import time
+starting_time = time.time()
+from datetime import datetime as dt
 
-a = np.empty([1024, 1024, 0])
+start = dt.now()
+
+a = np.empty([1024, 1024, 100])
+a = a +2
+a = a*a
+a = a +2
+a = a*a
+a = a +2
+a = a*a
+ending_time = time.time()
+elapsed_0 = round((ending_time - starting_time), 3)
+
+print(f'Total time: {elapsed}')
+print("Took: %02d:%02d:%02d" % (elapsed.seconds // 3600, elapsed.seconds // 60 % 60, elapsed.seconds % 60))
 print(a.shape)
 # from random import randint
 # import colorsys

@@ -341,7 +341,7 @@ def show_in_moved_window(win_name, img, i=None, x=0, y=0, time_display=0):  # la
     :param time_display: how much time to wait before closing the window.
     0 - wait for key press, else it's time in milliseconds
     """
-    if g_param.image_number < 30:
+    if not g_param.show_images:
         return
     if img is not None:
         target_bolded = img.copy()

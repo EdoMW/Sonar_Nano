@@ -1,4 +1,7 @@
 import sys
+import time
+from datetime import datetime as dt
+starting_time = dt.now()
 
 import cv2
 import tensorflow as tf  # Added next 2 lines insted
@@ -12,7 +15,7 @@ from self_utils import utils
 from test_one_record import test_spec
 from preprocessing_and_adding import preprocess_one_record
 from distance import distance2
-import time
+
 import Target_bank as TB_class
 import transform
 import read_write
@@ -72,7 +75,7 @@ g_param.init()
 g_param.distances_gt = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_distances.csv', header=None)
 g_param.eval_mode = True
 first_run = True
-g_param.show_images = True  # g.show_images: if true, it is visualizes the process
+g_param.show_images = False  # g.show_images: if true, it is visualizes the process
 external_signal_all_done = False
 not_finished = True
 velocity = 0.7
@@ -120,22 +123,13 @@ def create_track_gt_df():
     return table_3  # could be replaced by writing to csv file.
 
 
-def create_track_pred_df():
+def create_track_pred_fillterd_df():
     """
     same as create_track_gt_df
     """
-    pred_track = g_param.table_of_matches_pred
-    rows_num = pred_track.shape[0]  # amount of total grape clusters in all GT.
-    frames_num = pred_track.shape[1]  # 41 images
-    table_3_l = []
-    for col in range(0, rows_num):
-        for row in range(0, frames_num):
-            if pred_track[row][col] > -1:
-                table_3_l.append([row, col, pred_track[row][col]])
-    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id', 'frame_id_pred'])
-    table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
-    g_param.pred_df = table_3
-    return table_3
+    pred_track = g_param.pred_gt_tracking
+    pred_track = pred_track[pred_track['global_id'] > -1]
+    return pred_track
 
 
 def create_track_gt_from_pred_df():
@@ -1332,7 +1326,6 @@ def keep_relevant_masks(prediction_masks):
     image_masks_ind = []
     scores = []
     indexes = []
-    print()
     for ind in range(len(g_param.TB)):
         if g_param.TB[ind].last_updated == g_param.image_number:
             mask = np.reshape(g_param.TB[ind].mask, (1024, 1024, 1))
@@ -1377,17 +1370,17 @@ def evaluate_detections(prediction_masks, pred_score):
                             pred_boxes, pred_class_id, pred_score, prediction_masks,
                             class_names, title="Pred vs. GT", ax=None,
                             show_mask=True, show_box=True,
-                            iou_threshold=0.3, score_threshold=0.5) # FIXME: IOU VALUE!!!!
+                            iou_threshold=0.5, score_threshold=0.5) # FIXME: IOU VALUE!!!!
     else:
         display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
                           scores=None, title="instances",  figsize=(16, 16), ax=None,
                           show_mask=True, show_bbox=True, colors=None, captions=None)
     gt_match, pred_match, overlaps = utils.compute_matches(
         gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
-        pred_score, prediction_masks, iou_threshold=0.2)  # FIXME: IOU VALUE!!!!
+        pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
     mAP, precisions, recalls, overlaps = utils.compute_ap(
         gt_box, gt_class_id, gt_mask, pred_boxes,
-        pred_class_id, pred_score, prediction_masks, iou_threshold=0.2)  # FIXME: IOU VALUE!!!!
+        pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
     indexs = pred_match > -1
     # FIXME: UNCOMMENT- next 2 lines are writing the GT id_in_frame.
     #  the next uncommented sections is writing the pred id_in_frame. the frame, cluster ID are matching.
@@ -1406,7 +1399,7 @@ def evaluate_detections(prediction_masks, pred_score):
             row[3] = general_id[0]
         g_param.pred_gt_tracking.loc[len(g_param.pred_gt_tracking)] = row
 
-    #TODO: find a way to sync pred, GT table of tracking.
+    #  TODO: find a way to sync pred, GT table of tracking.
 
     g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
     g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
@@ -1418,17 +1411,20 @@ def evaluate_detections(prediction_masks, pred_score):
         precision_val = -1
     g_param.table_of_stats.at['recall', g_param.image_number] = recall_val
     g_param.table_of_stats.at['precision', g_param.image_number] = precision_val
-    # g_param.read_write_object.write_tracking_pred(create_track_pred_df())
+    g_param.read_write_object.write_tracking_pred(g_param.pred_gt_tracking)
+    g_param.read_write_object.write_tracking_pred_filterd(create_track_pred_fillterd_df())
 
-
-
-
-
-
-
-
-
+     # g_param.read_write_object.write_tracking_pred(create_track_pred_df())
     return prediction_masks.shape[2]
+
+
+def print_time():
+    """
+    Print the total time it took for this run.
+    """
+    ending_time = dt.now()
+    elaps = ending_time - starting_time
+    print("HH:MM:SS: %02d:%02d:%02d" % (elaps.seconds // 3600, elaps.seconds // 60 % 60, elaps.seconds % 60))
 
 
 if __name__ == '__main__':
@@ -1530,7 +1526,8 @@ if __name__ == '__main__':
             external_signal_all_done = check_end_program_time()
             # break
             # restart_target_bank()  # option to restart without initialize
+    print_time()
 
-"""
-check IoU between previously sprayed masks to new masks to be added (or between OBBs)
-"""
+
+# All 41 images takes 00:02:16 (2 min, 16 sec) when show_image = false.
+# All 41 images takes 00:09:41 (9 min, 41 sec) when show_image = True, auto_display_time = 1500.

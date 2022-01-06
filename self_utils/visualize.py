@@ -44,6 +44,8 @@ def show_in_moved_window_1(win_name, img, i=None, x=0, y=0, wait_time=0):  # lab
     :param x: x coordinate of end left corner of the window
     :param y: y coordinate of end left corner of the window
     """
+    if not g_param.show_images:
+        return
     if img is not None:
         target_bolded = img.copy()
         cv2.namedWindow(win_name, cv2.WINDOW_AUTOSIZE)  # Create a named window
