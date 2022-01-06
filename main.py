@@ -76,9 +76,11 @@ g_param.show_images = True  # g.show_images: if true, it is visualizes the proce
 external_signal_all_done = False
 not_finished = True
 velocity = 0.7
-g_param.table_of_matches = pd.DataFrame(-1, index=np.arange(12), columns=np.arange(41))
+g_param.table_of_matches_pred = pd.DataFrame(-1, index=np.arange(15), columns=np.arange(41))
+g_param.table_of_matches_gt = pd.DataFrame(-1, index=np.arange(15), columns=np.arange(41))
 g_param.table_of_stats = pd.DataFrame(0.0, index=['total_pred', 'total_gt', 'recall', 'precision'], columns=np.arange(41))
-track_gt_pred = pd.DataFrame(-1, index=np.arange(12), columns=np.arange(41))
+track_gt_pred = pd.DataFrame(-1, index=np.arange(15), columns=np.arange(41))
+g_param.pred_gt_tracking = pd.DataFrame(columns=['frame', 'frame_id_gt', 'frame_id_pred', 'global_id'])
 # trans_volcani = np.array([[-0.7071, 0.7071, 0], [-0.7071, -0.7071, 0], [0, 0, 1]])
 
 
@@ -94,8 +96,8 @@ def create_track_gt_df():
     the number (ranging 0 - 6) represnt the id of the grape in the frame (from left to right).
 
     This function converts it to a "2d" table, with the columns (left to right):
-    frame  Cluster_ID  ID_in_frame.
-    sorted by frame (image ID), than by Cluster_ID and than by ID_in_frame
+    frame  general_id  frame_id.
+    sorted by frame (image ID), than by general_id and than by frame_id
 
     a similar function exits for converting the detections that had IoU > 0.5 into the same type of table.
 
@@ -113,8 +115,8 @@ def create_track_gt_df():
                 if float(gt_track[row][col]) or gt_track[row][col] == 0:
                     # print(col, row, gt_track[row][col])
                     table_3_l.append([row, col,  gt_track[row][col]])
-    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'Cluster_ID', 'ID_in_frame'])
-    table_3 = table_3.sort_values(["frame", "Cluster_ID"], ascending=(True, True))
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id_gt'])
+    table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
     return table_3  # could be replaced by writing to csv file.
 
 
@@ -122,22 +124,40 @@ def create_track_pred_df():
     """
     same as create_track_gt_df
     """
-    gt_track = g_param.table_of_matches
-    rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
-    frames_num = gt_track.shape[1]  # 41 images
+    pred_track = g_param.table_of_matches_pred
+    rows_num = pred_track.shape[0]  # amount of total grape clusters in all GT.
+    frames_num = pred_track.shape[1]  # 41 images
     table_3_l = []
     for col in range(0, rows_num):
         for row in range(0, frames_num):
-            if gt_track[row][col] > -1:
-                table_3_l.append([row, col, gt_track[row][col]])
-    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'Cluster_ID', 'ID_in_frame'])
-    table_3 = table_3.sort_values(["frame", "Cluster_ID"], ascending=(True, True))
+            if pred_track[row][col] > -1:
+                table_3_l.append([row, col, pred_track[row][col]])
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id', 'frame_id_pred'])
+    table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
     g_param.pred_df = table_3
     return table_3
 
 
+def create_track_gt_from_pred_df():
+    """
+    same as create_track_pred_df but consitent with GT numnering of id_in_frame.
+    """
+    pred_track = g_param.table_of_matches_gt
+    rows_num = pred_track.shape[0]  # amount of total grape clusters in all GT.
+    frames_num = pred_track.shape[1]  # 41 images
+    table_3_l = []
+    for col in range(0, rows_num):
+        for row in range(0, frames_num):
+            if pred_track[row][col] > -1:
+                table_3_l.append([row, col, pred_track[row][col]])
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id'])
+    table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
+    g_param.pred_gt_df = table_3
+    return table_3
+
+
 # for image_col in range(41):
-#     columns = g_param.table_of_matches.at[arr[indexs][image_col], :].values
+#     columns = g_param.table_of_matches_pred.at[arr[indexs][image_col], :].values
 #     arr = columns
 #     indexs = arr > -1
 #     for i in range(len(arr[indexs])):
@@ -685,14 +705,20 @@ def get_dist_from_csv(index_of_tb):
     will search for the matching grape cluster in the GT csv file and return the distance.
     :param mask_id: mask ID in TB, global cluster ID
     :return: distance (float), real_grape (boolean)
-    ['frame', 'Cluster_ID', 'ID_in_frame']
+    ['frame', 'general_id', 'frame_id']
     Return 0.6, False if grape not in GT.
     else return estimated distance and True (REAL GRAPE)
     """
-    cluster_id = g_param.pred_df.index[(g_param.pred_df['frame'] == g_param.image_number) &
-                          (g_param.pred_df['ID_in_frame'] == g_param.TB[index_of_tb].id_in_frame)].tolist()
+    cluster_id = g_param.pred_gt_tracking[(g_param.pred_gt_tracking['frame'] == g_param.image_number) &
+                        (g_param.pred_gt_tracking['frame_id_pred'] == g_param.TB[index_of_tb].id_in_frame)]['global_id'].tolist()
+    # ### OLD version ###
+    # cluster_id = g_param.pred_df.index[(g_param.pred_df['frame'] == g_param.image_number) &
+    #                       (g_param.pred_df['frame_id'] == g_param.TB[index_of_tb].id_in_frame)].tolist()
+    g_param.TB[index_of_tb].GT_cluster_ID = cluster_id # update gt cluster id for the grape.
     if len(cluster_id) == 0:
-        return 1.2, False
+        return 0.6, False
+    elif cluster_id[0] == -1:
+        return 0.6, False
     return g_param.distances_gt.iloc[cluster_id].values[0][0], True
 
 
@@ -876,9 +902,16 @@ def update_database_no_grape(index):
     """
     g_param.TB[index].fake_grape = True
     g_param.TB[index].mask = None
-    g_param.TB[index].sprayed = True
+    g_param.TB[index].sprayed = True # TODO- consider change that.
     # check with Sigal if I want to count amount of grapes sprayed
     # any way, I could just subtract the amount of grapes that are sprayed and not fake_grape
+
+
+def update_x_y_p(index_of_g):
+    if g_param.image_number == g_param.TB[index_of_g].first_frame:
+        corners = g_param.TB[index_of_g].p_corners
+        g_param.TB[index_of_g].x_p = int([ sum(x) for x in zip(*corners) ][0] / 4)
+        g_param.TB[index_of_g].y_p = int([ sum(x) for x in zip(*corners) ][1] / 4)
 
 
 def update_database_sprayed(index_of_grape):
@@ -889,6 +922,7 @@ def update_database_sprayed(index_of_grape):
     g_param.TB[index_of_grape].sprayed = True
     # print(g_param.TB[-6:]) # Uncomment to print Target bank
     g_param.TB[index_of_grape].mask = None  # (to save space in memory)
+    update_x_y_p(index_of_grape)
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (g_param.TB[index_of_grape].x_p, g_param.TB[index_of_grape].y_p),
                                     radius=4, color=(0, 0, 255), thickness=4)
@@ -936,6 +970,7 @@ def mark_sprayed_and_display():
 
     half_image_left = g_param.half_width_meter
     for a in range(len(g_param.TB)):
+        update_x_y_p(a)
         target = g_param.TB[a]
         # sprayed and steel should appear in the image #
         if target.sprayed and abs(target.grape_world[1] - cam_0_base[1]) < half_image_left \
@@ -1290,14 +1325,14 @@ def keep_relevant_masks(prediction_masks):
     :param prediction_masks: prediction masks of the current image (before filtering by the TB).
     :return: prediction_masks and their scores.
     """
-    if prediction_masks.shape[2] == 0:
-        return prediction_masks, np.array([]), None
-
-
-
+    recently_updated = len([x for x in g_param.TB if x.last_updated == g_param.image_number])
+    if prediction_masks.shape[2] == 0 or recently_updated == 0:
+        return np.empty([1024, 1024, 0]), np.array([]), None
+        # return prediction_masks, np.array([]), None
     image_masks_ind = []
     scores = []
     indexes = []
+    print()
     for ind in range(len(g_param.TB)):
         if g_param.TB[ind].last_updated == g_param.image_number:
             mask = np.reshape(g_param.TB[ind].mask, (1024, 1024, 1))
@@ -1322,13 +1357,13 @@ def update_TB_id_in_frame(prediction_masks, pred_score, indexes):
 def evaluate_detections(prediction_masks, pred_score):
     if not g_param.eval_mode:
         return
+    g_param.read_write_object.write_tracking_gt(create_track_gt_df())
     prediction_masks, pred_score, indexes = keep_relevant_masks(prediction_masks)
     update_TB_id_in_frame(prediction_masks, pred_score, indexes)
     gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
     r_dict_gt = {'masks': gt_mask, 'bbox': gt_box, 'rois': gt_box, 'scores': np.array([1] * gt_mask.shape[2]),
                  'class_ids': np.array([1] * gt_mask.shape[2])}
     r_dict_gt = sort_results(r_dict_gt)
-    # pred_box = bbox_from_corners(grape.p_corners)
     gt_mask, gt_box, gt_class_id = r_dict_gt['masks'], r_dict_gt['bbox'], r_dict_gt['class_ids']
     pred_boxes = utils.extract_bboxes(prediction_masks)
 
@@ -1342,32 +1377,40 @@ def evaluate_detections(prediction_masks, pred_score):
                             pred_boxes, pred_class_id, pred_score, prediction_masks,
                             class_names, title="Pred vs. GT", ax=None,
                             show_mask=True, show_box=True,
-                            iou_threshold=0.5, score_threshold=0.5)
+                            iou_threshold=0.3, score_threshold=0.5) # FIXME: IOU VALUE!!!!
     else:
         display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
                           scores=None, title="instances",  figsize=(16, 16), ax=None,
                           show_mask=True, show_bbox=True, colors=None, captions=None)
     gt_match, pred_match, overlaps = utils.compute_matches(
         gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
-        pred_score, prediction_masks, iou_threshold=0.5)
+        pred_score, prediction_masks, iou_threshold=0.2)  # FIXME: IOU VALUE!!!!
     mAP, precisions, recalls, overlaps = utils.compute_ap(
         gt_box, gt_class_id, gt_mask, pred_boxes,
-        pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)
+        pred_class_id, pred_score, prediction_masks, iou_threshold=0.2)  # FIXME: IOU VALUE!!!!
     indexs = pred_match > -1
     # FIXME: UNCOMMENT- next 2 lines are writing the GT id_in_frame.
     #  the next uncommented sections is writing the pred id_in_frame. the frame, cluster ID are matching.
-    # for i in range(len(pred_match[indexs])):
-    #     g_param.table_of_matches.at[pred_match[indexs][i], g_param.image_number] = pred_match[indexs][i]
-    count = 0
+    """
+    for every mask detected in the image (pred), go from left to right. if it has a matching cluster in GT
+    it will have a non-negative number. if so, look for the global id of the cluster.
+    for each index, produce the record: frame num, frame_id_gt, frame_id_pred, global_id.
+    """
     for i in range(len(pred_match)):
-        if pred_match[i] > -1:
-            g_param.table_of_matches.at[count, g_param.image_number] = i
-            count += 1
+        row = [g_param.image_number, pred_match[i], i, None]
+        general_id = g_param.gt_track_df[(g_param.gt_track_df['frame'] == g_param.image_number) &
+                                           (g_param.gt_track_df['frame_id_gt'] == row[1])]['general_id'].tolist()
+        if len(general_id) == 0:
+            row[3] = -1
+        else:
+            row[3] = general_id[0]
+        g_param.pred_gt_tracking.loc[len(g_param.pred_gt_tracking)] = row
+
     #TODO: find a way to sync pred, GT table of tracking.
 
     g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
     g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
-    if gt_mask.shape[2] > 0:
+    if gt_mask.shape[2] > 0 and prediction_masks.shape[2] > 0:
         recall_val = float(len(pred_match[indexs]) / gt_mask.shape[2])
         precision_val = float(len(pred_match[indexs]) / prediction_masks.shape[2])
     else:
@@ -1375,8 +1418,15 @@ def evaluate_detections(prediction_masks, pred_score):
         precision_val = -1
     g_param.table_of_stats.at['recall', g_param.image_number] = recall_val
     g_param.table_of_stats.at['precision', g_param.image_number] = precision_val
-    g_param.read_write_object.write_tracking_pred(create_track_pred_df())
-    g_param.read_write_object.write_tracking_gt(create_track_gt_df())
+    # g_param.read_write_object.write_tracking_pred(create_track_pred_df())
+
+
+
+
+
+
+
+
 
     return prediction_masks.shape[2]
 
@@ -1408,7 +1458,7 @@ if __name__ == '__main__':
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
         prediction_maskss, pred_scores = capture_update_TB()  # 5 + 7-12 inside #
-        amount_grapes_detected = evaluate_detections(prediction_maskss, pred_scores)
+        amount_grapes_detected = evaluate_detections(prediction_maskss, pred_scores)  # FIXME PROBLEMN IN IMAGE NUM 32
         update_database_visualization()
         print_image_details(step_direction[(g_param.image_number + 1) % 4])
         # g.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:]) #print TB
@@ -1453,18 +1503,17 @@ if __name__ == '__main__':
                 # display_image_with_mask(g_param.masks_image, maskk)
                 # switch_materiel()  # check if it is time to switch materiel
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
+                TB_class.update_by_real_distance(i)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
-                    TB_class.update_by_real_distance(i)  # 23,24 TODO: check
                     # spray_process(grape)
                     if g_param.time_to_move_platform:  # 27
                         break  #
-                    move2capture()
+                    move2capture() # why does it says move2capture and not to spray?
                     update_database_sprayed(i)  # 28
-
                     mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22
-
+                    mark_sprayed_and_display()
         else:  # 15- no grapes to spray_procedure
             print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes # every 4 movements and press 11.

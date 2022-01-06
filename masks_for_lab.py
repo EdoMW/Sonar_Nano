@@ -341,6 +341,8 @@ def show_in_moved_window(win_name, img, i=None, x=0, y=0, time_display=0):  # la
     :param time_display: how much time to wait before closing the window.
     0 - wait for key press, else it's time in milliseconds
     """
+    if g_param.image_number < 30:
+        return
     if img is not None:
         target_bolded = img.copy()
         if i is not None:
@@ -1223,9 +1225,9 @@ def take_picture_and_run():
         if len(obbs_list) > 0:
             pred_masks = np.dstack((pred_masks, masks))
             pixels_count_arr = pixels_count_arr + [10_000] * len(obbs_list)
-            com_list = com_list + [(500, 500)] * len(obbs_list)
-            boxes = boxes + obbs_list
-            boxes_min = boxes_min + corners_list
+            com_list += [(500, 500)] * len(obbs_list)
+            boxes += obbs_list
+            boxes_min += corners_list
             amount_of_mask_detacted += len(obbs_list)
             print('At least 1 to spray, ', amount_of_mask_detacted)
         for i in range(amount_of_mask_detacted):

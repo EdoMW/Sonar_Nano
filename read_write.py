@@ -562,6 +562,7 @@ class ReadWrite:
         folder_path_tracking_gt = self.gt_tracking
         gt_tracking_path = os.path.join(folder_path_tracking_gt, 'tracking_gt.csv')
         gt_track_df.to_csv(gt_tracking_path, index=False)
+        g_param.gt_track_df = gt_track_df
 
     def write_tracking_pred(self, pred_track_df):
         """
@@ -606,6 +607,7 @@ class ReadWrite:
         path = os.path.join(path, 'locations')
         locations_list = os.listdir(path)
         res = [i for i in locations_list if i.startswith(str(image_number) + "_")]
+
         path = os.path.join(path, res[0])
         pos = np.genfromtxt(path, delimiter=',')
         return pos

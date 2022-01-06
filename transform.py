@@ -71,7 +71,7 @@ class Trans:
     # TODO- Omer - change the cam2word matrix due to platform steps
     def grape_world(self, x_cam, y_cam):
         grape_cam = np.array([float(x_cam), float(y_cam), 0, 1])
-        grape_world = np.matmul(self.t_cam2world, grape_cam) # TODO: also for z axis.
+        grape_world = np.matmul(self.t_cam2world, grape_cam)
         delta_x, delta_y = rotation_coordinate_sys(0, -g_param.sum_platform_steps, g_param.base_rotation_ang)
         grape_world[0] = grape_world[0] + delta_x
         grape_world[1] = grape_world[1] + delta_y

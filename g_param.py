@@ -5,17 +5,20 @@ TB = []
 masks_image = None
 half_width_meter = 0.34
 half_height_meter = 0.2
-auto_time_display = 0  # time to display image automatically
+auto_time_display = 1500  # time to display image automatically
 show_images = True
 spray_sonar = True
 trans = None
 distances_gt = None
 
+pred_gt_tracking = None
+gt_track_df = None
+pred_gt_df = None
 pred_df = None
-avg_dist = 0.63  # 75
+avg_dist = 0.55  # 75
 platform_step_size = 0.5  # TODO (change to 0.5 for exp movement default)
 sum_platform_steps = 0  # sum of all platform steps
-last_grape_dist = 0.63
+last_grape_dist = 0.55
 step_size = 0.1
 height_step_size = 1.5  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) # for future work - (after exp)
@@ -40,7 +43,7 @@ z_lim = (-0.5, 1)
 # y_lim = (0, 0.1)
 # z_lim = (0, 0.1)
 # UR5 limitation:
-max_euclid_dist = 0.97
+max_euclid_dist = 1.5  # 1.5 FOR tracking exp, 0.97 for lab/field. # TODO - don't forget to change value!
 z_max = 0.85
 z_min = -0.35
 y_max = 0.6
@@ -48,7 +51,11 @@ sonar_x_length = 0.075
 sprayer_x_length = 0.095
 base_rotation_ang = 225  # 180 for lab 225 for volcani # TODO- don't forget to change value!
 images_in_run = 1  # amount of images in the current run
-table_of_matches = None
+
+# Cluster ID (rows), frame ID (columns),
+# id_in_pred_frame (as oppose to id_in_gt_frame as marked in the GT).
+table_of_matches_pred = None
+table_of_matches_gt = None
 table_of_stats = None
 
 """
@@ -174,8 +181,8 @@ def init():
         image_number, safety_dist, half_width_meter, half_height_meter, sum_platform_steps, work_place, step_size, \
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
         image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
-        manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim, table_of_matches,\
-        table_of_stats, distances_gt, pred_df
+        manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim, table_of_matches_pred,\
+        table_of_stats, distances_gt, pred_df, pred_gt_df, table_of_matches_gt, gt_track_df, pred_gt_tracking
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
     empty_npz_dir()

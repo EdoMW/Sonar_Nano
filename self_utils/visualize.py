@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 from matplotlib import patches,  lines
 from matplotlib.patches import Polygon
 import IPython.display
+
+import g_param
 from self_utils import utils
 
 # Root directory of the project
@@ -182,7 +184,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
     rgb_masked_image = cv2.cvtColor(masked_image.astype(np.uint8).copy(), cv2.COLOR_RGB2BGR)
-    show_in_moved_window_1('Green GT, Red predictions', rgb_masked_image, None, 0, 0, 0)
+    show_in_moved_window_1('Green GT, Red predictions', rgb_masked_image, None, 0, 0, g_param.auto_time_display)
     if auto_show:
         plt.show()
     return masked_image.astype(np.uint8)

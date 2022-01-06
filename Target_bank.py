@@ -1,5 +1,4 @@
 import numpy as np
-np.set_printoptions(precision=3)
 import math
 from operator import itemgetter, attrgetter
 import g_param
@@ -9,6 +8,7 @@ import cv2 as cv
 from transform import rotation_coordinate_sys
 # Define colors for printing
 from sty import fg, Style, RgbFg
+np.set_printoptions(precision=3)
 fg.orange = Style(RgbFg(255, 150, 50))
 fg.red = Style(RgbFg(247, 31, 0))
 fg.green = Style(RgbFg(31, 177, 31))
@@ -23,7 +23,7 @@ same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
-same_grape_distance_threshold = 0.08
+same_grape_distance_threshold = 0.04 # FIXME! CHANGE BACK TO 0.08
 edge_distance_threshold = 0.01
 
 
@@ -54,6 +54,7 @@ class Target_bank:
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
         self.grape_base = grape_base
+        self.first_frame = g_param.image_number
         self.last_updated = g_param.image_number
         self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
@@ -79,7 +80,7 @@ class Target_bank:
         self.p_corners = p_corners
         self.corners = simplify_corners(corners)
         self.GT_cluster_ID = None
-        self.id_in_frame = None
+        self.id_in_frame = None # pred id in frame
         # amount of updates, what iteration was the last update
 
     grape_index = 0
@@ -210,17 +211,19 @@ def check_if_in_TB(grape_world, target):
             distance_between_grapes = np.linalg.norm(grape_world - point_b)
             if distance_between_grapes < same_grape_distance_threshold:
                 # print("distance between old and new cluster", distance_between_grapes)
-                g_param.TB[i].x_p = int(target[6][0])
-                g_param.TB[i].y_p = int(target[6][1])
-                g_param.TB[i].w_p = int(target[6][2])
-                g_param.TB[i].h_p = int(target[6][3])
                 g_param.TB[i].x_center = target[0]
                 g_param.TB[i].y_center = target[1]
                 g_param.TB[i].w_meter = target[2]
                 g_param.TB[i].h_meter = target[3]
                 g_param.TB[i].mask = target[5]
+                g_param.TB[i].x_p = int(target[6][0])
+                g_param.TB[i].y_p = int(target[6][1])
+                g_param.TB[i].w_p = int(target[6][2])
+                g_param.TB[i].h_p = int(target[6][3])
+                g_param.TB[i].p_corners = target[9]
                 g_param.TB[i].mask_score = target[-1]
                 g_param.TB[i].last_updated = g_param.image_number
+                # TODO- add id_In_frame
 
                 # decide if to update world
                 return True, i
@@ -338,8 +341,6 @@ def add_to_target_bank(target):
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
     grape_base = g_param.trans.grape_base(target[0], target[1])
     grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target)
-    if g_param.eval_mode:
-        pass
     if grape_in_TB:
         pass
         # closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target)
@@ -348,7 +349,6 @@ def add_to_target_bank(target):
         #     g_param.TB[temp_target_index].grape_base = grape_base
     else:
         if not too_close:
-            # print("the grape not in TB yet")
             g_param.TB.append(Target_bank(target[0], target[1], target[2], target[3], target[4],
                                           target[5], target[6], temp_grape_world, target[8], target[9],
                                           grape_base, target[10], target[11], target[12]))
@@ -455,5 +455,5 @@ def update_by_real_distance(ind):
     w, h, corners = calculate_w_h(g_param.TB[ind].distance, g_param.TB[ind].p_corners)
     g_param.TB[ind].x_center, g_param.TB[ind].y_center, g_param.TB[ind].w_meter, g_param.TB[ind].h_meter = x, y, w, h
     g_param.TB[ind].corners = corners
-    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y)
+    # g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y) # FIXME- check un comment this.
     g_param.TB[ind].grape_base = g_param.trans.grape_base(x, y)
