@@ -4,8 +4,8 @@
 # import os
 # import warnings
 #
-# import matplotlib
-# import matplotlib.pyplot as plt
+import matplotlib
+import matplotlib.pyplot as plt
 # import pandas as pd
 # from termcolor import colored
 # import glob, shutil
@@ -14,21 +14,32 @@ import time
 starting_time = time.time()
 from datetime import datetime as dt
 
-start = dt.now()
-
-a = np.empty([1024, 1024, 100])
-a = a +2
-a = a*a
-a = a +2
-a = a*a
-a = a +2
-a = a*a
-ending_time = time.time()
-elapsed_0 = round((ending_time - starting_time), 3)
-
-print(f'Total time: {elapsed}')
-print("Took: %02d:%02d:%02d" % (elapsed.seconds // 3600, elapsed.seconds // 60 % 60, elapsed.seconds % 60))
+a = np.load(r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks_2\3_13_49_27.npz')
+a = a.f.arr_0
 print(a.shape)
+#
+# fig, (ax2) = plt.subplots(ncols=1)
+#
+# x = np.random.uniform(0, 1, 10)
+# y = np.random.uniform(0, 1, 10)
+#
+# x_1, y_1 = np.random.uniform(0, 1, 10), np.random.uniform(0.5, 0.7, 10)
+# # Plot non-ordered points
+#
+# # Order points by their x-value
+# indexs_to_order_by = x_1.argsort()
+# x_ordered_1 = x_1[indexs_to_order_by]
+# y_ordered_1 = y_1[indexs_to_order_by]
+#
+# indexs_to_order_by = x.argsort()
+# x_ordered = x[indexs_to_order_by]
+# y_ordered = y[indexs_to_order_by]
+#
+# ax2.plot(x_ordered, y_ordered, marker="o", markerfacecolor="r")
+# ax2.plot(x_ordered_1, y_ordered_1, marker="o", markerfacecolor="g")
+# plt.show()
+
+
 # from random import randint
 # import colorsys
 # from PIL import Image

@@ -761,21 +761,6 @@ class ReadWrite:
         classes = np.genfromtxt(path, delimiter=",")
         return classes[0], classes[1]
 
-    def count_masks_in_image(self, image_number):
-        directory = self.exp_date_time
-        parent_dir = r'D:\Users\NanoProject'
-        path = os.path.join(parent_dir, directory)
-        if self.exp_date_time == r'old_experiments\exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
-            path = os.path.join(path, 'masks_2')
-        else:
-            path = os.path.join(path, 'masks')
-        masks_list = os.listdir(path)
-        res = [i for i in masks_list if i.startswith(str(image_number) + "_")]
-        path = os.path.join(path, res[0])
-        mask = np.load(path)
-        mask = mask.f.arr_0
-        return mask.shape[2]
-
     def count_images(self):
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
@@ -809,12 +794,28 @@ class ReadWrite:
         mask = mask.f.arr_0
         return mask
 
-    def load_mask_file(self, mask_id):
+    def count_masks_in_image(self, image_number):
+        image_number = get_image_num_sim(image_number)
+        directory = self.exp_date_time
+        parent_dir = r'D:\Users\NanoProject'
+        path = os.path.join(parent_dir, directory)
+        if self.exp_date_time == r'old_experiments\exp_data_13_46':  # TODO: Notice this 4 lines (only for dev, not for evaluation)
+            path = os.path.join(path, 'masks_2')
+        else:
+            path = os.path.join(path, 'masks')
+        masks_list = os.listdir(path)
+        res = [i for i in masks_list if i.startswith(str(image_number) + "_")]
+        path = os.path.join(path, res[0])
+        mask = np.load(path)
+        mask = mask.f.arr_0
+        return mask.shape[2]
+
+    def load_mask_file(self, image_number):
         """
         :param mask_id: mask id to load
         :return: mask
         """
-        image_number = get_image_num_sim(g_param.image_number)
+        image_number = get_image_num_sim(image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)

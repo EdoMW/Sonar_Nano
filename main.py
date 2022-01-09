@@ -75,7 +75,6 @@ g_param.init()
 g_param.distances_gt = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_distances.csv', header=None)
 g_param.eval_mode = True
 first_run = True
-g_param.show_images = False  # g.show_images: if true, it is visualizes the process
 external_signal_all_done = False
 not_finished = True
 velocity = 0.7
@@ -902,7 +901,7 @@ def update_database_no_grape(index):
 
 
 def update_x_y_p(index_of_g):
-    if g_param.image_number == g_param.TB[index_of_g].first_frame:
+    if g_param.image_number == g_param.TB[index_of_g].first_frame: # it was first_frame, I changed it
         corners = g_param.TB[index_of_g].p_corners
         g_param.TB[index_of_g].x_p = int([ sum(x) for x in zip(*corners) ][0] / 4)
         g_param.TB[index_of_g].y_p = int([ sum(x) for x in zip(*corners) ][1] / 4)
@@ -1032,6 +1031,60 @@ def three_d_color(index):
     if grape.fake_grape:
         return 'b'
     return 'r' if grape.sprayed else 'g'
+
+
+def find_item(lst, key, value):
+    for i, dic in enumerate(lst):
+        if dic[key] == value:
+            return i
+    return -1
+
+
+def  calc_y_diff(y_list):
+    """
+    :param y_list: list of y values of the corrdiantes
+    :return: average difference between two values that represent veritcal movement of the capturing position.
+    """
+    diff, diff_locs = [], []
+    for i in range(0, len(y_list) - 1):
+        if abs(y_list[i] - y_list[i + 1]) < 50:
+            diff.append(abs(y_list[i] - y_list[i + 1]))
+            diff_locs.append(i)
+    if len(diff) > 0:
+        return int(sum(diff) / len(diff)), diff_locs
+    return 0, 0
+
+def plot_2_d_track():
+    # ADD TITLE WITH IMAGE NUMBER. CHECK JUMP FROM IMAGE 5 TO 10.
+    """
+    2D plot of the location of the grape clusters in the image (in pixels) over time.
+    """
+    if not g_param.plot_2_d_track:
+        return
+    for i in range(len(g_param.TB)):
+        index = find_item(g_param.two_dim_track, 'index', g_param.TB[i].index)
+        if index < 0:
+            g_param.two_dim_track.append({'index': g_param.TB[i].index, 'values':[[g_param.TB[i].x_p, g_param.TB[i].y_p]]})
+        else:
+            g_param.two_dim_track[index]['values'].append([g_param.TB[i].x_p, g_param.TB[i].y_p])
+    print(g_param.two_dim_track)
+    if len(g_param.two_dim_track) > 0:
+        list_to_print = [col for col in zip(*[d.values() for d in g_param.two_dim_track])]
+        # b ={item['index']:item for item in g_param.two_dim_track}
+        xs, ys=list_to_print[1], list_to_print[0]
+        fig, (ax) = plt.subplots(ncols=1)
+        colors = ['b','r','g','c','k','y','m']
+        for i in range(min(len(ys), 4)):
+            x, y = map(list, zip(*xs[i]))
+            x, y = np.array(x), np.array(y)
+
+
+            # y_diff, locs = calc_y_diff(y) # for better visulization- substruct y_diff from all relevent locations in y.
+            # UNCOMMENT NEXT 2 LINES! ONLY FOR CHECKING NOW
+            # if abs(x[-1] - x[0] > 1000 or len([t for t in x if t < - 512]) > 0): # if the grape cluster had gone out of the frame, don't track it anymore.
+            #     continue
+            ax.plot(x, y, marker="o", markerfacecolor=colors[i % len(colors)])
+        plt.show()
 
 
 def plot_tracking_map():
@@ -1365,19 +1418,20 @@ def evaluate_detections(prediction_masks, pred_score):
     img_path = g_param.read_write_object.load_image_path()
     img = cv.imread(img_path)
     rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-    if len(gt_box) > 0:
-        display_differences(rgb, gt_box, gt_class_id, gt_mask,
-                            pred_boxes, pred_class_id, pred_score, prediction_masks,
-                            class_names, title="Pred vs. GT", ax=None,
-                            show_mask=True, show_box=True,
-                            iou_threshold=0.5, score_threshold=0.5) # FIXME: IOU VALUE!!!!
-    else:
-        display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
-                          scores=None, title="instances",  figsize=(16, 16), ax=None,
-                          show_mask=True, show_bbox=True, colors=None, captions=None)
+    if g_param.display_eval_images:
+        if len(gt_box) > 0:
+            display_differences(rgb, gt_box, gt_class_id, gt_mask,
+                                pred_boxes, pred_class_id, pred_score, prediction_masks,
+                                class_names, title="Pred vs. GT", ax=None,
+                                show_mask=True, show_box=True,
+                                iou_threshold=0.5, score_threshold=0.5) # FIXME: IOU VALUE!!!!
+        else:
+            display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
+                              scores=None, title="instances",  figsize=(16, 16), ax=None,
+                              show_mask=True, show_bbox=True, colors=None, captions=None)
     gt_match, pred_match, overlaps = utils.compute_matches(
         gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
-        pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
+        pred_score, prediction_masks, iou_threshold=0.2)  # FIXME: IOU VALUE!!!!
     mAP, precisions, recalls, overlaps = utils.compute_ap(
         gt_box, gt_class_id, gt_mask, pred_boxes,
         pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
@@ -1418,6 +1472,21 @@ def evaluate_detections(prediction_masks, pred_score):
     return prediction_masks.shape[2]
 
 
+def put_text_and_display(index):
+    """
+    This functions put thite
+    :param index: index of grape that is beeing itrated (and display with TB index in it's center).
+    """
+    g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[index].index),   # visualization
+                                     org=(int(g_param.TB[index].x_p), int(g_param.TB[index].y_p)),
+                                     fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
+                                     color=(255, 255, 255), thickness=1, lineType=2)
+    display_points(g_to_display=g_param.TB[index])
+    if g_param.show_images:
+        show_in_moved_window("Next target to be sprayed", g_param.masks_image, index, 0,
+                             0, g_param.auto_time_display)
+
+
 def print_time():
     """
     Print the total time it took for this run.
@@ -1433,6 +1502,7 @@ if __name__ == '__main__':
     print_current_location(g_param.trans.capture_pos)
     # The main loop:
     while not_finished:
+        plot_2_d_track()
         if not first_run:
             g_param.image_number += 1
             g_param.plat_position_step_number += 1
@@ -1463,14 +1533,6 @@ if __name__ == '__main__':
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
         if not first_run and g_param.image_number > 0:
             mark_sprayed_and_display()
-        dists = []
-        for i_d in range(len(g_param.TB)):
-            dists.append([i_d, g_param.TB[i_d].index, g_param.TB[i_d].distance])
-        # TODO: fix the way distance are beeing updated (I think the problem is in the selection of the right
-        # TODO: grape from the TB). check if to access all grapes that had not been sprayed yet, or
-        # TODO: all grapes that appear in the image.
-
-        print('distances \n', dists)
         if grape_ready_to_spray:  # 15- yes (change to sorting according to 14, rap the next lines in a function)
             # update_wait_another_round()  # for future work- details inside.
             amount_of_grapes_to_spray = count_un_sprayed()
@@ -1478,14 +1540,7 @@ if __name__ == '__main__':
             #     amount_of_grapes_to_spray = amount_grapes_detected
             for i in range(amount_of_grapes_to_spray):
                 grape = g_param.TB[i]  # 16 grape is the most to the left in the list, not sprayed
-                g_param.masks_image = cv.putText(g_param.masks_image, str(g_param.TB[i].index),   # visualization
-                                                 org=(int(g_param.TB[i].x_p), int(g_param.TB[i].y_p)),
-                                                 fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1,
-                                                 color=(255, 255, 255), thickness=1, lineType=2)
-                display_points(g_to_display=g_param.TB[i])
-                if g_param.show_images:
-                    show_in_moved_window("Next target to be sprayed", g_param.masks_image, i, 0,
-                                         0, g_param.auto_time_display)
+                put_text_and_display(i)
                 not_grape = remove_by_visual(i)
                 if not_grape:  # if it's not a grape, skip next part
                     continue
@@ -1519,7 +1574,6 @@ if __name__ == '__main__':
         if g_param.images_in_run - 1 <= g_param.image_number:
             print(f"Finished, {g_param.images_in_run} images were taken on this batch.")
             not_finished = False
-
         if steps_counter >= number_of_steps and step_direction[(g_param.plat_position_step_number + 1) % 4] == "right":
             g_param.time_to_move_platform = True
             print(print_line_sep_time(), '\n', " move platform", '\n')
@@ -1528,6 +1582,6 @@ if __name__ == '__main__':
             # restart_target_bank()  # option to restart without initialize
     print_time()
 
-
+# All 41 images takes 00:02:16 (2 min, 16 sec) when show_image = False, display_eval_images = False.
 # All 41 images takes 00:02:16 (2 min, 16 sec) when show_image = false.
 # All 41 images takes 00:09:41 (9 min, 41 sec) when show_image = True, auto_display_time = 1500.

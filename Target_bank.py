@@ -23,7 +23,7 @@ same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
-same_grape_distance_threshold = 0.04 # FIXME! CHANGE BACK TO 0.08
+same_grape_distance_threshold = 0.08  # FIXME! CHANGE BACK TO 0.08
 edge_distance_threshold = 0.01
 
 
@@ -230,6 +230,43 @@ def check_if_in_TB(grape_world, target):
     return False, None
 
 
+def check_if_in_TB_pixels(target):
+    """
+    :param grape_world: The grape coordinates in world parameters
+    :param target: The grape coordinates in pixels
+    :return: True,the updated pixel values for already in the TB grape.
+             False, None- the grapes does not exist in TB. it will be added.
+    """
+    if len(g_param.TB) > 0:
+        for i in range(len(g_param.TB)):  # TODO (after exp): make it only for possible grapes in reach of the image
+            # point_b = g_param.TB[i].grape_world
+            # print("grape_world", grape_world)
+            # print("distance : ", np.linalg.norm(grape_world - point_b))
+            point_b = np.array([1, g_param.TB[i].x_p, g_param.TB[i].y_p])
+            grape_p = np.array([1, target[6][0], target[6][1]])
+            distance_between_grapes = np.linalg.norm(grape_p - point_b)
+            same_grape_distance_threshold = 200
+            if distance_between_grapes < same_grape_distance_threshold:
+                # print("distance between old and new cluster", distance_between_grapes)
+                g_param.TB[i].x_center = target[0]
+                g_param.TB[i].y_center = target[1]
+                g_param.TB[i].w_meter = target[2]
+                g_param.TB[i].h_meter = target[3]
+                g_param.TB[i].mask = target[5]
+                g_param.TB[i].x_p = int(target[6][0])
+                g_param.TB[i].y_p = int(target[6][1])
+                g_param.TB[i].w_p = int(target[6][2])
+                g_param.TB[i].h_p = int(target[6][3])
+                g_param.TB[i].p_corners = target[9]
+                g_param.TB[i].mask_score = target[-1]
+                g_param.TB[i].last_updated = g_param.image_number
+                # TODO- add id_In_frame
+
+                # decide if to update world
+                return True, i
+    return False, None
+
+
 def simplify_corners(corners):
     """
     convert corners from np.array to list, round to 3 decimel points.
@@ -340,7 +377,8 @@ def add_to_target_bank(target):
     too_close = check_close_to_edge(target)
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
     grape_base = g_param.trans.grape_base(target[0], target[1])
-    grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target)
+    # grape_in_TB, temp_target_index = check_if_in_TB_pixels(target)
+    grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target) # TODO- Uncomment, old function
     if grape_in_TB:
         pass
         # closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target)
@@ -455,5 +493,5 @@ def update_by_real_distance(ind):
     w, h, corners = calculate_w_h(g_param.TB[ind].distance, g_param.TB[ind].p_corners)
     g_param.TB[ind].x_center, g_param.TB[ind].y_center, g_param.TB[ind].w_meter, g_param.TB[ind].h_meter = x, y, w, h
     g_param.TB[ind].corners = corners
-    # g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y) # FIXME- check un comment this.
+    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y)  # FIXME- check un comment this.
     g_param.TB[ind].grape_base = g_param.trans.grape_base(x, y)

@@ -5,8 +5,10 @@ TB = []
 masks_image = None
 half_width_meter = 0.34
 half_height_meter = 0.2
-auto_time_display = 1500  # time to display image automatically
+auto_time_display = 100  # time to display image automatically
 show_images = True
+display_eval_images = True
+plot_2_d_track = True
 spray_sonar = True
 trans = None
 distances_gt = None
@@ -51,6 +53,7 @@ sonar_x_length = 0.075
 sprayer_x_length = 0.095
 base_rotation_ang = 225  # 180 for lab 225 for volcani # TODO- don't forget to change value!
 images_in_run = 1  # amount of images in the current run
+two_dim_track = []
 
 # Cluster ID (rows), frame ID (columns),
 # id_in_pred_frame (as oppose to id_in_gt_frame as marked in the GT).
@@ -78,7 +81,7 @@ change parameters if necessary.
 """
 process_type = 'load'
 work_place = 'field'  # lab. to know which function of image processing to use.
-eval_mode = None
+eval_mode = True
 
 
 def calc_image_width():
@@ -182,7 +185,8 @@ def init():
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
         image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
         manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim, table_of_matches_pred,\
-        table_of_stats, distances_gt, pred_df, pred_gt_df, table_of_matches_gt, gt_track_df, pred_gt_tracking
+        table_of_stats, distances_gt, pred_df, pred_gt_df, table_of_matches_gt, gt_track_df, \
+        pred_gt_tracking, two_dim_track, plot_2_d_track, display_eval_images
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
     empty_npz_dir()
