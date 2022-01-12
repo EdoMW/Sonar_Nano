@@ -5,9 +5,9 @@ TB = []
 masks_image = None
 half_width_meter = 0.34
 half_height_meter = 0.2
-auto_time_display = 100  # time to display image automatically
-show_images = True
-display_eval_images = True
+auto_time_display = 1700  # time to display image automatically
+show_images = False
+display_eval_images = False
 plot_2_d_track = True
 spray_sonar = True
 trans = None
@@ -38,8 +38,8 @@ max_spray_dist = 0.25
 min_vel = 0.2
 max_vel = 0.5
 const_vel = max_vel
-x_lim = (-1.2, 1)
-y_lim = (-0.5, 1)
+x_lim = (-0.8, 2.5)  # (-1.2, 1)
+y_lim = (-0.8, 2.5)
 z_lim = (-0.5, 1)
 # x_lim = (0, 0.1)
 # y_lim = (0, 0.1)
@@ -66,7 +66,7 @@ steps_gap: determines how many horizontal steps should be done.
 for example, if step size is 0.1m and we want to keep it that (default) than steps_gap = 1.
 if an experiment wants to test step size of 0.2m, than steps_gap should be equal to 2.
 """
-steps_gap = 1
+steps_gap = 2
 """
 work_place: lab/field/lab_grapes:
 
@@ -141,13 +141,13 @@ def get_index(index):
 def build_array(step_size_sim):
     """
     builds array to take image from
-    range is 0-50 because max size of the array is 41.
+    range is 0-41 because max size of the array is at most 41.
     :param step_size_sim:
     :return:
     """
     move_direction = 0  # even = up, odd = down
     b = []
-    for i in range(0, 50, step_size_sim):
+    for i in range(0, 42, step_size_sim):
         lpi, hpi = get_index(i)
         if move_direction % 2 == 0:
             b.append(lpi)

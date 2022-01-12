@@ -28,6 +28,7 @@ from termcolor import colored
 from transform import rotation_coordinate_sys
 import scipy
 import g_param
+from g_param import get_image_num_sim
 import math
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
@@ -122,7 +123,23 @@ def create_track_gt_df():
                     table_3_l.append([row, col,  gt_track[row][col]])
     table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id_gt'])
     table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
-    return table_3  # could be replaced by writing to csv file.
+    table = remove_unreacable_frames(table_3)
+    return table
+
+
+def remove_unreachable_frames(t):
+    """
+    Remove records where the frame won't be part of the frames in simulations (will be skipped).
+    Note: if g_param.steps_gap == 1, no filter will be done.
+    :param t: table to filter.
+    :return: filterd table.
+    """
+    if g_param.steps_gap == 1:
+        return t
+    a = build_array(g_param.steps_gap)
+    t = t[t['frame'].isin(a)]
+    t = t.reset_index()
+    return t
 
 
 def create_track_pred_fillterd_df():
@@ -829,7 +846,7 @@ def print_line_sep_time():
     print('-' * 40, current_time, '-' * 40, '\n')
     image_masks = []
     for ind in range(len(g_param.TB)):
-        if g_param.TB[ind].last_updated == g_param.image_number:
+        if g_param.TB[ind].last_updated == get_image_num_sim(g_param.image_number):  # == g_param.image_number:
             image_masks.append([ind, g_param.TB[ind].index])
     print(image_masks)
 
@@ -884,9 +901,12 @@ def calc_step_size(step_size_to_move):
     else:
         move step_size_to_move to the right.
     """
+
     direction_of_move = g_param.direction
     if direction_of_move == "up" or direction_of_move == "down":
         step_size_to_move = step_size_to_move * g_param.height_step_size
+    else:
+        step_size_to_move *= g_param.steps_gap
     return step_size_to_move
 
 
@@ -1012,7 +1032,7 @@ def calc_axis_limits():
     Calculate the limits of each axis on the 3d plot
     """
     # g_param.x_lim = calc_single_axis_limits(0)
-    g_param.y_lim = calc_single_axis_limits(1)
+    # g_param.y_lim = calc_single_axis_limits(1)
     g_param.z_lim = calc_single_axis_limits(2)
 
 
@@ -1088,7 +1108,7 @@ def plot_2_d_track():
             # if abs(x[-1] - x[0] > 1000 or len([t for t in x if t < - 512]) > 0): # if the grape cluster had gone out of the frame, don't track it anymore.
             #     continue
             ax.plot(x, y, marker="o", markerfacecolor=colors[i % len(colors)])
-        plt.title(f'{g_param.image_number - 1} -2d track')
+        plt.title(f'{get_image_num_sim(g_param.image_number)} -2D track')
         plt.show()
 
 
@@ -1286,7 +1306,8 @@ def print_image_details(step_dir):
     :param step_dir: direction of movement
     """
     im_numb = g_param.image_number
-    image_det = f"Picture number {im_numb}, next moving direction: {step_dir}"
+    image_det = f"Picture number {im_numb} in the simulation. " \
+                f"Real image number {get_image_num_sim(g_param.image_number)}, next moving direction: {step_dir}"
     print(colored(image_det, 'green'))
 
 
@@ -1346,8 +1367,8 @@ def calc_gt_box(image_number):
     ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master")
     sys.path.append(ROOT_DIR)
     center_of_masks, bboxs = [], []
-    mask_count = g_param.read_write_object.count_masks_in_image(image_number)
-    masks = g_param.read_write_object.load_mask_file(image_number)
+    mask_count = g_param.read_write_object.count_masks_in_image()
+    masks = g_param.read_write_object.load_mask_file()
     bboxs = utils.extract_bboxes(masks).astype('int32')
     for m in range(mask_count):
         try:
@@ -1385,7 +1406,7 @@ def keep_relevant_masks(prediction_masks):
     scores = []
     indexes = []
     for ind in range(len(g_param.TB)):
-        if g_param.TB[ind].last_updated == g_param.image_number:
+        if g_param.TB[ind].last_updated == get_image_num_sim(g_param.image_number): #  g_param.image_number:
             mask = np.reshape(g_param.TB[ind].mask, (1024, 1024, 1))
             if len(image_masks_ind) == 0:
                 masks = mask
@@ -1523,9 +1544,11 @@ if __name__ == '__main__':
             move_const(g_param.step_size, direction, g_param.trans.capture_pos)
             if direction == "right":
                 steps_counter += 1
+            if direction == 'stay':
+                continue
         else:
             first_run = False
-            continue
+
 
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")

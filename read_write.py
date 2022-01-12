@@ -794,8 +794,8 @@ class ReadWrite:
         mask = mask.f.arr_0
         return mask
 
-    def count_masks_in_image(self, image_number):
-        image_number = get_image_num_sim(image_number)
+    def count_masks_in_image(self):
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)
@@ -810,12 +810,12 @@ class ReadWrite:
         mask = mask.f.arr_0
         return mask.shape[2]
 
-    def load_mask_file(self, image_number):
+    def load_mask_file(self):
         """
         :param mask_id: mask id to load
         :return: mask
         """
-        image_number = get_image_num_sim(image_number)
+        image_number = get_image_num_sim(g_param.image_number)
         directory = self.exp_date_time
         parent_dir = r'D:\Users\NanoProject'
         path = os.path.join(parent_dir, directory)

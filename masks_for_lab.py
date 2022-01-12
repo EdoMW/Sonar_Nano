@@ -877,7 +877,7 @@ def take_picture_and_run():
     """
     :return:
     """
-    image_number = g_param.image_number
+    image_number = g_param.image_number # FIXME ?
     d = g_param.avg_dist
     plt.clf()  # clean the canvas
     if g_param.process_type == "record" or g_param.process_type == "work":
@@ -1158,13 +1158,6 @@ def take_picture_and_run():
         img = im0
         img_with_masks = img.copy()
         arr = [im0]
-        # TODO: uncomment to see image taken
-        # show_in_moved_window("check image taken", img, None)
-        # cv.waitKey()
-        # cv.destroyAllWindows()
-
-        # cv.imshow("before detection", arr[0])
-        # cv.waitKey()
         # use THE MASK R-CNN for real grapes: next 93 lines
         results = model.detect(arr, verbose=1)
         r = results[0]

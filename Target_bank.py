@@ -2,6 +2,7 @@ import numpy as np
 import math
 from operator import itemgetter, attrgetter
 import g_param
+from g_param import get_image_num_sim
 from math import cos, sin, pi, radians
 import scipy
 import cv2 as cv
@@ -54,8 +55,8 @@ class Target_bank:
         self.index = Target_bank.grape_index
         self.grape_world = grape_world
         self.grape_base = grape_base
-        self.first_frame = g_param.image_number
-        self.last_updated = g_param.image_number
+        self.first_frame = get_image_num_sim(g_param.image_number)  # g_param.image_number
+        self.last_updated = get_image_num_sim(g_param.image_number)  # g_param.image_number
         self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
@@ -183,19 +184,21 @@ def update_grape_center(index):
     """
 
     if g_param.image_number > 0:
-        if g_param.TB[index].last_updated < g_param.image_number:
+        if g_param.TB[index].last_updated < get_image_num_sim(g_param.image_number):  # g_param.image_number
             """
             In case that there is a fix advancement along the line, next code will work. else, uncomment the next
             section. 
             """
             if g_param.direction == 'up':
-                delta_x, delta_y = 0, 0.15
+                delta_x, delta_y = 0, (g_param.height_step_size * g_param.step_size)
             elif g_param.direction == 'right':
-                delta_x, delta_y = -0.1, 0
+                delta_x, delta_y = -g_param.step_size * g_param.steps_gap, 0
             elif g_param.direction == 'down':
-                delta_x, delta_y = 0, -0.15
-            elif g_param.direction == 'stay':
-                delta_x, delta_y = -0.1, 0
+                delta_x, delta_y = 0, -(g_param.height_step_size * g_param.step_size)
+            elif (g_param.image_number * g_param.steps_gap) % 8 == 0:
+                delta_x, delta_y = -g_param.step_size * g_param.steps_gap, 0
+                # elif g_param.direction == 'stay':
+            #     delta_x, delta_y = -0.1, 0
             # capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],
             #                                         g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
             # prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0],
@@ -203,8 +206,6 @@ def update_grape_center(index):
             #                                              -g_param.base_rotation_ang)[1]
             # delta_x = capture_pos_r-prev_capture_pos_r
             # delta_y = g_param.trans.capture_pos[2] - g_param.trans.prev_capture_pos[2]
-            # delta_plat_x, delta_plat_y = 0, 0 #rotation_coordinate_sys(0, g_param.sum_platform_steps, g_param.base_rotation_ang)
-
 
             g_param.TB[index].x_center += delta_x
             g_param.TB[index].y_center += delta_y
@@ -237,7 +238,7 @@ def check_if_in_TB(grape_world, target):
                 g_param.TB[i].h_p = int(target[6][3])
                 g_param.TB[i].p_corners = target[9]
                 g_param.TB[i].mask_score = target[-1]
-                g_param.TB[i].last_updated = g_param.image_number
+                g_param.TB[i].last_updated = get_image_num_sim(g_param.image_number)  # g_param.image_number
                 # TODO- add id_In_frame
 
                 # decide if to update world
@@ -274,7 +275,7 @@ def check_if_in_TB_pixels(target):
                 g_param.TB[i].h_p = int(target[6][3])
                 g_param.TB[i].p_corners = target[9]
                 g_param.TB[i].mask_score = target[-1]
-                g_param.TB[i].last_updated = g_param.image_number
+                g_param.TB[i].last_updated = get_image_num_sim(g_param.image_number)  # g_param.image_number
                 # TODO- add id_In_frame
 
                 # decide if to update world

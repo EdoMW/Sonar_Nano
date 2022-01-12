@@ -1,12 +1,12 @@
 # import random
 # import cv2 as cv
-# import sys
-# import os
+import sys
+import os
 # import warnings
 #
 import matplotlib
 import matplotlib.pyplot as plt
-# import pandas as pd
+import pandas as pd
 # from termcolor import colored
 # import glob, shutil
 import numpy as np
@@ -14,9 +14,90 @@ import time
 starting_time = time.time()
 from datetime import datetime as dt
 
-a = np.load(r'D:\Users\NanoProject\old_experiments\exp_data_13_46\masks_2\3_13_49_27.npz')
-a = a.f.arr_0
-print(a.shape)
+
+def get_index(index):
+    """
+    :param index: index of current image
+    :return: low image idx, high image idx
+    """
+    if index % 2 == 0:
+        lpi_temp = index * 2
+        hpi_temp = lpi_temp + 1
+    else:
+        lpi_temp = index * 2 + 1
+        hpi_temp = lpi_temp - 1
+    return lpi_temp, hpi_temp
+
+
+def build_array(step_size_sim):
+    """
+    builds array to take image from
+    range is 0-41 because max size of the array is at most 41.
+    :param step_size_sim:
+    :return:
+    """
+    move_direction = 0  # even = up, odd = down
+    b = []
+    for i in range(0, 42, step_size_sim):
+        lpi, hpi = get_index(i)
+        if move_direction % 2 == 0:
+            b.append(lpi)
+            b.append(hpi)
+        else:
+            b.append(hpi)
+            b.append(lpi)
+        move_direction += 1
+    return b
+
+
+def get_image_num_sim(image_num):
+    global steps_gap
+    b = build_array(steps_gap)
+    print(b[image_num])
+    return b[image_num]
+
+
+def create_track_gt_df():
+    """
+    read the csv file that describes the 2d tracking of the grape clusters.
+    each column represent an image.
+    each row represent a grape cluster
+    the number (ranging 0 - 6) represnt the id of the grape in the frame (from left to right).
+
+    This function converts it to a "2d" table, with the columns (left to right):
+    frame  general_id  frame_id.
+    sorted by frame (image ID), than by general_id and than by frame_id
+
+    a similar function exits for converting the detections that had IoU > 0.5 into the same type of table.
+
+    Later, a comparison should be made between these two tables.
+    """
+    gt_track = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_track.csv',
+                           header=None)
+    rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
+    frames_num = gt_track.shape[1]  # 41 images
+    table_3_l = []
+    # print('Frame | ID in Frame | Cluster ID')
+    for col in range(0, rows_num):
+        for row in range(0, frames_num):
+            if not pd.isna(gt_track[row][col]):
+                if float(gt_track[row][col]) or gt_track[row][col] == 0:
+                    # print(col, row, gt_track[row][col])
+                    table_3_l.append([row, col,  gt_track[row][col]])
+    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id_gt'])
+    table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
+    table = remove_unreachable_frames(table_3)
+    return table
+
+
+def remove_unreachable_frames(t):
+    a = build_array(1)
+    t = t[t['frame'].isin(a)]
+    t = t.reset_index()
+    print(t)
+
+
+create_track_gt_df()
 #
 # fig, (ax2) = plt.subplots(ncols=1)
 #
