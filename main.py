@@ -1,6 +1,9 @@
 import sys
 import time
 from datetime import datetime as dt
+
+import matplotlib.pyplot as plt
+
 starting_time = dt.now()
 
 import cv2
@@ -1058,6 +1061,7 @@ def plot_2_d_track():
     # ADD TITLE WITH IMAGE NUMBER. CHECK JUMP FROM IMAGE 5 TO 10.
     """
     2D plot of the location of the grape clusters in the image (in pixels) over time.
+    Print twice the same plot every movement of the platform (Bug, but doesn't disturb anything).
     """
     if not g_param.plot_2_d_track:
         return
@@ -1084,6 +1088,7 @@ def plot_2_d_track():
             # if abs(x[-1] - x[0] > 1000 or len([t for t in x if t < - 512]) > 0): # if the grape cluster had gone out of the frame, don't track it anymore.
             #     continue
             ax.plot(x, y, marker="o", markerfacecolor=colors[i % len(colors)])
+        plt.title(f'{g_param.image_number - 1} -2d track')
         plt.show()
 
 
@@ -1267,12 +1272,12 @@ def update_database_visualization():
         TB_class.update_grape_center(j)
         grape_temp = [g_param.TB[j].x_center, g_param.TB[j].y_center]
         x_temp, y_temp = point_meter_2_pixel(d=g_param.TB[j].distance, point=[grape_temp[0], grape_temp[1]])
-        print(g_param.TB[j].distance)
-        if -2000 < x_temp < 2000:  # Update all grapes in database that still should appear in the image.
+        # Update all grapes in database that still should appear in the image. can be reduced to -600 < x_temp < 600
+        if -2000 < x_temp < 2000:
             g_param.TB[j].x_p = int(x_temp)
             g_param.TB[j].y_p = int(y_temp)
-        else:
-            break  # check if it's necessary
+        # else:
+        #     break  # rest of the images will be out of range.
 
 
 def print_image_details(step_dir):
@@ -1520,6 +1525,8 @@ if __name__ == '__main__':
                 steps_counter += 1
         else:
             first_run = False
+            continue
+
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!

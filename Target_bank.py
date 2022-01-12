@@ -184,13 +184,28 @@ def update_grape_center(index):
 
     if g_param.image_number > 0:
         if g_param.TB[index].last_updated < g_param.image_number:
-            capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],
-                                                    g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
-            prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0],
-                                                         g_param.trans.prev_capture_pos[1],
-                                                         -g_param.base_rotation_ang)[1]
-            delta_x = capture_pos_r-prev_capture_pos_r
-            delta_y = g_param.trans.capture_pos[2] - g_param.trans.prev_capture_pos[2]
+            """
+            In case that there is a fix advancement along the line, next code will work. else, uncomment the next
+            section. 
+            """
+            if g_param.direction == 'up':
+                delta_x, delta_y = 0, 0.15
+            elif g_param.direction == 'right':
+                delta_x, delta_y = -0.1, 0
+            elif g_param.direction == 'down':
+                delta_x, delta_y = 0, -0.15
+            elif g_param.direction == 'stay':
+                delta_x, delta_y = -0.1, 0
+            # capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],
+            #                                         g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
+            # prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0],
+            #                                              g_param.trans.prev_capture_pos[1],
+            #                                              -g_param.base_rotation_ang)[1]
+            # delta_x = capture_pos_r-prev_capture_pos_r
+            # delta_y = g_param.trans.capture_pos[2] - g_param.trans.prev_capture_pos[2]
+            # delta_plat_x, delta_plat_y = 0, 0 #rotation_coordinate_sys(0, g_param.sum_platform_steps, g_param.base_rotation_ang)
+
+
             g_param.TB[index].x_center += delta_x
             g_param.TB[index].y_center += delta_y
 
@@ -377,8 +392,8 @@ def add_to_target_bank(target):
     too_close = check_close_to_edge(target)
     temp_grape_world = g_param.trans.grape_world(target[0], target[1])
     grape_base = g_param.trans.grape_base(target[0], target[1])
-    # grape_in_TB, temp_target_index = check_if_in_TB_pixels(target)
-    grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target) # TODO- Uncomment, old function
+    # grape_in_TB, temp_target_index = check_if_in_TB_pixels(target)  # another option, less robust.
+    grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if grape_in_TB:
         pass
         # closer_to_center = g_param.TB[temp_target_index].dist_from_center < Target_bank.calc_dist_from_center(target)
@@ -493,5 +508,5 @@ def update_by_real_distance(ind):
     w, h, corners = calculate_w_h(g_param.TB[ind].distance, g_param.TB[ind].p_corners)
     g_param.TB[ind].x_center, g_param.TB[ind].y_center, g_param.TB[ind].w_meter, g_param.TB[ind].h_meter = x, y, w, h
     g_param.TB[ind].corners = corners
-    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y)  # FIXME- check un comment this.
+    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y)  # FIXME- check uncomment this.
     g_param.TB[ind].grape_base = g_param.trans.grape_base(x, y)
