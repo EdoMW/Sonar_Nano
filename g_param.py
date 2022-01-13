@@ -8,7 +8,7 @@ half_height_meter = 0.2
 auto_time_display = 1700  # time to display image automatically
 show_images = False
 display_eval_images = False
-plot_2_d_track = True
+plot_2_d_track = False
 spray_sonar = True
 trans = None
 distances_gt = None
@@ -162,7 +162,6 @@ def build_array(step_size_sim):
 def get_image_num_sim(image_num):
     global steps_gap
     b = build_array(steps_gap)
-    print(b[image_num])
     return b[image_num]
 
 

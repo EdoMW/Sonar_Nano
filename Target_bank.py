@@ -32,7 +32,7 @@ edge_distance_threshold = 0.01
 def print_by_id():
     print("TB by id: ", "\n")
     for i in range(len(g_param.TB)):
-        print(g_param.TB[i].index, end=" ")
+        print(g_param.TB[i], end=" ")
 
 
 class Target_bank:
@@ -186,7 +186,7 @@ def update_grape_center(index):
     if g_param.image_number > 0:
         if g_param.TB[index].last_updated < get_image_num_sim(g_param.image_number):  # g_param.image_number
             """
-            In case that there is a fix advancement along the line, next code will work. else, uncomment the next
+            In case that there is a fixed advancement along the line, next code will work. else, uncomment the next
             section. 
             """
             if g_param.direction == 'up':
@@ -500,14 +500,13 @@ def update_by_real_distance(ind):
     call the function ONLY if Sonar was activated
     :param ind: index of the grape
     """
-    # TODO (after exp): call the function that updates g_param.avg_dist with sonar_location
-    # TODO - I think it was solved outside.
-
+    # (after exp): call the function that updates g_param.avg_dist with sonar_location, I think it was solved outside.
+    # FIXME- I don't think that this rotation is doing the right thing regarding the distance.
     g_param.TB[ind].distance = round(g_param.last_grape_dist + g_param.sonar_x_length, 3)
     # todo: ADD the opposite function to TB_class.update_grape_center(index).
     x, y = point_pixels_2_meter(g_param.TB[ind].distance, [g_param.TB[ind].x_p, g_param.TB[ind].y_p])
     w, h, corners = calculate_w_h(g_param.TB[ind].distance, g_param.TB[ind].p_corners)
     g_param.TB[ind].x_center, g_param.TB[ind].y_center, g_param.TB[ind].w_meter, g_param.TB[ind].h_meter = x, y, w, h
     g_param.TB[ind].corners = corners
-    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y)  # FIXME- check uncomment this.
+    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y)
     g_param.TB[ind].grape_base = g_param.trans.grape_base(x, y)

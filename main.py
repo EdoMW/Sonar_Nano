@@ -28,7 +28,7 @@ from termcolor import colored
 from transform import rotation_coordinate_sys
 import scipy
 import g_param
-from g_param import get_image_num_sim
+from g_param import get_image_num_sim, build_array
 import math
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
@@ -123,7 +123,7 @@ def create_track_gt_df():
                     table_3_l.append([row, col,  gt_track[row][col]])
     table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id_gt'])
     table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
-    table = remove_unreacable_frames(table_3)
+    table = remove_unreachable_frames(table_3)
     return table
 
 
@@ -722,7 +722,7 @@ def get_dist_from_csv(index_of_tb):
     Return 0.6, False if grape not in GT.
     else return estimated distance and True (REAL GRAPE)
     """
-    cluster_id = g_param.pred_gt_tracking[(g_param.pred_gt_tracking['frame'] == g_param.image_number) &
+    cluster_id = g_param.pred_gt_tracking[(g_param.pred_gt_tracking['frame'] == get_image_num_sim(g_param.image_number)) &
                         (g_param.pred_gt_tracking['frame_id_pred'] == g_param.TB[index_of_tb].id_in_frame)]['global_id'].tolist()
     # ### OLD version ###
     # cluster_id = g_param.pred_df.index[(g_param.pred_df['frame'] == g_param.image_number) &
@@ -924,7 +924,7 @@ def update_database_no_grape(index):
 
 
 def update_x_y_p(index_of_g):
-    if g_param.image_number == g_param.TB[index_of_g].first_frame: # it was first_frame, I changed it
+    if get_image_num_sim(g_param.image_number) == g_param.TB[index_of_g].first_frame: # it was first_frame, I changed it
         corners = g_param.TB[index_of_g].p_corners
         g_param.TB[index_of_g].x_p = int([ sum(x) for x in zip(*corners) ][0] / 4)
         g_param.TB[index_of_g].y_p = int([ sum(x) for x in zip(*corners) ][1] / 4)
@@ -1165,7 +1165,8 @@ def plot_tracking_map():
     s = ax.scatter(x_cors, y_cors, z_cors, s=400, c=colors)  # x,y,z coordinates, size of each point, colors.
     # controls the alpha channel. all points have the same value, ignoring their distance
     s.set_edgecolors = s.set_facecolors = lambda *args: None
-    ax.title.set_text(f'Imgae number {g_param.image_number}')
+    ax.title.set_text(f'Imgae number {g_param.image_number}, '
+                      f'real image number{get_image_num_sim(g_param.image_number)}')
     # elev = 5.0
     # azim = 135.5
     # ax.view_init(elev, azim)
@@ -1363,7 +1364,7 @@ def calc_gt_box_trail(image_number):
     return masks, bboxs, center_of_masks
 
 
-def calc_gt_box(image_number):
+def calc_gt_box():
     ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master")
     sys.path.append(ROOT_DIR)
     center_of_masks, bboxs = [], []
@@ -1398,7 +1399,7 @@ def keep_relevant_masks(prediction_masks):
     :param prediction_masks: prediction masks of the current image (before filtering by the TB).
     :return: prediction_masks and their scores.
     """
-    recently_updated = len([x for x in g_param.TB if x.last_updated == g_param.image_number])
+    recently_updated = len([x for x in g_param.TB if x.last_updated == get_image_num_sim(g_param.image_number)]) # g_param.image_number
     if prediction_masks.shape[2] == 0 or recently_updated == 0:
         return np.empty([1024, 1024, 0]), np.array([]), None
         # return prediction_masks, np.array([]), None
@@ -1432,7 +1433,7 @@ def evaluate_detections(prediction_masks, pred_score):
     g_param.read_write_object.write_tracking_gt(create_track_gt_df())
     prediction_masks, pred_score, indexes = keep_relevant_masks(prediction_masks)
     update_TB_id_in_frame(prediction_masks, pred_score, indexes)
-    gt_mask, gt_box, coms = calc_gt_box(g_param.image_number)
+    gt_mask, gt_box, coms = calc_gt_box()
     r_dict_gt = {'masks': gt_mask, 'bbox': gt_box, 'rois': gt_box, 'scores': np.array([1] * gt_mask.shape[2]),
                  'class_ids': np.array([1] * gt_mask.shape[2])}
     r_dict_gt = sort_results(r_dict_gt)
@@ -1457,7 +1458,7 @@ def evaluate_detections(prediction_masks, pred_score):
                               show_mask=True, show_bbox=True, colors=None, captions=None)
     gt_match, pred_match, overlaps = utils.compute_matches(
         gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
-        pred_score, prediction_masks, iou_threshold=0.2)  # FIXME: IOU VALUE!!!!
+        pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
     mAP, precisions, recalls, overlaps = utils.compute_ap(
         gt_box, gt_class_id, gt_mask, pred_boxes,
         pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
@@ -1470,8 +1471,8 @@ def evaluate_detections(prediction_masks, pred_score):
     for each index, produce the record: frame num, frame_id_gt, frame_id_pred, global_id.
     """
     for i in range(len(pred_match)):
-        row = [g_param.image_number, pred_match[i], i, None]
-        general_id = g_param.gt_track_df[(g_param.gt_track_df['frame'] == g_param.image_number) &
+        row = [get_image_num_sim(g_param.image_number), pred_match[i], i, None]
+        general_id = g_param.gt_track_df[(g_param.gt_track_df['frame'] == get_image_num_sim(g_param.image_number)) &
                                            (g_param.gt_track_df['frame_id_gt'] == row[1])]['general_id'].tolist()
         if len(general_id) == 0:
             row[3] = -1
@@ -1481,16 +1482,16 @@ def evaluate_detections(prediction_masks, pred_score):
 
     #  TODO: find a way to sync pred, GT table of tracking.
 
-    g_param.table_of_stats.at['total_pred', g_param.image_number] = prediction_masks.shape[2]
-    g_param.table_of_stats.at['total_gt', g_param.image_number] = gt_mask.shape[2]
+    g_param.table_of_stats.at['total_pred', get_image_num_sim(g_param.image_number)] = prediction_masks.shape[2]
+    g_param.table_of_stats.at['total_gt', get_image_num_sim(g_param.image_number)] = gt_mask.shape[2]
     if gt_mask.shape[2] > 0 and prediction_masks.shape[2] > 0:
         recall_val = float(len(pred_match[indexs]) / gt_mask.shape[2])
         precision_val = float(len(pred_match[indexs]) / prediction_masks.shape[2])
     else:
         recall_val = -1
         precision_val = -1
-    g_param.table_of_stats.at['recall', g_param.image_number] = recall_val
-    g_param.table_of_stats.at['precision', g_param.image_number] = precision_val
+    g_param.table_of_stats.at['recall', get_image_num_sim(g_param.image_number)] = recall_val
+    g_param.table_of_stats.at['precision', get_image_num_sim(g_param.image_number)] = precision_val
     g_param.read_write_object.write_tracking_pred(g_param.pred_gt_tracking)
     g_param.read_write_object.write_tracking_pred_filterd(create_track_pred_fillterd_df())
 
@@ -1548,8 +1549,6 @@ if __name__ == '__main__':
                 continue
         else:
             first_run = False
-
-
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
@@ -1601,7 +1600,7 @@ if __name__ == '__main__':
                 not_finished = False
                 print("Finished- external signal all done")
                 break  # 23
-        if g_param.images_in_run - 1 <= g_param.image_number:
+        if g_param.images_in_run - 1 <= get_image_num_sim(g_param.image_number):
             print(f"Finished, {g_param.images_in_run} images were taken on this batch.")
             not_finished = False
         if steps_counter >= number_of_steps and step_direction[(g_param.plat_position_step_number + 1) % 4] == "right":
