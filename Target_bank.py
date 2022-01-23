@@ -24,19 +24,20 @@ same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
-same_grape_distance_threshold = 0.08  # FIXME! CHANGE BACK TO 0.08
+same_grape_distance_threshold = 0.08
 edge_distance_threshold = 0.01
 
 
-# prints the TB by grapes index
 def print_by_id():
+    """
+    # print all grapes in the TB.
+    """
     print("TB by id: ", "\n")
     for i in range(len(g_param.TB)):
         print(g_param.TB[i], end=" ")
 
 
 class Target_bank:
-
     def __init__(self, x, y, w, h, angle, mask, pixels_data, grape_world,
                  corners, p_corners, grape_base, pixels_count, com, mask_score):
         """
@@ -57,6 +58,7 @@ class Target_bank:
         self.grape_base = grape_base
         self.first_frame = get_image_num_sim(g_param.image_number)  # g_param.image_number
         self.last_updated = get_image_num_sim(g_param.image_number)  # g_param.image_number
+        self.amount_times_updated = 0
         self.x_p = int(pixels_data[0])  # p are in pixels. 0,0 is the center of the image.
         self.y_p = int(pixels_data[1])
         self.w_p = int(pixels_data[2])
@@ -73,7 +75,6 @@ class Target_bank:
         self.mask_score = mask_score
         self.center_of_mass = com
         self.pixels_count = pixels_count  # in pixels
-        # self.distance = 0.57  # 0:default distance value, 1:from sonar
         self.distance = g_param.last_grape_dist
         self.fake_grape = False
         self.in_range = "ok"
@@ -81,12 +82,16 @@ class Target_bank:
         self.p_corners = p_corners
         self.corners = simplify_corners(corners)
         self.GT_cluster_ID = None
-        self.id_in_frame = None # pred id in frame
+        self.id_in_frame = None  # pred id in frame
+        self.IoU = []
         # amount of updates, what iteration was the last update
 
     grape_index = 0
 
     def target_to_string(self):
+        """
+        It helps to shorten the repr (print) function.
+        """
         ind = self.index
         ind = " ID : " + str(ind) + " "
         ind = fg.orange + ind + fg.rs
@@ -121,6 +126,9 @@ class Target_bank:
         # return ind + sp + wr + x_c + y_c + world_data + base_data + w + h + angle + '\n'
 
     def __repr__(self):
+        """
+        Overrides default print function.
+        """
         params = self.target_to_string()
         corners = f"corner_1: {self.corners[0]} corner_2: {self.corners[1]} " \
                   f"corner_3: {self.corners[2]} corner_4: {self.corners[3]}"
@@ -128,36 +136,18 @@ class Target_bank:
         # return params + corners + '\n'
         # return ind + x + y + x_c + y_c + f + sp + world_data + base_data
 
-    def calc_corners_by_gemotry(self):
-        """
-        Doesn't work when extra process is done to the image.
-        :return:
-        """
-        x_cen, y_cen = self.x_center, self.y_center
-        w, h = self.w_meter, self.h_meter
-        angle = self.angle
-        ninety = pi / 2
-        alpha = radians(angle)
-        beta = ninety - radians(angle)
-        # beta = radians(angle)
-        # alpha = ninety - radians(angle)
-        w = w / 2
-        h = h / 2
-        cor_1 = [round(x_cen + (-cos(beta) * h + cos(alpha) * w), 3),
-                 round(y_cen + (-sin(beta) * h - w * sin(alpha)), 3)]
-        cor_2 = [round(x_cen + (cos(beta) * h + cos(alpha) * w), 3), round(y_cen + (sin(beta) * h - w * sin(alpha)), 3)]
-        cor_3 = [round(x_cen + (cos(beta) * h - cos(alpha) * w), 3), round(y_cen + (sin(beta) * h + w * sin(alpha)), 3)]
-        cor_4 = [round(x_cen + (-cos(beta) * h - cos(alpha) * w), 3),
-                 round(y_cen + (-sin(beta) * h + w * sin(alpha)), 3)]
-        # auto_corners = cv.boxPoints(box)
-        return [cor_1, cor_2, cor_3, cor_4]
-
     def calc_center_of_mass(self):
+        """
+        :return: mask center of mass
+        """
         if self.mask is not None:
             return scipy.ndimage.measurements.center_of_mass(self.mask)
         return None
 
     def calc_dist_from_center(self):
+        """
+        :return: euclidean distance from center of OBB to center of the image in pixels
+        """
         if type(self) is list:
             x = 512 - self[0]
             y = 512 - self[1]
@@ -165,13 +155,6 @@ class Target_bank:
             x = 512 - self.x_p
             y = 512 - self.y_p
         return round(math.sqrt((x * x) + (y * y)), 2)
-
-
-def calc_z_move():
-    a = g_param.image_number % 4
-    if a == 0 or a == 3:
-        return 0
-    return g_param.height_step_size * g_param.step_size
 
 
 def update_grape_center(index):
@@ -182,33 +165,30 @@ def update_grape_center(index):
     z of base is equal to camera y (up to -/+)
     :param index: index of the grape in TB
     """
-
-    if g_param.image_number > 0:
-        if g_param.TB[index].last_updated < get_image_num_sim(g_param.image_number):  # g_param.image_number
-            """
-            In case that there is a fixed advancement along the line, next code will work. else, uncomment the next
-            section. 
-            """
-            if g_param.direction == 'up':
-                delta_x, delta_y = 0, (g_param.height_step_size * g_param.step_size)
-            elif g_param.direction == 'right':
-                delta_x, delta_y = -g_param.step_size * g_param.steps_gap, 0
-            elif g_param.direction == 'down':
-                delta_x, delta_y = 0, -(g_param.height_step_size * g_param.step_size)
-            elif (g_param.image_number * g_param.steps_gap) % 8 == 0:
-                delta_x, delta_y = -g_param.step_size * g_param.steps_gap, 0
-                # elif g_param.direction == 'stay':
-            #     delta_x, delta_y = -0.1, 0
-            # capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],
-            #                                         g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
-            # prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0],
-            #                                              g_param.trans.prev_capture_pos[1],
-            #                                              -g_param.base_rotation_ang)[1]
-            # delta_x = capture_pos_r-prev_capture_pos_r
-            # delta_y = g_param.trans.capture_pos[2] - g_param.trans.prev_capture_pos[2]
-
-            g_param.TB[index].x_center += delta_x
-            g_param.TB[index].y_center += delta_y
+    if g_param.TB[index].last_updated < get_image_num_sim(g_param.image_number):  # g_param.image_number
+        """
+        In case that there is a fixed advancement along the line, next code will work. else, uncomment the next
+        section. 
+        """
+        # if g_param.direction == 'up':
+        #     delta_x, delta_y = 0, (g_param.height_step_size * g_param.step_size)
+        # elif g_param.direction == 'right':
+        #     delta_x, delta_y = -g_param.step_size * g_param.steps_gap * 0.7, 0
+        # elif g_param.direction == 'down':
+        #     delta_x, delta_y = 0, -(g_param.height_step_size * g_param.step_size)
+        # elif (g_param.image_number * g_param.steps_gap) % 8 == 0:
+        #     delta_x, delta_y = -g_param.step_size * g_param.steps_gap * 0.7, 0
+            # elif g_param.direction == 'stay':
+        #     delta_x, delta_y = -0.1, 0
+        capture_pos_r = rotation_coordinate_sys(g_param.trans.capture_pos[0],
+                                                g_param.trans.capture_pos[1], -g_param.base_rotation_ang)[1]
+        prev_capture_pos_r = rotation_coordinate_sys(g_param.trans.prev_capture_pos[0],
+                                                     g_param.trans.prev_capture_pos[1],
+                                                     -g_param.base_rotation_ang)[1]
+        delta_x = capture_pos_r-prev_capture_pos_r
+        delta_y = g_param.trans.capture_pos[2] - g_param.trans.prev_capture_pos[2]
+        g_param.TB[index].x_center += delta_x
+        g_param.TB[index].y_center += delta_y
 
 
 # if distance between centers is smaller than the treshhold
@@ -219,64 +199,29 @@ def check_if_in_TB(grape_world, target):
     :return: True,the updated pixel values for already in the TB grape.
              False, None- the grapes does not exist in TB. it will be added.
     """
+    # FIXME- Edo Sigal change logic
     if len(g_param.TB) > 0:
         for i in range(len(g_param.TB)):  # TODO (after exp): make it only for possible grapes in reach of the image
             point_b = g_param.TB[i].grape_world
-            # print("grape_world", grape_world)
-            # print("distance : ", np.linalg.norm(grape_world - point_b))
-            distance_between_grapes = np.linalg.norm(grape_world - point_b)
+            distance_between_grapes = np.linalg.norm(grape_world[1:3] - point_b[1:3])
             if distance_between_grapes < same_grape_distance_threshold:
+
                 # print("distance between old and new cluster", distance_between_grapes)
-                g_param.TB[i].x_center = target[0]
-                g_param.TB[i].y_center = target[1]
-                g_param.TB[i].w_meter = target[2]
-                g_param.TB[i].h_meter = target[3]
-                g_param.TB[i].mask = target[5]
-                g_param.TB[i].x_p = int(target[6][0])
-                g_param.TB[i].y_p = int(target[6][1])
-                g_param.TB[i].w_p = int(target[6][2])
-                g_param.TB[i].h_p = int(target[6][3])
-                g_param.TB[i].p_corners = target[9]
-                g_param.TB[i].mask_score = target[-1]
+                # g_param.TB[i].grape_world = grape_world
+                # g_param.TB[i].x_center = target[0]
+                # g_param.TB[i].y_center = target[1]
+                # g_param.TB[i].w_meter = target[2]
+                # g_param.TB[i].h_meter = target[3]
+                # g_param.TB[i].mask = target[5]
+                # g_param.TB[i].x_p = int(target[6][0])
+                # g_param.TB[i].y_p = int(target[6][1])
+                # g_param.TB[i].w_p = int(target[6][2])
+                # g_param.TB[i].h_p = int(target[6][3])
+                # g_param.TB[i].p_corners = target[9]
+                # g_param.TB[i].mask_score = target[-1]
                 g_param.TB[i].last_updated = get_image_num_sim(g_param.image_number)  # g_param.image_number
-                # TODO- add id_In_frame
-
-                # decide if to update world
-                return True, i
-    return False, None
-
-
-def check_if_in_TB_pixels(target):
-    """
-    :param grape_world: The grape coordinates in world parameters
-    :param target: The grape coordinates in pixels
-    :return: True,the updated pixel values for already in the TB grape.
-             False, None- the grapes does not exist in TB. it will be added.
-    """
-    if len(g_param.TB) > 0:
-        for i in range(len(g_param.TB)):  # TODO (after exp): make it only for possible grapes in reach of the image
-            # point_b = g_param.TB[i].grape_world
-            # print("grape_world", grape_world)
-            # print("distance : ", np.linalg.norm(grape_world - point_b))
-            point_b = np.array([1, g_param.TB[i].x_p, g_param.TB[i].y_p])
-            grape_p = np.array([1, target[6][0], target[6][1]])
-            distance_between_grapes = np.linalg.norm(grape_p - point_b)
-            same_grape_distance_threshold = 200
-            if distance_between_grapes < same_grape_distance_threshold:
-                # print("distance between old and new cluster", distance_between_grapes)
-                g_param.TB[i].x_center = target[0]
-                g_param.TB[i].y_center = target[1]
-                g_param.TB[i].w_meter = target[2]
-                g_param.TB[i].h_meter = target[3]
-                g_param.TB[i].mask = target[5]
-                g_param.TB[i].x_p = int(target[6][0])
-                g_param.TB[i].y_p = int(target[6][1])
-                g_param.TB[i].w_p = int(target[6][2])
-                g_param.TB[i].h_p = int(target[6][3])
-                g_param.TB[i].p_corners = target[9]
-                g_param.TB[i].mask_score = target[-1]
-                g_param.TB[i].last_updated = get_image_num_sim(g_param.image_number)  # g_param.image_number
-                # TODO- add id_In_frame
+                g_param.TB[i].amount_times_updated += 1
+                # # TODO- add id_In_frame
 
                 # decide if to update world
                 return True, i
@@ -287,7 +232,7 @@ def simplify_corners(corners):
     """
     convert corners from np.array to list, round to 3 decimel points.
     :param corners: corners list of np.arrays
-    :return: corner list in meters
+    :return: list of corners in meters
     """
     corners_simple = []
     for i in range(4):
@@ -325,6 +270,7 @@ def check_close_to_edge(target):
 
 def check_close_to_right_edge(corners_in_m):
     """
+    # TODO- Change to pixels
     :param corners_in_m:
     :return: True if too close to the right edge
     """
@@ -373,6 +319,10 @@ def check_close_to_upper_edge(corners_in_m):
 
 
 def round_to_three(arr):
+    """
+    :param arr:
+    :return: same array, all elements rounded to three.
+    """
     for i in range(0, 4):
         arr[i] = round(arr[i], 3)
     return arr
@@ -387,12 +337,13 @@ def add_to_target_bank(target):
     if the target center in this image is closer to the center, update it's world coordinates.
     else- add new target to the target bank.
     :param target:
-    :return:
+    :return: temp_target_index- in use only for testing the hypothesis that grape cluster is better recognized when it's
+    closer to the center of the image. (not in use right now, the code is commented)
     """
     target = round_to_three(target)
     too_close = check_close_to_edge(target)
-    temp_grape_world = g_param.trans.grape_world(target[0], target[1])
-    grape_base = g_param.trans.grape_base(target[0], target[1])
+    temp_grape_world = g_param.trans.grape_world(target[0], target[1], g_param.avg_dist)
+    grape_base = g_param.trans.grape_base(target[0], target[1])  # FIXME- Delete this from TB class
     # grape_in_TB, temp_target_index = check_if_in_TB_pixels(target)  # another option, less robust.
     grape_in_TB, temp_target_index = check_if_in_TB(temp_grape_world, target)
     if grape_in_TB:
@@ -461,8 +412,8 @@ def point_pixels_2_meter(d, point):
     """
     cen_poi_x_0 = int(point[0])
     cen_poi_y_0 = int(point[1])
-    cen_poi_x_0 = cen_poi_x_0 - int(1024 / 2)
-    cen_poi_y_0 = cen_poi_y_0 - int(1024 / 2)
+    cen_poi_x_0 = cen_poi_x_0 - 512
+    cen_poi_y_0 = cen_poi_y_0 - 512
     x_point = d * (cen_poi_x_0 / 1024) * (7.11 / 8)
     y_point = d * (cen_poi_y_0 / 1024) * (5.33 / 8) * 1.33
     return [x_point, y_point]
@@ -471,7 +422,7 @@ def point_pixels_2_meter(d, point):
 def box_points_to_np_array(d, corner):
     p1 = point_pixels_2_meter(d, corner)
     p1 = np.array(p1)
-    p1 = np.insert(arr=p1, obj=2, values=1, axis=0)
+    # p1 = np.insert(arr=p1, obj=2, values=1, axis=0)
     return p1
 
 
@@ -501,12 +452,87 @@ def update_by_real_distance(ind):
     :param ind: index of the grape
     """
     # (after exp): call the function that updates g_param.avg_dist with sonar_location, I think it was solved outside.
-    # FIXME- I don't think that this rotation is doing the right thing regarding the distance.
     g_param.TB[ind].distance = round(g_param.last_grape_dist + g_param.sonar_x_length, 3)
-    # todo: ADD the opposite function to TB_class.update_grape_center(index).
     x, y = point_pixels_2_meter(g_param.TB[ind].distance, [g_param.TB[ind].x_p, g_param.TB[ind].y_p])
     w, h, corners = calculate_w_h(g_param.TB[ind].distance, g_param.TB[ind].p_corners)
     g_param.TB[ind].x_center, g_param.TB[ind].y_center, g_param.TB[ind].w_meter, g_param.TB[ind].h_meter = x, y, w, h
     g_param.TB[ind].corners = corners
-    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y)
-    g_param.TB[ind].grape_base = g_param.trans.grape_base(x, y)
+    g_param.TB[ind].grape_world = g_param.trans.grape_world(x, y, g_param.TB[ind].distance)
+    # g_param.TB[ind].grape_base = g_param.trans.grape_base(x, y)
+
+
+
+    # def calc_corners_by_gemotry(self):
+    #     """
+    #     Doesn't work when extra process is done to the image.
+    #     :return:
+    #     """
+    #     x_cen, y_cen = self.x_center, self.y_center
+    #     w, h = self.w_meter, self.h_meter
+    #     angle = self.angle
+    #     ninety = pi / 2
+    #     alpha = radians(angle)
+    #     beta = ninety - radians(angle)
+    #     # beta = radians(angle)
+    #     # alpha = ninety - radians(angle)
+    #     w = w / 2
+    #     h = h / 2
+    #     cor_1 = [round(x_cen + (-cos(beta) * h + cos(alpha) * w), 3),
+    #              round(y_cen + (-sin(beta) * h - w * sin(alpha)), 3)]
+    #     cor_2 = [round(x_cen + (cos(beta) * h + cos(alpha) * w), 3),
+    #              round(y_cen + (sin(beta) * h - w * sin(alpha)), 3)]
+    #     cor_3 = [round(x_cen + (cos(beta) * h - cos(alpha) * w), 3),
+    #              round(y_cen + (sin(beta) * h + w * sin(alpha)), 3)]
+    #     cor_4 = [round(x_cen + (-cos(beta) * h - cos(alpha) * w), 3),
+    #              round(y_cen + (-sin(beta) * h + w * sin(alpha)), 3)]
+    #     # auto_corners = cv.boxPoints(box)
+    #     return [cor_1, cor_2, cor_3, cor_4]
+
+# def calc_z_move():
+#     """
+#     Calc movement in z axis only
+#     :return:
+#     """
+#     a = g_param.image_number % 4
+#     if a == 0 or a == 3:
+#         return 0
+#     return g_param.height_step_size * g_param.step_size
+
+
+#
+# def check_if_in_TB_pixels(target):
+#     """
+#     Compare between grapes based on their location in pixels- not in use
+#     :param grape_world: The grape coordinates in world parameters
+#     :param target: The grape coordinates in pixels
+#     :return: True,the updated pixel values for already in the TB grape.
+#              False, None- the grapes does not exist in TB. it will be added.
+#     """
+#     if len(g_param.TB) > 0:
+#         for i in range(len(g_param.TB)):  # TODO (after exp): make it only for possible grapes in reach of the image
+#             # point_b = g_param.TB[i].grape_world
+#             # print("grape_world", grape_world)
+#             # print("distance : ", np.linalg.norm(grape_world - point_b))
+#             point_b = np.array([1, g_param.TB[i].x_p, g_param.TB[i].y_p])
+#             grape_p = np.array([1, target[6][0], target[6][1]])
+#             distance_between_grapes = np.linalg.norm(grape_p - point_b)
+#             same_grape_distance_threshold = 200
+#             if distance_between_grapes < same_grape_distance_threshold:
+#                 # print("distance between old and new cluster", distance_between_grapes)
+#                 g_param.TB[i].x_center = target[0]
+#                 g_param.TB[i].y_center = target[1]
+#                 g_param.TB[i].w_meter = target[2]
+#                 g_param.TB[i].h_meter = target[3]
+#                 g_param.TB[i].mask = target[5]
+#                 g_param.TB[i].x_p = int(target[6][0])
+#                 g_param.TB[i].y_p = int(target[6][1])
+#                 g_param.TB[i].w_p = int(target[6][2])
+#                 g_param.TB[i].h_p = int(target[6][3])
+#                 g_param.TB[i].p_corners = target[9]
+#                 g_param.TB[i].mask_score = target[-1]
+#                 g_param.TB[i].last_updated = get_image_num_sim(g_param.image_number)  # g_param.image_number
+#                 # TODO- add id_In_frame
+#
+#                 # decide if to update world
+#                 return True, i
+#     return False, None

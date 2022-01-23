@@ -329,6 +329,12 @@ def image_resize(image, width=None, height=None, inter=cv.INTER_AREA):
     return resized
 
 
+def to_display():
+    if g_param.image_number >= g_param.display_image_num_threshold:
+        return True
+    return False
+
+
 # def show_in_moved_window(win_name, img, i=None, x=(-1090), y=35): # lab
 def show_in_moved_window(win_name, img, i=None, x=0, y=0, time_display=0):  # lab
     """
@@ -341,7 +347,7 @@ def show_in_moved_window(win_name, img, i=None, x=0, y=0, time_display=0):  # la
     :param time_display: how much time to wait before closing the window.
     0 - wait for key press, else it's time in milliseconds
     """
-    if not g_param.show_images:
+    if not g_param.show_images and to_display():
         return
     if img is not None:
         target_bolded = img.copy()
@@ -877,7 +883,7 @@ def take_picture_and_run():
     """
     :return:
     """
-    image_number = g_param.image_number # FIXME ?
+    image_number = g_param.image_number
     d = g_param.avg_dist
     plt.clf()  # clean the canvas
     if g_param.process_type == "record" or g_param.process_type == "work":
@@ -1238,6 +1244,7 @@ def take_picture_and_run():
             # det_box = [int(cen_poi_x_0), int(cen_poi_y_0), width_0, height_0, angle_0, None]
             det_box = [int(cen_poi_x_0), int(cen_poi_y_0), int(boxes[i][1][0]), int(boxes[i][1][1]), angle_0, None]
             x_center_meter, y_center_meter = point_pixels_2_meter(d, [det_box[0], det_box[1]])
+            # Edo Sigal consider world coordinates
             box_in_meter = [x_center_meter, y_center_meter, width_0, height_0, angle_0]
             # det_rotated_boxes.append(box_in_meter)
             mask_score = None

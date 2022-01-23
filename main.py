@@ -1,3 +1,7 @@
+"""
+Look for all ocurances of fixme Sigal Edo, and do the changes. (rotation_coordinate_sys)
+"""
+
 import sys
 import time
 from datetime import datetime as dt
@@ -29,10 +33,11 @@ from transform import rotation_coordinate_sys
 import scipy
 import g_param
 from g_param import get_image_num_sim, build_array
+from utilitis import *
 import math
 
 from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
-    point_meter_2_pixel, image_resize, take_manual_image, sort_results
+    point_meter_2_pixel, image_resize, take_manual_image, sort_results, to_display
 
 import write_to_socket
 import read_from_socket
@@ -86,95 +91,10 @@ g_param.table_of_matches_pred = pd.DataFrame(-1, index=np.arange(15), columns=np
 g_param.table_of_matches_gt = pd.DataFrame(-1, index=np.arange(15), columns=np.arange(41))
 g_param.table_of_stats = pd.DataFrame(0.0, index=['total_pred', 'total_gt', 'recall', 'precision'], columns=np.arange(41))
 track_gt_pred = pd.DataFrame(-1, index=np.arange(15), columns=np.arange(41))
-g_param.pred_gt_tracking = pd.DataFrame(columns=['frame', 'frame_id_gt', 'frame_id_pred', 'global_id'])
+g_param.pred_gt_tracking = pd.DataFrame(columns=['frame', 'frame_id_gt', 'frame_id_pred',
+                                                 'global_id','global_id_TB', 'IoU'])
+
 # trans_volcani = np.array([[-0.7071, 0.7071, 0], [-0.7071, -0.7071, 0], [0, 0, 1]])
-
-
-########################################################################################################################
-# ---------- tracking results analysis -------------
-
-
-def create_track_gt_df():
-    """
-    read the csv file that describes the 2d tracking of the grape clusters.
-    each column represent an image.
-    each row represent a grape cluster
-    the number (ranging 0 - 6) represnt the id of the grape in the frame (from left to right).
-
-    This function converts it to a "2d" table, with the columns (left to right):
-    frame  general_id  frame_id.
-    sorted by frame (image ID), than by general_id and than by frame_id
-
-    a similar function exits for converting the detections that had IoU > 0.5 into the same type of table.
-
-    Later, a comparison should be made between these two tables.
-    """
-    gt_track = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_track.csv',
-                           header=None)
-    rows_num = gt_track.shape[0]  # amount of total grape clusters in all GT.
-    frames_num = gt_track.shape[1]  # 41 images
-    table_3_l = []
-    # print('Frame | ID in Frame | Cluster ID')
-    for col in range(0, rows_num):
-        for row in range(0, frames_num):
-            if not pd.isna(gt_track[row][col]):
-                if float(gt_track[row][col]) or gt_track[row][col] == 0:
-                    # print(col, row, gt_track[row][col])
-                    table_3_l.append([row, col,  gt_track[row][col]])
-    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id_gt'])
-    table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
-    table = remove_unreachable_frames(table_3)
-    return table
-
-
-def remove_unreachable_frames(t):
-    """
-    Remove records where the frame won't be part of the frames in simulations (will be skipped).
-    Note: if g_param.steps_gap == 1, no filter will be done.
-    :param t: table to filter.
-    :return: filterd table.
-    """
-    if g_param.steps_gap == 1:
-        return t
-    a = build_array(g_param.steps_gap)
-    t = t[t['frame'].isin(a)]
-    t = t.reset_index()
-    return t
-
-
-def create_track_pred_fillterd_df():
-    """
-    same as create_track_gt_df
-    """
-    pred_track = g_param.pred_gt_tracking
-    pred_track = pred_track[pred_track['global_id'] > -1]
-    return pred_track
-
-
-def create_track_gt_from_pred_df():
-    """
-    same as create_track_pred_df but consitent with GT numnering of id_in_frame.
-    """
-    pred_track = g_param.table_of_matches_gt
-    rows_num = pred_track.shape[0]  # amount of total grape clusters in all GT.
-    frames_num = pred_track.shape[1]  # 41 images
-    table_3_l = []
-    for col in range(0, rows_num):
-        for row in range(0, frames_num):
-            if pred_track[row][col] > -1:
-                table_3_l.append([row, col, pred_track[row][col]])
-    table_3 = pd.DataFrame(table_3_l, columns=['frame', 'general_id', 'frame_id'])
-    table_3 = table_3.sort_values(["frame", "general_id"], ascending=(True, True))
-    g_param.pred_gt_df = table_3
-    return table_3
-
-
-# for image_col in range(41):
-#     columns = g_param.table_of_matches_pred.at[arr[indexs][image_col], :].values
-#     arr = columns
-#     indexs = arr > -1
-#     for i in range(len(arr[indexs])):
-#         d.at[arr[indexs][i], 0] = i
 
 
 ########################################################################################################################
@@ -205,6 +125,14 @@ def move2sonar(grape_1):
 
 
 def two_step_movement(old_pos, new_pos):
+    """
+    Inverse rotation -225 to world to find x,y motion. Forward rotation of them sepratly.
+    Used only one of them.
+    :param old_pos:
+    :param new_pos:
+    :return:
+    """
+
     r_new_pos = np.copy(new_pos)
     r_old_pos = np.copy(old_pos)
     r_new_pos[0], r_new_pos[1] = rotation_coordinate_sys(r_new_pos[0], r_new_pos[1], -g_param.base_rotation_ang)
@@ -326,7 +254,7 @@ def move_const(size_of_step, direction_to_move, location):
     # print("move const ", step_size, " start at:", location)
     if g_param.process_type != "load":
         if direction_to_move == "right":
-            delta_x, delta_y = rotation_coordinate_sys(0, -size_of_step, g_param.base_rotation_ang)
+            delta_x, delta_y = rotation_coordinate_sys(0, -size_of_step, g_param.base_rotation_ang) # fixme Sigal Edo, (0, size_of_step, -g_param.base_rotation_ang)
             location[0] = location[0] + delta_x
             location[1] = location[1] + delta_y
             ws_rob.move_command(False, location, sleep_time, velocity)
@@ -412,7 +340,7 @@ def move_and_spray(start, end, target_grape, adj_v):
     if g_param.process_type != "load":
         if possible_move(start, target_grape) and possible_move(end, target_grape):
             ws_rob.move_command(False, start, 3, adj_v)
-            # check_update_move(start)  # TODO:check with Sigal
+            # check_update_move(start)
             ws_rob.spray_command(True)
             ws_rob.move_command(False, end, 2, adj_v)
             ws_rob.spray_command(False)
@@ -701,9 +629,6 @@ def get_classes(mask_id, class_from_sonar, real_class):
     return real_class, real_class
 
 
-# calling the 2 sonar methods to get distance and validate existence of grapes
-
-
 def update_database_no_grape_sonar_human(mask_id):
     """
     update the datanase about what NN score was and what the user said (only for exp!)
@@ -837,20 +762,6 @@ def restart_target_bank():
         print("continue the program")
 
 
-def print_line_sep_time():
-    """
-    prints a line separation of ___ and the current time
-    """
-    t = time.localtime()
-    current_time = time.strftime("%H:%M:%S", t)
-    print('-' * 40, current_time, '-' * 40, '\n')
-    image_masks = []
-    for ind in range(len(g_param.TB)):
-        if g_param.TB[ind].last_updated == get_image_num_sim(g_param.image_number):  # == g_param.image_number:
-            image_masks.append([ind, g_param.TB[ind].index])
-    print(image_masks)
-
-
 def move_platform():
     """
     For moving the platform manually.
@@ -887,6 +798,7 @@ def move_platform():
         g_param.read_write_object.write_platform_step(g_param.platform_step_size)
     else:
         g_param.platform_step_size = g_param.read_write_object.read_platform_step_size_from_csv()
+    g_param.trans.update_cam2world(g_param.platform_step_size) # FIXME Sigal Edo
     g_param.sum_platform_steps += g_param.platform_step_size
 
 
@@ -917,10 +829,8 @@ def update_database_no_grape(index):
     :param index: The index of the grape
     """
     g_param.TB[index].fake_grape = True
-    g_param.TB[index].mask = None
-    g_param.TB[index].sprayed = True # TODO- consider change that.
-    # check with Sigal if I want to count amount of grapes sprayed
-    # any way, I could just subtract the amount of grapes that are sprayed and not fake_grape
+    # g_param.TB[index].mask = None
+    g_param.TB[index].sprayed = True # TODO- consider change that, according to IoU.
 
 
 def update_x_y_p(index_of_g):
@@ -937,7 +847,7 @@ def update_database_sprayed(index_of_grape):
     """
     g_param.TB[index_of_grape].sprayed = True
     # print(g_param.TB[-6:]) # Uncomment to print Target bank
-    g_param.TB[index_of_grape].mask = None  # (to save space in memory)
+    # g_param.TB[index_of_grape].mask = None  # (to save space in memory)
     update_x_y_p(index_of_grape)
     g_param.masks_image = cv.circle(g_param.masks_image,
                                     (g_param.TB[index_of_grape].x_p, g_param.TB[index_of_grape].y_p),
@@ -981,35 +891,39 @@ def mark_sprayed_and_display():
     """
     print_line_sep_time()
     cam_0 = np.array([0, 0, 0, 1])
-    cam_0_base = np.matmul(g_param.trans.t_cam2base, cam_0)
+    cam_0_world = np.matmul(g_param.trans.t_cam2world, cam_0)
     print("TB after sorting \n", g_param.TB)
 
     half_image_left = g_param.half_width_meter
     for a in range(len(g_param.TB)):
         update_x_y_p(a)
         target = g_param.TB[a]
-        # sprayed and steel should appear in the image #
-        if target.sprayed and abs(target.grape_world[1] - cam_0_base[1]) < half_image_left \
-                and target.in_range == "ok" and not target.fake_grape:
+        # sprayed and still should appear in the image # FIXME Sigal Edo- CHANGE cam_0_base TO WORLD
+        # and abs(target.grape_world[1] - cam_0_world[1]) < half_image_left*2
+        if target.sprayed and target.in_range == "ok" and not target.fake_grape:
             g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(0, 0, 255), thickness=4)
         # mark orange dot on grapes that are too high/low.
         if target.in_range == "high" or target.in_range == "low":
             g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(255, 165, 0), thickness=4)
-        if target.sprayed and abs(target.grape_world[1] - cam_0_base[1]) < half_image_left \
-                and target.in_range == "ok" and target.fake_grape:
+        # and abs(target.grape_world[1] - cam_0_world[1]) < half_image_left*2
+        if target.sprayed and target.in_range == "ok" and target.fake_grape:
             g_param.masks_image = cv.circle(g_param.masks_image, (int(target.x_p), int(target.y_p)),
                                             radius=4, color=(255, 0, 0), thickness=4)
-
-    if g_param.show_images:
+        g_param.masks_image = cv.putText(g_param.masks_image, str(target.index),   # visualization
+                                         org=(int(target.x_p + 15), int(target.y_p) + 15),
+                                         fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=0.5,
+                                         color=(255, 255, 255), thickness=1, lineType=2)
+    if g_param.show_3D_plot:
         plot_tracking_map()
+    if g_param.show_images:
         show_in_moved_window("Checking status", g_param.masks_image, None, 0, 0, g_param.auto_time_display)
-        print('a')
 
 
-def calc_single_axis_limits(axis):
+def calc_single_axis_limits(axis: int) -> (float, float):
     """
+    axis: The index (0 - x, 1 - y, 2 - z) to calc limits for.
     calc the values and range between the 2 points that are the farthest away from each other on a single axis.
     :return: min and max value of values on this axis.
     """
@@ -1026,14 +940,13 @@ def calc_single_axis_limits(axis):
     return float(min_lim_x - 2.5 * min_max_range), float(max_lim_x + 2.5 * min_max_range)
 
 
-
 def calc_axis_limits():
     """
     Calculate the limits of each axis on the 3d plot
     """
-    # g_param.x_lim = calc_single_axis_limits(0)
+    g_param.x_lim = calc_single_axis_limits(0)
     # g_param.y_lim = calc_single_axis_limits(1)
-    g_param.z_lim = calc_single_axis_limits(2)
+    # g_param.z_lim = calc_single_axis_limits(2)
 
 
 def get_projections():
@@ -1077,6 +990,7 @@ def  calc_y_diff(y_list):
         return int(sum(diff) / len(diff)), diff_locs
     return 0, 0
 
+
 def plot_2_d_track():
     # ADD TITLE WITH IMAGE NUMBER. CHECK JUMP FROM IMAGE 5 TO 10.
     """
@@ -1117,6 +1031,8 @@ def plot_tracking_map():
     Visualize all grapes centers on a 3d map.
     This function generates a plot that represents the TB in 3D.
     """
+    if not to_display():
+        return
     x_cors, y_cors, z_cors, colors = [], [], [], []
     for i in range(len(g_param.TB)):
         x_cor, y_cor, z_cor = g_param.TB[i].grape_world[0], g_param.TB[i].grape_world[1], g_param.TB[i].grape_world[2]
@@ -1141,9 +1057,9 @@ def plot_tracking_map():
 
                # project each points on all planes.
     x, y, z = get_projections()
-    ax.plot(x, z, '+', c='r', zdir='y', zs=g_param.y_lim[1])  # red pluses (+) on XZ plane
-    ax.plot(y, z, 's', c='g', zdir='-x', zs=g_param.x_lim[0])  # red squares on YZ plane
-    ax.plot(x, y, '*', c='b', zdir='-z', zs=g_param.z_lim[0])  # red pluses (*) on XY plane
+    ax.plot(x, z, '+', c='r', zdir='y', zs=g_param.y_lim[1])  # Red pluses (+) on XZ plane
+    ax.plot(y, z, 's', c='g', zdir='-x', zs=g_param.x_lim[0])  # Green squares on YZ plane
+    ax.plot(x, y, '*', c='b', zdir='-z', zs=g_param.z_lim[0])  # Blue pluses (*) on XY plane
 
     # labels titles
     ax.set_xlabel('X - Distance [m]', fontsize=14)
@@ -1162,7 +1078,7 @@ def plot_tracking_map():
     zz = yy
     # plot plane that goes through z axis and perpendicular to xy plane. at 45 degrees (the line of x=y)
     # ax.plot_surface(xx, yy, zz, alpha=0.5)
-    s = ax.scatter(x_cors, y_cors, z_cors, s=400, c=colors)  # x,y,z coordinates, size of each point, colors.
+    s = ax.scatter(x_cors, y_cors, z_cors, s=300, c=colors)  # x,y,z coordinates, size of each point, colors.
     # controls the alpha channel. all points have the same value, ignoring their distance
     s.set_edgecolors = s.set_facecolors = lambda *args: None
     ax.title.set_text(f'Imgae number {g_param.image_number}, '
@@ -1170,7 +1086,6 @@ def plot_tracking_map():
     # elev = 5.0
     # azim = 135.5
     # ax.view_init(elev, azim)
-
     plt.show()
 
 
@@ -1265,29 +1180,14 @@ def remove_by_visual(grape_index_to_check):
     return False
 
 
-def log_statistics():
-    """
-    write down some descriptive statics of what just recorded
-    :return:
-    """
-    # take_manual_image()
-    amount_of_grapes = len(g_param.TB)
-    amount_of_fake = sum(g.fake_grape is True for g in g_param.TB)
-    amount_sprayed = sum((g.sprayed is False and g.fake_grape is False) for g in g_param.TB)
-    print('-' * 50, '\n', '-' * 50, '\n', '-' * 25 + ' summary ' + '-' * 25)
-    print(f'Total grapes detected: {amount_of_grapes}')
-    print(f'Total "false" grapes detected: {amount_of_fake}')
-    print(f'Precision : {round(((amount_of_grapes - amount_of_fake) / amount_of_grapes + 0.0000001), 3)}')
-    print(f'percentage of grapes that were not reachable: {round((amount_sprayed / amount_of_grapes + 0.0000001), 3)}'
-          f' \n')
-    print('-' * 50, '\n', '-' * 50)
-    pass
+
 
 
 def update_database_visualization():
     """
     Update location of the center point of all grapes that could still appear in the image
     """
+    create_centers_df()
     for j in range(len(g_param.TB)):
 
         TB_class.update_grape_center(j)
@@ -1297,6 +1197,7 @@ def update_database_visualization():
         if -2000 < x_temp < 2000:
             g_param.TB[j].x_p = int(x_temp)
             g_param.TB[j].y_p = int(y_temp)
+    create_centers_df() # FIXME- Check index/location in TB
         # else:
         #     break  # rest of the images will be out of range.
 
@@ -1321,6 +1222,12 @@ def switch_materiel():
 
 
 def display_image_with_mask(image_path, mask, alpha=0.7):
+    """
+
+    :param image_path: path of the image
+    :param mask: mask (2D numpy array)
+    :param alpha: opacity of the mask on top of the image
+    """
     # image = cv.imread(image_path)
     # image = cv.cvtColor(image,cv.COLOR_BGR2RGB)
     if mask.ndim == 2:
@@ -1395,7 +1302,7 @@ def keep_relevant_masks(prediction_masks):
     """
     The goal of the evaluation is to check the tracking system with respect to the masks that entered the TB
     (not evaluating the performance of the network. it had been done separately (and can easily be done here is well).
-    This function returns the maks on this image that weren't removed by the tracking algorithm.
+    This function returns the masks on this image that weren't removed by the tracking algorithm.
     :param prediction_masks: prediction masks of the current image (before filtering by the TB).
     :return: prediction_masks and their scores.
     """
@@ -1408,7 +1315,8 @@ def keep_relevant_masks(prediction_masks):
     indexes = []
     for ind in range(len(g_param.TB)):
         if g_param.TB[ind].last_updated == get_image_num_sim(g_param.image_number): #  g_param.image_number:
-            mask = np.reshape(g_param.TB[ind].mask, (1024, 1024, 1))
+            # mask = np.reshape(g_param.TB[ind].mask, (1024, 1024, 1))
+            mask = g_param.TB[ind].mask
             if len(image_masks_ind) == 0:
                 masks = mask
             else:
@@ -1420,48 +1328,65 @@ def keep_relevant_masks(prediction_masks):
     return masks, scores, indexes
 
 
-def update_TB_id_in_frame(prediction_masks, pred_score, indexes):
+def update_TB_id_in_frame(prediction_masks, pred_score):
+    """
+    Update the id_in_frame for each of the masks that appear in the image.
+    Very not elegent way to solve it! should be improved in the future!
+    :param prediction_masks: masks deteced in the image and enterd the TB (not too close the edges).
+    :param pred_score:prediction score per mask
+    :return:
+    """
+    indexs_tb = []
+    masks_count = 0
+    if len(pred_score) == 1:
+        return [g_param.TB[0].index]
     for i in range(len(g_param.TB)):
+        if masks_count == prediction_masks.shape[2]:
+            break
         for j in range(prediction_masks.shape[2]):
             if np.all(g_param.TB[i].mask == prediction_masks[:,:,j]):
                 g_param.TB[i].id_in_frame = j
+                masks_count += 1
+                indexs_tb.append(g_param.TB[i].index)
+    return indexs_tb
 
 
 def evaluate_detections(prediction_masks, pred_score):
     if not g_param.eval_mode:
         return
     g_param.read_write_object.write_tracking_gt(create_track_gt_df())
-    prediction_masks, pred_score, indexes = keep_relevant_masks(prediction_masks)
-    update_TB_id_in_frame(prediction_masks, pred_score, indexes)
+    prediction_masks, pred_score, _ = keep_relevant_masks(prediction_masks) # 3rd elemnt (indexes) not used.
+    indexs_TB = update_TB_id_in_frame(prediction_masks, pred_score)
     gt_mask, gt_box, coms = calc_gt_box()
     r_dict_gt = {'masks': gt_mask, 'bbox': gt_box, 'rois': gt_box, 'scores': np.array([1] * gt_mask.shape[2]),
                  'class_ids': np.array([1] * gt_mask.shape[2])}
     r_dict_gt = sort_results(r_dict_gt)
     gt_mask, gt_box, gt_class_id = r_dict_gt['masks'], r_dict_gt['bbox'], r_dict_gt['class_ids']
     pred_boxes = utils.extract_bboxes(prediction_masks)
-
+    if prediction_masks.ndim == 2:
+        prediction_masks = np.reshape(prediction_masks, (1024, 1024, 1))
     pred_class_id = np.array([1] * prediction_masks.shape[2])
     class_names = ['BG', 'grape_cluster']
     img_path = g_param.read_write_object.load_image_path()
     img = cv.imread(img_path)
     rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-    if g_param.display_eval_images:
+    if g_param.display_eval_images and to_display():
         if len(gt_box) > 0:
             display_differences(rgb, gt_box, gt_class_id, gt_mask,
                                 pred_boxes, pred_class_id, pred_score, prediction_masks,
                                 class_names, title="Pred vs. GT", ax=None,
                                 show_mask=True, show_box=True,
-                                iou_threshold=0.5, score_threshold=0.5) # FIXME: IOU VALUE!!!!
+                                iou_threshold=g_param.iou, score_threshold=0.5)
         else:
             display_instances(rgb, pred_boxes, prediction_masks, np.array([1]), class_names,
                               scores=None, title="instances",  figsize=(16, 16), ax=None,
                               show_mask=True, show_bbox=True, colors=None, captions=None)
     gt_match, pred_match, overlaps = utils.compute_matches(
         gt_box, gt_class_id, gt_mask, pred_boxes, pred_class_id,
-        pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
+        pred_score, prediction_masks, iou_threshold=g_param.iou)
     mAP, precisions, recalls, overlaps = utils.compute_ap(
         gt_box, gt_class_id, gt_mask, pred_boxes,
-        pred_class_id, pred_score, prediction_masks, iou_threshold=0.5)  # FIXME: IOU VALUE!!!!
+        pred_class_id, pred_score, prediction_masks, iou_threshold=g_param.iou)
     indexs = pred_match > -1
     # FIXME: UNCOMMENT- next 2 lines are writing the GT id_in_frame.
     #  the next uncommented sections is writing the pred id_in_frame. the frame, cluster ID are matching.
@@ -1471,13 +1396,23 @@ def evaluate_detections(prediction_masks, pred_score):
     for each index, produce the record: frame num, frame_id_gt, frame_id_pred, global_id.
     """
     for i in range(len(pred_match)):
-        row = [get_image_num_sim(g_param.image_number), pred_match[i], i, None]
+        i_val = pred_match[i]
+        if not pred_match[i] > -1:
+            max_val = max(overlaps[i])
+            i_val = list(overlaps[i]).index(max_val)
+            if i_val is None :
+                i_val = 0
+        # row = [get_image_num_sim(g_param.image_number), pred_match[i], i,
+        #        None, round(overlaps[i][int(pred_match[int(i_val)])],3)]
+        rounded_iou = round(overlaps[i][int(i_val)],3)
+        row = [int(get_image_num_sim(g_param.image_number)), int(pred_match[i]), int(i),
+               None, indexs_TB[i], float(rounded_iou)]
         general_id = g_param.gt_track_df[(g_param.gt_track_df['frame'] == get_image_num_sim(g_param.image_number)) &
                                            (g_param.gt_track_df['frame_id_gt'] == row[1])]['general_id'].tolist()
         if len(general_id) == 0:
-            row[3] = -1
+            row[3] = int(-1)
         else:
-            row[3] = general_id[0]
+            row[3] = int(general_id[0])
         g_param.pred_gt_tracking.loc[len(g_param.pred_gt_tracking)] = row
 
     #  TODO: find a way to sync pred, GT table of tracking.
@@ -1521,6 +1456,17 @@ def print_time():
     ending_time = dt.now()
     elaps = ending_time - starting_time
     print("HH:MM:SS: %02d:%02d:%02d" % (elaps.seconds // 3600, elaps.seconds // 60 % 60, elaps.seconds % 60))
+    if not not_finished: # time to end program
+        if g_param.process_type == "load":
+            g_param.read_write_object.create_simulation_config_file()
+
+
+
+def default_fake_grapes():
+    for i in range(len(g_param.TB)):
+        if g_param.TB[i].fake_grape and g_param.TB[i].amount_times_updated > 0:
+            g_param.TB[i].fake_grape = False
+            g_param.TB[i].sprayed = False
 
 
 if __name__ == '__main__':
@@ -1552,15 +1498,15 @@ if __name__ == '__main__':
         # input("Press Enter to take picture")
         print(fg.yellow + "wait" + fg.rs, "\n")
         # take_manual_image() # TODO: uncomment for exp!!!
+        update_database_visualization()
         prediction_maskss, pred_scores = capture_update_TB()  # 5 + 7-12 inside #
         amount_grapes_detected = evaluate_detections(prediction_maskss, pred_scores)  # FIXME PROBLEMN IN IMAGE NUM 32
-        update_database_visualization()
         print_image_details(step_direction[(g_param.image_number + 1) % 4])
         # g.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:]) #print TB
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         # input("press enter for continue to spraying")
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
-        if not first_run and g_param.image_number > 0:
+        if not first_run and g_param.image_number > 0: # fixme- not working
             mark_sprayed_and_display()
         if grape_ready_to_spray:  # 15- yes (change to sorting according to 14, rap the next lines in a function)
             # update_wait_another_round()  # for future work- details inside.
@@ -1585,15 +1531,16 @@ if __name__ == '__main__':
                 print("distance :", g_param.last_grape_dist, "is_grape :", is_grape)
                 TB_class.update_by_real_distance(i)
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
-                    # spray_process(grape)
+                    spray_process(grape)
                     if g_param.time_to_move_platform:  # 27
                         break  #
-                    move2capture() # why does it says move2capture and not to spray?
+                    move2capture() #
                     update_database_sprayed(i)  # 28
-                    mark_sprayed_and_display()
+                    mark_sprayed_and_display()# fixme- not working
                 else:
                     update_database_no_grape(i)  # 22
-                    mark_sprayed_and_display()
+                    mark_sprayed_and_display()# fixme- not working
+            # default_fake_grapes()  #TODO- check with and without it.
         else:  # 15- no grapes to spray_procedure
             print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes # every 4 movements and press 11.
@@ -1601,7 +1548,10 @@ if __name__ == '__main__':
                 print("Finished- external signal all done")
                 break  # 23
         if g_param.images_in_run - 1 <= get_image_num_sim(g_param.image_number):
-            print(f"Finished, {g_param.images_in_run} images were taken on this batch.")
+            if g_param.process_type != 'load':
+                print(f"Finished, {g_param.images_in_run} images were taken on this batch.")
+            else:
+                print(f"Finished, {g_param.image_number} images were processed in this simulation.")
             not_finished = False
         if steps_counter >= number_of_steps and step_direction[(g_param.plat_position_step_number + 1) % 4] == "right":
             g_param.time_to_move_platform = True

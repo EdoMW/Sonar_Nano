@@ -38,6 +38,8 @@ def extract_bboxes(mask):
     Returns: bbox array [num_instances, (y1, x1, y2, x2)].
     """
     boxes = np.zeros([mask.shape[-1], 4], dtype=np.int32)
+    if mask.ndim == 2:
+        mask = np.reshape(mask, (1024, 1024, 1))
     for i in range(mask.shape[-1]):
         m = mask[:, :, i]
         # Bounding box.

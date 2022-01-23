@@ -5,22 +5,26 @@ TB = []
 masks_image = None
 half_width_meter = 0.34
 half_height_meter = 0.2
-auto_time_display = 1700  # time to display image automatically
+auto_time_display = 0  # time to display image automatically. at least 100
+display_image_num_threshold = 0
+show_3D_plot = False
 show_images = False
 display_eval_images = False
 plot_2_d_track = False
 spray_sonar = True
 trans = None
 distances_gt = None
+iou = 0.2
 
+centers_df = None
 pred_gt_tracking = None
 gt_track_df = None
 pred_gt_df = None
 pred_df = None
-avg_dist = 0.55  # 75
+avg_dist = 0.6  # 75
 platform_step_size = 0.5  # TODO (change to 0.5 for exp movement default)
 sum_platform_steps = 0  # sum of all platform steps
-last_grape_dist = 0.55
+last_grape_dist = 0.6
 step_size = 0.1
 height_step_size = 1.5  # parameter to_tune
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) # for future work - (after exp)
@@ -38,9 +42,9 @@ max_spray_dist = 0.25
 min_vel = 0.2
 max_vel = 0.5
 const_vel = max_vel
-x_lim = (-0.8, 2.5)  # (-1.2, 1)
-y_lim = (-0.8, 2.5)
-z_lim = (-0.5, 1)
+x_lim = (0.0, 1.0)  # (-1.2, 1)
+y_lim = (-0.5, 2.5)
+z_lim = (0.0, 0.9)
 # x_lim = (0, 0.1)
 # y_lim = (0, 0.1)
 # z_lim = (0, 0.1)
@@ -54,6 +58,7 @@ sprayer_x_length = 0.095
 base_rotation_ang = 225  # 180 for lab 225 for volcani # TODO- don't forget to change value!
 images_in_run = 1  # amount of images in the current run
 two_dim_track = []
+distances_matrix_2d = []
 
 # Cluster ID (rows), frame ID (columns),
 # id_in_pred_frame (as oppose to id_in_gt_frame as marked in the GT).
@@ -66,7 +71,7 @@ steps_gap: determines how many horizontal steps should be done.
 for example, if step size is 0.1m and we want to keep it that (default) than steps_gap = 1.
 if an experiment wants to test step size of 0.2m, than steps_gap should be equal to 2.
 """
-steps_gap = 2
+steps_gap = 1
 """
 work_place: lab/field/lab_grapes:
 
@@ -124,10 +129,10 @@ def get_cnn_config(train_config_obj):
     return cnn_config_temp
 
 
-def get_index(index):
+def get_index(index) -> (int, int):
     """
-    :param index: index of current image
-    :return: low image idx, high image idx
+    :param index: (int) index of current image
+    :return: low image idx, high image idx (int, int)
     """
     if index % 2 == 0:
         lpi_temp = index * 2
@@ -138,12 +143,12 @@ def get_index(index):
     return lpi_temp, hpi_temp
 
 
-def build_array(step_size_sim):
+def build_array(step_size_sim) -> list:
     """
     builds array to take image from
     range is 0-41 because max size of the array is at most 41.
     :param step_size_sim:
-    :return:
+    :return: list of the indexes of the images to use (in the right order, according to the movement).
     """
     move_direction = 0  # even = up, odd = down
     b = []
@@ -184,8 +189,9 @@ def init():
         read_write_object, process_type, last_grape_dist, height_step_size, direction, platform_step_size, \
         image_cnn_path, cnn_config, steps_gap, min_spray_dist, max_spray_dist, max_euclid_dist, z_max, z_min, y_max,\
         manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim, table_of_matches_pred,\
-        table_of_stats, distances_gt, pred_df, pred_gt_df, table_of_matches_gt, gt_track_df, \
-        pred_gt_tracking, two_dim_track, plot_2_d_track, display_eval_images
+        table_of_stats, distances_gt, pred_df, pred_gt_df, table_of_matches_gt, gt_track_df, centers_df, \
+        pred_gt_tracking, two_dim_track, plot_2_d_track, display_eval_images, iou, display_image_num_threshold, \
+        distances_matrix_2d, show_3D_plot
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
     empty_npz_dir()

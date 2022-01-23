@@ -1,5 +1,6 @@
 import csv
 import os
+from pathlib import Path
 import g_param
 from g_param import get_image_num_sim
 import matplotlib.pyplot as plt
@@ -52,9 +53,9 @@ def get_latest_dir():
     if take_last_exp = True (default) it will return the last exp dir. AND
     :return: dir path of the exp to be analysed
     """
-    directory = r'D:\Users\NanoProject\experiments'
+    directory = r'D:\Users\NanoProject\old_experiments'
     if take_last_exp and g_param.process_type == "record" and len(os.listdir(directory)) > 0:
-        directory = r'D:\Users\NanoProject\experiments'
+        directory = r'D:\Users\NanoProject\old_experiments'
         return max([os.path.join(directory, d) for d in os.listdir(directory)], key=os.path.getmtime)
     else:
         print("Experiments dir is empty. taking last exp from old experiments")
@@ -95,9 +96,18 @@ def write_txt(mask_directory_path):
         file.write("")
 
 
+def write_tb_summary(sim_directory_path):
+    path = Path(sim_directory_path) / 'grape_count.txt'
+    with open(path, 'w') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow([len(g_param.TB)])
+        csv_file.close()
+
+
 def write_txt_config(sim_directory_path):
     """
     create a txt file with the name: 'Working in lab- no masks'
+    steps gap- horizontal gap (normal, x2,..)
     :param sim_directory_path: path to save the txt file
     """
     path = sim_directory_path + r'\config.csv'
@@ -108,14 +118,16 @@ def write_txt_config(sim_directory_path):
     image_cnn_path = g_param.image_cnn_path
     cnn_config = g_param.cnn_config
     horizontal_step_size = g_param.step_size
+    steps_gap = g_param.steps_gap
+    iou = g_param.iou
     param_list = [avg_dist, horizontal_step_size, str(round(height_step_size * horizontal_step_size, 2)),
-                  platform_step_size, resolution, image_cnn_path]
+                  platform_step_size, resolution, image_cnn_path, steps_gap, iou]
     param_list_name = ["avg_dist", "horizontal_step_size", "height_step_size",
-                       "platform_step_size", "resolution", "image_cnn_path"]
+                       "platform_step_size", "resolution", "image_cnn_path", "steps gap", 'IoU']
     headlines = ["Network configuration", "Running configuration"]
     with open(path, 'w') as csv_file:
         writer = csv.writer(csv_file)
-        cnn_used = False  # TODO- add to exp name real/fake
+        cnn_used = True
         if cnn_used:
             writer.writerow([headlines[0]])
             for key, value in cnn_config.items():
@@ -351,6 +363,7 @@ class ReadWrite:
         path_sim = self.simulations
         # FIXME - NEEDS TO ADD ON LOAD MODE THE PATHS TO TRACKING (TRACKING, 2 SUB DIRS GT, PRED)
         write_txt_config(path_sim)
+        write_tb_summary(path_sim)
 
     def save_mask(self, mask, mask_id):
         if g_param.process_type == "work" or g_param.process_type == "load":
