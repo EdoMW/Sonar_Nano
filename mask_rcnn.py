@@ -1159,7 +1159,7 @@ if __name__ == '__main__':
 #     return d
 #
 # # im1 = 'path to captured image indside cv2.imageread'
-# def take_picture_and_run(current_location, image_number):
+# def capture_update_TB(current_location, image_number):
 #     real_grapes = True
 #     d = g_param.avg_dist
 #     box = [0,0,0,0,0]
@@ -1466,4 +1466,4 @@ if __name__ == '__main__':
 #
 # if __name__ == '__main__':
 #     d = 520 # comment when running from other moudle (single proccess)
-#     take_picture_and_run()
+#     capture_update_TB()

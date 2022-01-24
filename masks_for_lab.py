@@ -879,7 +879,7 @@ def take_manual_image():
                 print_special_cam_error()
 
 
-def take_picture_and_run():
+def capture_update_TB():
     """
     :return:
     """
@@ -1273,5 +1273,5 @@ def take_picture_and_run():
 if __name__ == '__main__':
 
     g_param.masks_image = None
-    take_picture_and_run()
+    capture_update_TB()
 

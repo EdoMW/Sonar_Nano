@@ -24,7 +24,7 @@ same_grape_distance_threshold: min distance to distinguish between to grapes
 edge_distance_threshold: if distance from right edge of the grape to the edge of the image (when moving right),
                         don't add the grape to TB (it will get inside at the next iteration) 
 """
-same_grape_distance_threshold = 0.08
+same_grape_distance_threshold = g_param.same_grape_distance_threshold
 edge_distance_threshold = 0.01
 
 

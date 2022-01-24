@@ -36,19 +36,21 @@ from g_param import get_image_num_sim, build_array
 from utilitis import *
 import math
 
-from masks_for_lab import take_picture_and_run as capture_update_TB, show_in_moved_window, \
+from masks_for_lab import capture_update_TB, show_in_moved_window, \
     point_meter_2_pixel, image_resize, take_manual_image, sort_results, to_display
 
 import write_to_socket
 import read_from_socket
 from self_utils.visualize import *
+import results
+from results import get_results
 
 
 # np.set_printoptions(precision=3)
 # pd.set_option("display.precision", 3)
 # from Target_bank import print_grape
 # uncomment this line and comment next for field exp
-# from mask_rcnn import take_picture_and_run as capture_update_TB, show_in_moved_window
+# from mask_rcnn import capture_update_TB as capture_update_TB, show_in_moved_window
 
 ########################################################################################################################
 # parameters ###########################################################################################################
@@ -1560,7 +1562,4 @@ if __name__ == '__main__':
             # break
             # restart_target_bank()  # option to restart without initialize
     print_time()
-
-# All 41 images takes 00:02:16 (2 min, 16 sec) when show_image = False, display_eval_images = False.
-# All 41 images takes 00:02:16 (2 min, 16 sec) when show_image = false.
-# All 41 images takes 00:09:41 (9 min, 41 sec) when show_image = True, auto_display_time = 1500.
+    get_results()

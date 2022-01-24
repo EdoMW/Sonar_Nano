@@ -1,3 +1,4 @@
+import csv
 import os
 import pandas as pd
 from pathlib import *
@@ -20,18 +21,23 @@ class Result:
         self.miss = grapes_count_gt - self.hit  # K0
         self.recall = self.hit / grapes_count_gt
         self.precision = self.hit / self.num_grapes_sprayed
-        self.f1 = (2 * self.precision * self.recall) / (self.precision + self.recall)
+        self.f1 = self.calc_f1()
         self.s = self.num_grapes_sprayed
         self.k = grapes_count_gt
         self.s_f = self.num_grapes_sprayed - self.hit
         self.s_t = self.hit
         self.k_0 = self.miss
         self.k_1 = self.hit
-        self.k_2 = 0
+        self.k_2 = check_for_duplicates(self.read_track_pred_df()[['global_id', 'global_id_TB']])
 
     def __repr__(self):
         result_obj = f'simulation time: {self.sim_time}'
         return result_obj
+
+    def calc_f1(self):
+        if (self.precision + self.recall) > 0:
+            return (2 * self.precision * self.recall) / (self.precision + self.recall)
+        return 0
 
     def read_track_gt_df(self):
         gt_path = self.sim_time_path.joinpath(r'tracking\gt\tracking_gt.csv')
@@ -57,6 +63,38 @@ class Result:
         f = open(path, "r")
         return int(f.read())
 
+    def write_txt(self):
+        """
+        create a txt file with the name: 'Working in lab- no masks'
+        steps gap- horizontal gap (normal, x2,..)
+        :param sim_directory_path: path to save the txt file
+        """
+        path = self.sim_time_path.joinpath('results.csv')
+        hit = self.hit
+        miss = self.miss
+        recall = self.recall
+        precision = self.precision
+        f1 = self.f1
+        num_grapes_sprayed = self.s
+        s_f = self.s_f
+        s_t = self.s_t
+        k_0 = self.k_0
+        k_1 = self.k_1
+        k_2 = self.k_2
+        param_list = [num_grapes_sprayed, hit, miss, recall, precision, f1, s_f, s_t, k_0, k_1, k_2]
+        param_list_name = ["num_grapes_sprayed", "hit", "miss", "recall", "precision", "f1",
+                           's_f', 's_t', 'k_0', 'k_1', 'k_2']
+        with open(path, 'w') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerows(zip(param_list_name, param_list))
+            csv_file.close()
+        # text = open(path, "r")
+        # text = ''.join([i for i in text]).replace(", ", ": ")
+        # text = ''.join([i for i in text]).replace(",", ": ")
+        # x = open(path, "w")
+        # x.writelines(text)
+        # x.close()
+
 #
 #
 # def print_simulations_list():
@@ -78,15 +116,22 @@ def get_simulation_results(take_last_exp):
         return []
 
 
-# -------- Efficiency ---------
-
-
-if __name__ == '__main__':
-    result = Result(get_simulation_results(True))
-    df = result.read_track_pred_df()[['global_id', 'global_id_TB']]
+def check_for_duplicates(df):
+    count = 0
+    # df = res.read_track_pred_df()[['global_id', 'global_id_TB']]
     for i in range(0,15):
         temp_df = df[df['global_id'] == i]
         vals_par_id = temp_df['global_id'].unique()
-        if len(vals_par_id) > 0:
+        if len(vals_par_id) > 1:
             print(f'index {i}: matching TB indexes {vals_par_id}')
-    # print(df)
+            count += len(vals_par_id) - 1
+    return count
+
+
+def get_results():
+    result = Result(get_simulation_results(True))
+    result.write_txt()
+
+
+if __name__ == '__main__':
+    get_results()

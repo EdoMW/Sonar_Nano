@@ -110,7 +110,7 @@ def write_txt_config(sim_directory_path):
     steps gap- horizontal gap (normal, x2,..)
     :param sim_directory_path: path to save the txt file
     """
-    path = sim_directory_path + r'\config.csv'
+    cs = g_param.confidance_score
     avg_dist = g_param.avg_dist
     height_step_size = g_param.height_step_size
     platform_step_size = g_param.platform_step_size
@@ -120,6 +120,8 @@ def write_txt_config(sim_directory_path):
     horizontal_step_size = g_param.step_size
     steps_gap = g_param.steps_gap
     iou = g_param.iou
+    cg = g_param.same_grape_distance_threshold
+    path = sim_directory_path + f'\cs_{cs}_iou_{iou}_sg_{steps_gap}_cg_{cg}.csv'
     param_list = [avg_dist, horizontal_step_size, str(round(height_step_size * horizontal_step_size, 2)),
                   platform_step_size, resolution, image_cnn_path, steps_gap, iou]
     param_list_name = ["avg_dist", "horizontal_step_size", "height_step_size",
