@@ -7,10 +7,10 @@ if an experiment wants to test step size of 0.2m, than steps_gap should be equal
 """
 
 # params for exp:
-iou = 0.6  # 0.5 - 0.8
+iou = 0.3  # 0.5 - 0.8
 steps_gap = 2
 confidance_score = 0.9
-same_grape_distance_threshold = 0.10
+same_grape_distance_threshold = 0.08
 
 
 manual_work = False

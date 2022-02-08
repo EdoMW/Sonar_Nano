@@ -20,7 +20,7 @@ class Result:
         self.hit = self.pred_df_fil['global_id'].nunique()  # k1
         self.miss = grapes_count_gt - self.hit  # K0
         self.recall = self.hit / grapes_count_gt
-        self.precision = self.hit / self.num_grapes_sprayed
+        self.precision = self.calc_precision()
         self.f1 = self.calc_f1()
         self.s = self.num_grapes_sprayed
         self.k = grapes_count_gt
@@ -33,6 +33,12 @@ class Result:
     def __repr__(self):
         result_obj = f'simulation time: {self.sim_time}'
         return result_obj
+
+    def calc_precision(self):
+        try:
+            return self.hit / self.num_grapes_sprayed
+        except ValueError:
+            return 0
 
     def calc_f1(self):
         if (self.precision + self.recall) > 0:
@@ -113,7 +119,7 @@ def get_simulation_results(take_last_exp):
     if take_last_exp and len(os.listdir(directory)) > 0:
         return max([directory.joinpath(d) for d in directory.iterdir()], key=os.path.getmtime)
     else:
-        return []
+        return Path(r'D:\Users\NanoProject\simulations\exp_data_11_33')
 
 
 def check_for_duplicates(df):
@@ -129,7 +135,7 @@ def check_for_duplicates(df):
 
 
 def get_results():
-    result = Result(get_simulation_results(True))
+    result = Result(get_simulation_results(True))  # TODO: pay attention it's no set to false (not last exp)
     result.write_txt()
 
 

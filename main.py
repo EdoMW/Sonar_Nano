@@ -1395,18 +1395,26 @@ def evaluate_detections(prediction_masks, pred_score):
     """
     for every mask detected in the image (pred), go from left to right. if it has a matching cluster in GT
     it will have a non-negative number. if so, look for the global id of the cluster.
-    for each index, produce the record: frame num, frame_id_gt, frame_id_pred, global_id.
+    for each index, produce the record: [frame num, frame_id_gt, frame_id_pred, global_id_gt, global_id_pred, iou].
     """
     for i in range(len(pred_match)):
+        flag_missing_val = False
         i_val = pred_match[i]
-        if not pred_match[i] > -1:
-            max_val = max(overlaps[i])
-            i_val = list(overlaps[i]).index(max_val)
+        if pred_match[i] == -1:
+            max_val = max(overlaps[i], default=0)
+            try:
+                i_val = list(overlaps[i]).index(max_val)
+            except ValueError:
+                i_val = None
+                flag_missing_val = True
             if i_val is None :
                 i_val = 0
         # row = [get_image_num_sim(g_param.image_number), pred_match[i], i,
         #        None, round(overlaps[i][int(pred_match[int(i_val)])],3)]
-        rounded_iou = round(overlaps[i][int(i_val)],3)
+        if flag_missing_val:
+            rounded_iou = 0
+        else:
+            rounded_iou = round(overlaps[i][int(i_val)],3)
         row = [int(get_image_num_sim(g_param.image_number)), int(pred_match[i]), int(i),
                None, indexs_TB[i], float(rounded_iou)]
         general_id = g_param.gt_track_df[(g_param.gt_track_df['frame'] == get_image_num_sim(g_param.image_number)) &
