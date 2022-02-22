@@ -130,7 +130,7 @@ def three_d(df, metric):
     colors = cm.winter(dz)
 
     # plot
-    cb = ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color=colors)
+    ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color=colors)
     # put the column / index labels
     ax.w_xaxis.set_ticklabels([0.3, 0.4, 0.5, 0.6, 0.7])
     ax.w_yaxis.set_ticklabels(np.linspace(0.5, 0.9, 5))
@@ -153,6 +153,69 @@ def three_d(df, metric):
 
     plt.show()
 
+
+def three_d_two_colors(df, metric):
+    dzs = []
+    df = df[df['steps_gap'] == 1]
+    df = df.loc[:, df.columns.drop('steps_gap')]
+    z1 = df['k_1'].values
+    z2 = df['k_2'].values
+    dzs.append(z1)
+    dzs.append(z2)
+    # thickness of the bars
+    dx, dy = .05, .05
+    # prepare 3d axes
+    # ax, fig = plt.figure(figsize=(10, 6),subplot_kw={'projection': ccrs.PlateCarree()}))
+    fig = plt.figure()
+    # ax = Axes3D(fig)
+    ax = fig.add_subplot(projection='3d')
+    ax.set_title('Standard')
+    # set up positions for the bars
+    xpos = np.linspace(0.3, 0.7, 5)
+    ypos = np.linspace(0.5, 0.9, 5)
+
+    # set the ticks in the middle of the bars
+    ax.set_xticks(xpos + dx / 2)
+    ax.set_yticks(ypos + dy / 2)
+    # ax.set_zlim(0, 1)
+    # create meshgrid
+    # print xpos before and after this block if not clear
+    xpos, ypos = np.meshgrid(xpos, ypos)
+    xpos = xpos.flatten()
+    ypos = ypos.flatten()
+
+    # the bars starts from 0 attitude
+    zpos = np.zeros(df.shape[0]).flatten()
+    # the bars' heights
+    dz = df[metric].values.ravel()
+
+    # colors = cm.winter(dz)
+    colors = ['#FFC04C', '#ee2f2f']
+    # plot
+    for i in range(2):
+        ax.bar3d(xpos, ypos, zpos, dx, dy, dz=dzs[i], color=colors[i])
+        zpos += dzs[i]
+    # put the column / index labels
+    ax.w_xaxis.set_ticklabels([0.3, 0.4, 0.5, 0.6, 0.7])
+    ax.w_yaxis.set_ticklabels(np.linspace(0.5, 0.9, 5))
+
+    # name the axes
+    ax.set_xlabel('IoU')
+    ax.set_ylabel('Classification \n confidence score')
+    ax.set_zlabel(f'{metric}')
+    ax.set_title(f'{metric} vs (IoU, and Confidence score)', y=1.1)
+    cmap = cm.winter
+    N = 11
+    norm = mpl.colors.Normalize(vmin=0, vmax=1)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbaxes = fig.add_axes([0.05, 0.1, 0.03, 0.8])
+    plt.colorbar(sm, ticks=np.linspace(0, 1, N), cax=cbaxes,
+                 boundaries=np.arange(0, 1.05, .1), shrink=0.9, pad=0.15)
+    # ax.azim = -20
+    # ax.elev = 15
+
+    plt.show()
 
 
 
@@ -213,17 +276,11 @@ def three_d_two():
                        Line2D([0], [0], marker='o', color='w', label='B',markerfacecolor='g', markersize=10),
                        Line2D([0], [0], marker='o', color='w', label='C',markerfacecolor='b', markersize=10)
                        ]
-
     # Make legend
     ax.legend(handles=legend_elements, loc='best')
     # Set view
     ax.view_init(elev=35., azim=35)
     plt.show()
-
-
-
-
-
 
 
 if __name__ == '__main__':
@@ -234,11 +291,11 @@ if __name__ == '__main__':
     table_2 = pd.concat([table_1, table_0], axis=1)
 
     # todo: uncomment to write results to csv
-    table_2.to_csv(r'C:\Users\Administrator\Desktop\grapes\results.csv')
+    # table_2.to_csv(r'C:\Users\Administrator\Desktop\grapes\results.csv')
     table_2 = table_2.apply(pd.to_numeric)
     metric = 'recall'
-
-    three_d(table_2[[metric, 'IoU', 'confidence_score', 'steps_gap']], metric)
+    three_d_two_colors(table_2[[metric, 'IoU', 'confidence_score', 'steps_gap', 'k_1', 'k_2']], metric)
+    # three_d(table_2[[metric, 'IoU', 'confidence_score', 'steps_gap']], metric)
     # three_d_plot(big_df)
     cs = 0.9
 

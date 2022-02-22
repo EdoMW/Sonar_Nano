@@ -320,6 +320,8 @@ def init_arm_and_platform():
         g_param.trans.update_cam2base(current_location)  # 4
     else:
         move_platform()
+        if external_signal_all_done is True:
+            return
         g_param.time_to_move_platform = False
         current_location = g_param.read_write_object.read_location_from_csv()
         g_param.trans.set_capture_pos(current_location)
@@ -1090,6 +1092,12 @@ def plot_tracking_map():
     plt.show()
 
 
+def check_sim_img_num():
+    if get_image_num_sim(g_param.image_number + 1) > 40:
+        return True
+    return False
+
+
 def check_end_program_time():
     """
     check if to end program (before movement of the platform), log statistics and exit.
@@ -1100,10 +1108,10 @@ def check_end_program_time():
     # Uncomment for allow manual exit points for the program
     # temp_input = input(f"Press {eleven} to end the program. Press {enter} to continue.")
     temp_input = ""
-    if temp_input == "11":
+    if temp_input == "11" or check_sim_img_num():
         log_statistics()
-        return True
-    return False
+        return True, False
+    return False, True
 
 
 def display_points(g_to_display):
@@ -1494,12 +1502,18 @@ def check_ttmp():
     4) last platform movement was more than 1 step ago.
     :return: Boolean value.
     """
+    cond_a = get_image_num_sim(g_param.image_number + 1) % 8 == 0
+    cond_b = get_image_num_sim(g_param.image_number + 1) % 8 == 1
+    cond_c = step_direction[(g_param.plat_position_step_number + 1) % 4] == "right"
+    cond_d = (get_image_num_sim(g_param.image_number + 1) > 7)
+    return (cond_a or cond_b) and cond_c and cond_d
+
     # (return True every time image is (multiply of 8) or [(multiply of 8)  + 1]  )
-    next_step = (math.floor(get_image_num_sim(g_param.image_number) / 2) == 4)
-    condition_1 = (steps_counter >= number_of_steps or next_step == 1)
-    condition_2 = step_direction[(g_param.plat_position_step_number + 1) % 4] == "right"
-    condition_3 = (get_image_num_sim(g_param.image_number)  - g_param.last_movement > 2)
-    return (condition_1 and condition_2 and condition_3)
+    # next_step = (math.floor(get_image_num_sim(g_param.image_number) / 2) == 4)
+    # condition_1 = (steps_counter >= number_of_steps or next_step == 1)
+    # condition_2 = step_direction[(g_param.plat_position_step_number + 1) % 4] == "right"
+    # condition_3 = (get_image_num_sim(g_param.image_number)  - g_param.last_movement > 2)
+    # return (condition_1 and condition_2 and condition_3)
 
 if __name__ == '__main__':
     init_program()
@@ -1515,6 +1529,8 @@ if __name__ == '__main__':
             direction = step_direction[g_param.plat_position_step_number % 4]
             if g_param.time_to_move_platform:
                 init_arm_and_platform()  # 3
+                if external_signal_all_done:
+                    break
                 g_param.last_movement = get_image_num_sim(g_param.image_number)
                 first_run = True
                 steps_counter, g_param.plat_position_step_number = 0, 0
@@ -1591,7 +1607,7 @@ if __name__ == '__main__':
         if check_ttmp():
             g_param.time_to_move_platform = True
             print(print_line_sep_time(), '\n', " move platform", '\n')
-            external_signal_all_done = check_end_program_time()
+            external_signal_all_done, not_finished = check_end_program_time()
             # break
             # restart_target_bank()  # option to restart without initialize
     print_time()

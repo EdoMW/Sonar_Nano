@@ -128,6 +128,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         assert boxes.shape[0] == masks.shape[-1] == class_ids.shape[0]
     if N == 1:
         scores = np.array([scores])
+        if (boxes==np.array([0,0,0,0]).reshape(1,4)).all():
+            N = 0
     # If no axis is passed, create one and automatically call show()
     auto_show = False
     if not ax:
@@ -246,10 +248,17 @@ def display_differences(image,
     colors = [(0, 1, 0, .8)] * len(gt_match)\
            + [(1, 0, 0, 1)] * len(pred_match)
     # Concatenate GT and predictions
-    class_ids = np.concatenate([gt_class_id, pred_class_id])
-    scores = np.concatenate([np.zeros([len(gt_match)]), pred_score])
-    boxes = np.concatenate([gt_box, pred_box])
-    masks = np.concatenate([gt_mask, pred_mask], axis=-1)
+
+    if not (pred_box == np.array([0,0,0,0]).reshape(1,4)).all():
+        class_ids = np.concatenate([gt_class_id, pred_class_id])
+        scores = np.concatenate([np.zeros([len(gt_match)]), pred_score])
+        boxes = np.concatenate([gt_box, pred_box])
+        masks = np.concatenate([gt_mask, pred_mask], axis=-1)
+    else:
+        masks = gt_mask
+        boxes = gt_box
+        scores = np.zeros([len(gt_match)])
+        class_ids = gt_class_id
     # Captions per instance show score/IoU
     captions = ["" for m in gt_match] + ["{:.2f} / {:.2f}".format(
         pred_score[i],
