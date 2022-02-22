@@ -19,16 +19,17 @@ class Result:
         self.pred_df_fil = self.read_track_pred_fil_df()
         self.hit = self.pred_df_fil['global_id'].nunique()  # k1
         self.miss = grapes_count_gt - self.hit  # K0
-        self.recall = self.hit / grapes_count_gt
-        self.precision = self.calc_precision()
-        self.f1 = self.calc_f1()
+
         self.s = self.num_grapes_sprayed
         self.k = grapes_count_gt
         self.s_f = self.num_grapes_sprayed - self.hit
         self.s_t = self.hit
         self.k_0 = self.miss
-        self.k_1 = self.hit
         self.k_2 = check_for_duplicates(self.read_track_pred_df()[['global_id', 'global_id_TB']])
+        self.k_1 = self.hit - self.k_2
+        self.recall = self.k_1 / grapes_count_gt
+        self.precision = self.calc_precision()
+        self.f1 = self.calc_f1()
 
     def __repr__(self):
         result_obj = f'simulation time: {self.sim_time}'
@@ -36,7 +37,7 @@ class Result:
 
     def calc_precision(self):
         try:
-            return self.hit / self.num_grapes_sprayed
+            return self.k_1 / self.num_grapes_sprayed
         except ValueError:
             return 0
 
@@ -123,20 +124,41 @@ def get_simulation_results(take_last_exp):
 
 
 def check_for_duplicates(df):
-    count = 0
-    # df = res.read_track_pred_df()[['global_id', 'global_id_TB']]
-    for i in range(0,15):
-        temp_df = df[df['global_id'] == i]
-        vals_par_id = temp_df['global_id'].unique()
-        if len(vals_par_id) > 1:
-            print(f'index {i}: matching TB indexes {vals_par_id}')
-            count += len(vals_par_id) - 1
-    return count
+
+
+    df2 = df.groupby(['global_id', 'global_id_TB']).size().reset_index()
+    k_n = len(df2.global_id.value_counts().reset_index(name="count").query("count > 1")["index"])
+    return k_n
+    # count = 0
+    # # df = res.read_track_pred_df()[['global_id', 'global_id_TB']]
+    # for i in range(0,15):
+    #     temp_df = df[df['global_id'] == i]
+    #     vals_par_id = temp_df['global_id'].unique()
+    #     if len(vals_par_id) > 1:
+    #         print(f'index {i}: matching TB indexes {vals_par_id}')
+    #         count += len(vals_par_id) - 1
+    # return count
 
 
 def get_results():
-    result = Result(get_simulation_results(True))  # TODO: pay attention it's no set to false (not last exp)
+    """
+    calculates the results for the last exp (when set to ture)
+    or any desired exp- the specific exp should be specified inside get_simulation_results.
+    Write the results into 'result' file.
+    """
+    result = Result(get_simulation_results(True))
     result.write_txt()
+    """
+    code for re running all the results calculations.
+    Not needed, unless a change in all the results files is required.
+    :return: 
+    """
+    # sim_path = r'D:\Users\NanoProject\simulations'
+    # dirs = os.listdir(sim_path)
+    # for dir_name in dirs:
+    #     dir_path = Path(os.path.join(sim_path, dir_name))
+    #     result = Result(dir_path)
+    #     result.write_txt()
 
 
 if __name__ == '__main__':

@@ -110,7 +110,7 @@ def write_txt_config(sim_directory_path):
     steps gap- horizontal gap (normal, x2,..)
     :param sim_directory_path: path to save the txt file
     """
-    cs = g_param.confidance_score
+    cs = g_param.confidence_score
     avg_dist = g_param.avg_dist
     height_step_size = g_param.height_step_size
     platform_step_size = g_param.platform_step_size

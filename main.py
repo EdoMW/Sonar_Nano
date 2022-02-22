@@ -1,26 +1,20 @@
 """
 Look for all ocurances of fixme Sigal Edo, and do the changes. (rotation_coordinate_sys)
 """
-
-import sys
-import time
 from datetime import datetime as dt
-
-import matplotlib.pyplot as plt
-
 starting_time = dt.now()
 
-import cv2
 import tensorflow as tf  # Added next 2 lines insted
 # import tensorflow.compat.v1 as tf
+# tf.disable_v2_behavior()
 # tf.disable_v2_behavior()
 
 import pandas as pd
 import cv2 as cv
 import DAQ_BG
 from self_utils import utils
-from test_one_record import test_spec
-from preprocessing_and_adding import preprocess_one_record
+from test_one_record import test_spec # TODO- uncomment!
+from preprocessing_and_adding import preprocess_one_record  # TODO- uncomment!
 from distance import distance2
 
 import Target_bank as TB_class
@@ -64,11 +58,11 @@ g_param.read_write_object = read_write.ReadWrite()
 if g_param.process_type != 'load':
     rs_rob = read_from_socket.ReadFromRobot()
     ws_rob = write_to_socket.Send2Robot()
-# TODO: check next 4 lines!!!!!!!!!!!
+
 weight_file_name = r'\saved_CNN_clasifier_noise0.03_learn123_test4_3classes_77_2classes_92.1_try2_class_w0.350.350.3.h5'
-# config = tf.ConfigProto() #TODO
-# config.gpu_options.allow_growth = True #TODO
-# sess = tf.Session(config=config) #TODO
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = True
+# sess = tf.Session(config=config)
 
 sys.path.append("C:/Users/omerdad/Desktop/RFR/")
 start_pos = np.array([-0.3, -0.24198481, 0.46430055, -0.6474185, -1.44296026, 0.59665296])  # start pos
@@ -76,7 +70,7 @@ start_pos = np.array([-0.3, -0.24198481, 0.46430055, -0.6474185, -1.44296026, 0.
 # start_pos = np.array([-0.173, 0.364, 0.542, -1.144, -1.035, -0.128])
 step_size = g_param.step_size
 # number_of_steps = math.floor(step_size / 0.1)  # amount of steps before platform move
-number_of_steps = 3  # FIXME - on the exp the value was 3.
+number_of_steps = 3  # amount of right movemnts done using the robotic arm, before moving the platform.
 steps_counter = 0
 moving_direction = "right"  # right/left
 sleep_time = 5
@@ -799,7 +793,12 @@ def move_platform():
             g_param.platform_step_size = temp_step_size
         g_param.read_write_object.write_platform_step(g_param.platform_step_size)
     else:
-        g_param.platform_step_size = g_param.read_write_object.read_platform_step_size_from_csv()
+        # if for some reason an equal steps were made.
+        # g_param.platform_step_size = g_param.read_write_object.read_platform_step_size_from_csv()
+        if g_param.image_number > 1:
+            g_param.platform_step_size = 0.4
+        else:
+            g_param.platform_step_size = 0
     g_param.trans.update_cam2world(g_param.platform_step_size) # FIXME Sigal Edo
     g_param.sum_platform_steps += g_param.platform_step_size
 
@@ -1084,7 +1083,7 @@ def plot_tracking_map():
     # controls the alpha channel. all points have the same value, ignoring their distance
     s.set_edgecolors = s.set_facecolors = lambda *args: None
     ax.title.set_text(f'Imgae number {g_param.image_number}, '
-                      f'real image number{get_image_num_sim(g_param.image_number)}')
+                      f'real image number {get_image_num_sim(g_param.image_number)}')
     # elev = 5.0
     # azim = 135.5
     # ax.view_init(elev, azim)
@@ -1364,8 +1363,14 @@ def evaluate_detections(prediction_masks, pred_score):
                  'class_ids': np.array([1] * gt_mask.shape[2])}
     r_dict_gt = sort_results(r_dict_gt)
     gt_mask, gt_box, gt_class_id = r_dict_gt['masks'], r_dict_gt['bbox'], r_dict_gt['class_ids']
-    pred_boxes = utils.extract_bboxes(prediction_masks)
-    if prediction_masks.ndim == 2:
+    # pred_boxes = utils.extract_bboxes(prediction_masks)
+    if prediction_masks.ndim > 2:
+        pred_boxes = utils.extract_bboxes(prediction_masks).astype('int32')
+    else:
+        # pred_boxes = np.zeros([1, 4], dtype=np.int32)
+
+        pred_boxes = np.array([0, 0, 0, 0])
+        pred_boxes = np.expand_dims(pred_boxes, axis=0).astype('int32')
         prediction_masks = np.reshape(prediction_masks, (1024, 1024, 1))
     pred_class_id = np.array([1] * prediction_masks.shape[2])
     class_names = ['BG', 'grape_cluster']
@@ -1479,6 +1484,23 @@ def default_fake_grapes():
             g_param.TB[i].sprayed = False
 
 
+def check_ttmp():
+    """
+    ttmp = Time To Move Platform.
+    four conditions should be satisfied in order to return True (ttmp).
+    1) at least 'number_of_stetps' had been made
+    2) 'image_num" fulfils 'next step' cartire. 1,2 toghther are condtion_1.
+    3) direction is right
+    4) last platform movement was more than 1 step ago.
+    :return: Boolean value.
+    """
+    # (return True every time image is (multiply of 8) or [(multiply of 8)  + 1]  )
+    next_step = (math.floor(get_image_num_sim(g_param.image_number) / 2) == 4)
+    condition_1 = (steps_counter >= number_of_steps or next_step == 1)
+    condition_2 = step_direction[(g_param.plat_position_step_number + 1) % 4] == "right"
+    condition_3 = (get_image_num_sim(g_param.image_number)  - g_param.last_movement > 2)
+    return (condition_1 and condition_2 and condition_3)
+
 if __name__ == '__main__':
     init_program()
     print(">>> Start position: ")
@@ -1493,6 +1515,7 @@ if __name__ == '__main__':
             direction = step_direction[g_param.plat_position_step_number % 4]
             if g_param.time_to_move_platform:
                 init_arm_and_platform()  # 3
+                g_param.last_movement = get_image_num_sim(g_param.image_number)
                 first_run = True
                 steps_counter, g_param.plat_position_step_number = 0, 0
                 direction = "stay"
@@ -1501,6 +1524,7 @@ if __name__ == '__main__':
             move_const(g_param.step_size, direction, g_param.trans.capture_pos)
             if direction == "right":
                 steps_counter += 1
+                # steps_counter += g_param.steps_gap
             if direction == 'stay':
                 continue
         else:
@@ -1510,13 +1534,13 @@ if __name__ == '__main__':
         # take_manual_image() # TODO: uncomment for exp!!!
         update_database_visualization()
         prediction_maskss, pred_scores = capture_update_TB()  # 5 + 7-12 inside #
-        amount_grapes_detected = evaluate_detections(prediction_maskss, pred_scores)  # FIXME PROBLEMN IN IMAGE NUM 32
+        amount_grapes_detected = evaluate_detections(prediction_maskss, pred_scores)
         print_image_details(step_direction[(g_param.image_number + 1) % 4])
         # g.green + "continue" + fg.rs, "\n", "TB after detecting first grape:", "\n", g_param.TB[-6:]) #print TB
         grape_ready_to_spray = TB_class.sort_by_and_check_for_grapes('leftest_first')  # 6
         # input("press enter for continue to spraying")
         # g_param.masks_image = cv.cvtColor(g_param.masks_image, cv.COLOR_RGB2BGR)
-        if not first_run and g_param.image_number > 0: # fixme- not working
+        if not first_run and g_param.image_number > 0:
             mark_sprayed_and_display()
         if grape_ready_to_spray:  # 15- yes (change to sorting according to 14, rap the next lines in a function)
             # update_wait_another_round()  # for future work- details inside.
@@ -1563,7 +1587,8 @@ if __name__ == '__main__':
             else:
                 print(f"Finished, {g_param.image_number} images were processed in this simulation.")
             not_finished = False
-        if steps_counter >= number_of_steps and step_direction[(g_param.plat_position_step_number + 1) % 4] == "right":
+        next_step = (math.floor(get_image_num_sim(g_param.image_number) / 2) == 4)
+        if check_ttmp():
             g_param.time_to_move_platform = True
             print(print_line_sep_time(), '\n', " move platform", '\n')
             external_signal_all_done = check_end_program_time()

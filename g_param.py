@@ -9,7 +9,7 @@ if an experiment wants to test step size of 0.2m, than steps_gap should be equal
 # params for exp:
 iou = 0.3  # 0.5 - 0.8
 steps_gap = 2
-confidance_score = 0.9
+confidence_score = 0.5
 same_grape_distance_threshold = 0.08
 
 
@@ -20,13 +20,14 @@ half_width_meter = 0.34
 half_height_meter = 0.2
 auto_time_display = 0  # time to display image automatically. at least 100
 display_image_num_threshold = 0
-show_3D_plot = False
+show_3D_plot = True
 show_images = False
-display_eval_images = False
+display_eval_images = True
 plot_2_d_track = False
 spray_sonar = True
 trans = None
 distances_gt = None
+last_movement = 0
 
 
 centers_df = None
@@ -197,7 +198,7 @@ def init():
         manual_work, base_rotation_ang, eval_mode, auto_time_display, x_lim, y_lim, z_lim, table_of_matches_pred,\
         table_of_stats, distances_gt, pred_df, pred_gt_df, table_of_matches_gt, gt_track_df, centers_df, \
         pred_gt_tracking, two_dim_track, plot_2_d_track, display_eval_images, iou, display_image_num_threshold, \
-        distances_matrix_2d, show_3D_plot, confidance_score, same_grape_distance_threshold
+        distances_matrix_2d, show_3D_plot, confidence_score, same_grape_distance_threshold, last_movement
     half_width_meter = calc_image_width()
     half_height_meter = calc_image_height()
     empty_npz_dir()

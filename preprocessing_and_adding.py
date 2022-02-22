@@ -11,6 +11,7 @@ from sklearn import linear_model
 import matplotlib.pyplot as plt
 import cv2 as cv
 
+
 def preprocess_one_record(record, counter, adding):
     X_test_per_rec = []
     # mat = scipy.io.loadmat(os.path.join(d, file))['records']
@@ -120,6 +121,8 @@ def preprocess_one_record(record, counter, adding):
         print(counter)
         # continue
     X_samples[:, :, 0] = Sxx[:, it_min: it_min + 980]
+
+
 
 
     # adding noise instead of the transmited signal or adding zero columns

@@ -110,7 +110,7 @@ if g_param.work_place == "field":
         STEPS_PER_EPOCH = 30
 
         # Skip detections with < 90% confidence
-        DETECTION_MIN_CONFIDENCE = 0.95
+        DETECTION_MIN_CONFIDENCE = g_param.confidence_score
 
         DETECTION_NMS_THRESHOLD = 0.1
 
@@ -238,7 +238,8 @@ if g_param.work_place == "field":
     # weights_path = '/content/gdrive/My Drive/grapes data/Mask_RCNN-master/mask_rcnn_coco.h5'
     # weights_path = model.find_last()
     # print(weights_path)
-    model.load_weights(r'C:\Drive\Mask_RCNN-master\logs_to_import\exp_7\mask_rcnn_grape_0080.h5')
+    # model.load_weights(r'D:\Users\NanoProject\Sonar_Nano\weights\mask_rcnn_grape_0080.h5')
+    model.load_weights(r'weights/2021_weights.h5')
 
 
     # train (model)
@@ -891,9 +892,7 @@ def capture_update_TB():
             # image_path = r'D:\Users\NanoProject\old_experiments\exp_data_11_10\rgb_images\0_11_10_46.jpeg'
             # frame = cv.imread(image_path)
             # frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            image_path, frame, original_frame = ueye_take_picture_2(
-                image_number)  # TODO: uncomment if working with camera
-
+            image_path, frame, original_frame = ueye_take_picture_2(image_number)  # TODO: uncomment if working with camera
             image_taken = check_image(image_path)
             print("try number: ", i)
             if image_taken:
@@ -911,15 +910,15 @@ def capture_update_TB():
     # parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
     # args = parser.parse_args()
 
-    # fOR FIELD simulation in lab
-    if g_param.work_place == "field":
-        dataset_images = os.listdir(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test')
-        img_path = random.choice(dataset_images)
-        image_path = os.path.join(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test', img_path)
-        print(f"image_path : {image_path}")
-
-        image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG'
-        # image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0363.JPG'
+    # fOR FIELD simulation in lab with only 1 image from 2019
+    # if g_param.work_place == "field":
+    #     dataset_images = os.listdir(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test')
+    #     img_path = random.choice(dataset_images)
+    #     image_path = os.path.join(r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test', img_path)
+    #     print(f"image_path : {image_path}")
+    #
+    #     image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0280.JPG'
+    #     # image_path = r'C:\Drive\Mask_RCNN-master\samples\grape\dataset\test\DSC_0363.JPG'
 
     img = cv.imread(image_path)
     # img = cv.resize(img, (1024, 692))  # Resize image if needed
@@ -1092,13 +1091,9 @@ def capture_update_TB():
             show_in_moved_window("check images", rgb, None)
             boxes, corner_points = [], []
         # mask, obbs_list, corners_list, img_rgb = None,[],[], None
-        # try:
         mask, obbs_list, corners_list, img_rgb = add_grapes(rgb)  # adding new grapes that were not recognized
-        # except Exception as e:
-        #     print("exception: ", e.__class__)
         corner_points = corner_points + corners_list
         boxes = boxes + obbs_list
-
         new_corner_points = []
         for elem in corner_points:
             if check_if_in_list(elem, new_corner_points):
@@ -1157,6 +1152,7 @@ def capture_update_TB():
     if g_param.work_place == "field":
         # TODO: same as lab_grapes: if not g_param.manual_work:  # for exp. only manual grape detection
         im0 = rgb
+        im0 = cv.cvtColor(im0, cv.COLOR_BGR2RGB)
         im0 = utils.resize_image(im0, max_dim=1024, mode="square")
         im0, *_ = np.asarray(im0)
         # if g_param.process_type == "record":

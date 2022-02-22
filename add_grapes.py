@@ -5,6 +5,8 @@ import sys
 ROOT_DIR = os.path.abspath("C:/Drive/Mask_RCNN-master/")
 sys.path.append(ROOT_DIR)
 from mrcnn import utils
+import gc
+import time
 
 # screen_x_cord = -1_200  # TODO: when working on my computer. change to 200 when working in lab
 # screen_y_cord = -120  # TODO: when working on my computer. change to 200 when working in lab
@@ -135,6 +137,7 @@ def get_unrecognized_grapes(img_t, amount_of_grapes):
     # amount_of_grapes = int(input("enter amount of grapes: "))
     # amount_of_grapes = 2
     while image_index < amount_of_grapes:
+        gc.collect()
         draw_line_widget = DrawLineWidget(img_shared)
         while True:
             show_img(title='Add grape mask manually', image_to_show=draw_line_widget.show_image(),
@@ -166,11 +169,11 @@ def get_unrecognized_grapes(img_t, amount_of_grapes):
             #             color=(255, 255, 255), thickness=1, lineType=2)
         img_1 = np.zeros([img.shape[0], img.shape[1], 3], dtype=np.uint8)
         img_1.fill(255)
-
         cv2.polylines(img_1, [array], True, (0, 15, 255))
         cv2.drawContours(img_1, [array], -1, (0, 15, 255), -1)
         src_gray = cv2.cvtColor(img_1, cv2.COLOR_BGR2GRAY)
         del img_1
+        gc.collect()
         ret, thresh = cv2.threshold(src_gray, 127, 255, cv2.THRESH_BINARY_INV)
         contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
         rect, box = get_rect_box(contours[0])
@@ -186,14 +189,17 @@ def get_unrecognized_grapes(img_t, amount_of_grapes):
         alpha = 0.4
         cv2.addWeighted(img_shared_overlay, alpha, img_shared, 1 - alpha,
                         0, img_shared)
+        gc.collect()
         show_img(title=f"Add grape mask manually {image_index + 1}", image_to_show=img_shared,
                  x_cord=screen_x_cord, y_cord=screen_y_cord)
         # cv2.imshow()
+        del img_shared_overlay
         cv2.waitKey()
         cv2.destroyAllWindows()
         obbs.append(rect)
         corners.append(box.tolist())
         npys.append(npy)
+        gc.collect()
 
     return obbs, corners, npys, img_shared
 
