@@ -7,8 +7,8 @@ if an experiment wants to test step size of 0.2m, than steps_gap should be equal
 """
 
 # params for exp:
-iou = 0.7  # 0.5 - 0.8
-steps_gap = 4
+iou = 0.4  # 0.5 - 0.8
+steps_gap = 2
 confidence_score = 0.9
 same_grape_distance_threshold = 0.08
 
@@ -20,7 +20,7 @@ half_width_meter = 0.34
 half_height_meter = 0.2
 auto_time_display = 0  # time to display image automatically. at least 100. 0 = wait for click.
 display_image_num_threshold = 0
-show_3D_plot = False
+show_3D_plot = True
 show_images = False
 display_eval_images = False
 plot_2_d_track = False

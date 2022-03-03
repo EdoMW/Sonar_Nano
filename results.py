@@ -3,7 +3,6 @@ import os
 import pandas as pd
 from pathlib import *
 
-grapes_count_gt = 15
 """
 This module includes all functions for evaluating the results of a single simulation.
 """
@@ -15,19 +14,20 @@ class Result:
         self.sim_time = sim_time_path.parts[-1]
         self.num_grapes_sprayed = self.read_tb_summary()
         self.gt_df = self.read_track_gt_df()
+        self.grapes_count_gt = self.gt_df['general_id'].unique() # 15- the real amount of grapes.
         self.pred_df = self.read_track_pred_df()
         self.pred_df_fil = self.read_track_pred_fil_df()
         self.hit = self.pred_df_fil['global_id'].nunique()  # k1
-        self.miss = grapes_count_gt - self.hit  # K0
+        self.miss = self.grapes_count_gt - self.hit  # K0
 
         self.s = self.num_grapes_sprayed
-        self.k = grapes_count_gt
+        self.k = self.grapes_count_gt
         self.s_f = self.num_grapes_sprayed - self.hit
         self.s_t = self.hit
         self.k_0 = self.miss
         self.k_2 = check_for_duplicates(self.read_track_pred_df()[['global_id', 'global_id_TB']])
         self.k_1 = self.hit - self.k_2
-        self.recall = self.k_1 / grapes_count_gt
+        self.recall = self.k_1 / self.grapes_count_gt
         self.precision = self.calc_precision()
         self.f1 = self.calc_f1()
 
@@ -120,7 +120,7 @@ def get_simulation_results(take_last_exp):
     if take_last_exp and len(os.listdir(directory)) > 0:
         return max([directory.joinpath(d) for d in directory.iterdir()], key=os.path.getmtime)
     else:
-        return Path(r'D:\Users\NanoProject\simulations\exp_data_11_33')
+        return Path(r'D:\Users\NanoProject\simulations\exp_data_12_13')
 
 
 def check_for_duplicates(df):
@@ -146,8 +146,8 @@ def get_results():
     or any desired exp- the specific exp should be specified inside get_simulation_results.
     Write the results into 'result' file.
     """
-    result = Result(get_simulation_results(True))
-    result.write_txt()
+    result = Result(get_simulation_results(False))
+    # result.write_txt()
     """
     code for re running all the results calculations.
     Not needed, unless a change in all the results files is required.

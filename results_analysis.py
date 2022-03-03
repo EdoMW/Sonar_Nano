@@ -7,6 +7,11 @@ import numpy as np
 from matplotlib import cm
 import matplotlib as mpl
 
+"""
+This script was writen to summarize the results of all the experiments of the 3D map.
+It can produce various types of plots.
+"""
+
 
 def get_results(path_to_dir):
     """
@@ -25,6 +30,10 @@ def get_results(path_to_dir):
 
 
 def get_data(path_to_dir):
+    """
+    :param path_to_dir: path to dir of the exp parameters.
+    :return: df of single row. contains the parameters of the experiment.
+    """
     for file in path_to_dir.iterdir():
         file_name = file.parts[-1]
         if file.is_file() and file_name.startswith('cs'):
@@ -37,6 +46,11 @@ def get_data(path_to_dir):
 
 
 def get_results_values(path):
+    """
+    Read all files to create one big data frame.
+    :param path: path to experiments results dir.
+    :return: df of all experiments results (metrics)
+    """
     # table_t = None
     table_t = pd.DataFrame(columns=['hit', 'miss', 'recall', 'precision', 'f1', 's_f', 's_t',
                                     'k_0', 'k_1', 'k_2', 'num_grapes_sprayed'])
@@ -49,6 +63,11 @@ def get_results_values(path):
 
 
 def get_options_tested(path):
+    """
+
+    :param path:
+    :return: df of all experiments parameters
+    """
     table_t = pd.DataFrame(columns=['', 'IoU', 'steps_gap', 'same_grape'])
     for dir_f in path.iterdir():
         temp_t = get_data(dir_f)
@@ -60,9 +79,13 @@ def get_options_tested(path):
 
 
 def scatter_recall_precision(table_0, table_1):
+    """
+    :param table_0:
+    :param table_1:
+    :return:
+    """
     scatter = plt.scatter(x=table_0['recall'], y=table_0['precision'], c=table_1['steps_gap'])
     classes = ['1', '2']
-    # values = table_1['steps_gap']
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.legend(handles=scatter.legend_elements()[0], labels=classes)
@@ -94,7 +117,6 @@ def stack_bar_confidence(table_0, table_1, conf_level):
     plt.bar(x.index, y1, color='g')
     plt.bar(x.index, y2, bottom=y1, color='r')
     plt.show()
-
 
 
 def three_d(df, metric):
@@ -156,7 +178,7 @@ def three_d(df, metric):
 
 def three_d_two_colors(df, metric):
     dzs = []
-    df = df[df['steps_gap'] == 1]
+    df = df[df['steps_gap'] == 4]
     df = df.loc[:, df.columns.drop('steps_gap')]
     z1 = df['k_1'].values
     z2 = df['k_2'].values
@@ -190,7 +212,7 @@ def three_d_two_colors(df, metric):
     dz = df[metric].values.ravel()
 
     # colors = cm.winter(dz)
-    colors = ['#FFC04C', '#ee2f2f']
+    colors = ['green', '#FFC04C']
     # plot
     for i in range(2):
         ax.bar3d(xpos, ypos, zpos, dx, dy, dz=dzs[i], color=colors[i])
@@ -212,14 +234,10 @@ def three_d_two_colors(df, metric):
     cbaxes = fig.add_axes([0.05, 0.1, 0.03, 0.8])
     plt.colorbar(sm, ticks=np.linspace(0, 1, N), cax=cbaxes,
                  boundaries=np.arange(0, 1.05, .1), shrink=0.9, pad=0.15)
-    # ax.azim = -20
-    # ax.elev = 15
+    ax.azim = 10
+    ax.elev = 30
 
     plt.show()
-
-
-
-
 
 
 def three_d_two():
@@ -283,6 +301,254 @@ def three_d_two():
     plt.show()
 
 
+def plot_spray_of_targets_3(df, metric):
+    """
+    plot total sprays of targets vs iou, step size, ccs.
+    """
+    fig, axs = plt.subplots(1, 5, figsize=(18,4), sharex='all')
+    fig.suptitle(f'total sprays of targets for different overlapping size, IoU and classification confidence score', fontweight='bold')
+    labels = df['IoU'].unique()
+    for i, con_sco in enumerate(np.linspace(0.5, 0.9, 5)):
+        ax = axs[i]
+        metric_df = df[df['confidence_score'] == con_sco][['k_1', 'k_2', 'steps_gap']]
+        df_0 = metric_df[metric_df['steps_gap'] == 1]['k_1'] + metric_df[metric_df['steps_gap'] == 1]['k_2']
+        df_1 = metric_df[metric_df['steps_gap'] == 2]['k_1'] + metric_df[metric_df['steps_gap'] == 2]['k_2']
+        df_2 = metric_df[metric_df['steps_gap'] == 4]['k_1'] + metric_df[metric_df['steps_gap'] == 4]['k_2']
+
+        ax.bar(labels, df_0, width=0.03,  label='1')
+        # ax.bar(labels, df_0_1, width=0.03, bottom=df_0, label='1, k_2')
+        ax.bar(labels + 0.03, df_1, width=0.03, label='2')
+        # ax.bar(labels + 0.03, df_1_1, width=0.03, bottom=df_1,label='2, k_2')
+        ax.bar(labels - 0.03, df_2, width=0.03, label='4')
+        # ax.bar(labels - 0.03, df_2_1, width=0.03, bottom=df_2,label='4, k_2')
+        ax.set_ylim(0, 15)
+        ax.set_xlabel("IoU", fontweight='bold')
+        if i == 0:
+            ax.set_ylabel("Score", fontweight='bold', fontsize=25)
+        plt.legend()
+        ax.set_title(f'{con_sco}')
+        plt.xticks([0.3, 0.4, 0.5, 0.6, 0.7])
+    # plt.rcParams["figure.figsize"] = (25, 4)
+    plt.show()
+
+
+def plot_spray_of_targets_2(df, metric):
+    """
+    plot k_1 vs iou, step size, ccs.
+    """
+    fig, axs = plt.subplots(1, 5, figsize=(18,4), sharex='all')
+    fig.suptitle(f'Hit (k_1) for different overlapping size, IoU and classification confidence score', fontweight='bold')
+    labels = df['IoU'].unique()
+    for i, con_sco in enumerate(np.linspace(0.5, 0.9, 5)):
+        ax = axs[i]
+        metric_df = df[df['confidence_score'] == con_sco][['k_1', 'k_2', 'steps_gap']]
+        df_0 = metric_df[metric_df['steps_gap'] == 1]['k_1']
+        df_1 = metric_df[metric_df['steps_gap'] == 2]['k_1']
+        df_2 = metric_df[metric_df['steps_gap'] == 4]['k_1']
+        df_0_1 = metric_df[metric_df['steps_gap'] == 1]['k_2']
+        df_1_1 = metric_df[metric_df['steps_gap'] == 2]['k_2']
+        df_2_1 = metric_df[metric_df['steps_gap'] == 4]['k_2']
+        ax.bar(labels, df_0, width=0.03,  label='1')
+        # ax.bar(labels, df_0_1, width=0.03, bottom=df_0, label='1, k_2')
+        ax.bar(labels + 0.03, df_1, width=0.03, label='2')
+        # ax.bar(labels + 0.03, df_1_1, width=0.03, bottom=df_1,label='2, k_2')
+        ax.bar(labels - 0.03, df_2, width=0.03, label='4')
+        # ax.bar(labels - 0.03, df_2_1, width=0.03, bottom=df_2,label='4, k_2')
+        ax.set_ylim(0, 15)
+        ax.set_xlabel("IoU", fontweight='bold')
+        if i == 0:
+            ax.set_ylabel("Score", fontweight='bold')
+        plt.legend()
+        ax.set_title(f'{con_sco}')
+        plt.xticks([0.3, 0.4, 0.5, 0.6, 0.7])
+    # plt.rcParams["figure.figsize"] = (25, 4)
+    plt.show()
+
+
+def plot_spray_of_targets(df, metric):
+    """
+    plot k1, k2 (on top of it) vs step size, iou, ccs
+    """
+    fig, axs = plt.subplots(1, 5, figsize=(18,4), sharex='all', constrained_layout = True)
+    fig.suptitle(f'k_1, k_2 for different overlapping size, IoU and classification confidence score', fontweight='bold')
+    labels = df['IoU'].unique()
+    for i, con_sco in enumerate(np.linspace(0.5, 0.9, 5)):
+        ax = axs[i]
+        metric_df = df[df['confidence_score'] == con_sco][['k_1', 'k_2', 'steps_gap']]
+        df_0 = metric_df[metric_df['steps_gap'] == 1]['k_1']
+        df_1 = metric_df[metric_df['steps_gap'] == 2]['k_1']
+        df_2 = metric_df[metric_df['steps_gap'] == 4]['k_1']
+        df_0_1 = metric_df[metric_df['steps_gap'] == 1]['k_2']
+        df_1_1 = metric_df[metric_df['steps_gap'] == 2]['k_2']
+        df_2_1 = metric_df[metric_df['steps_gap'] == 4]['k_2']
+        ax.bar(labels, df_0, width=0.03,  label='1, k_1')
+        ax.bar(labels, df_0_1, width=0.03, bottom=df_0, label='1, k_2')
+        ax.bar(labels + 0.03, df_1, width=0.03, label='2, k_1')
+        ax.bar(labels + 0.03, df_1_1, width=0.03, bottom=df_1,label='2, k_2')
+        ax.bar(labels - 0.03, df_2, width=0.03, label='4, k_1')
+        ax.bar(labels - 0.03, df_2_1, width=0.03, bottom=df_2,label='4, k_2')
+        ax.set_ylim(0, 15)
+        if i == 3 or i == 4 or i == 2:
+            ax.set_xlabel("IoU", fontweight='bold', fontsize=16)
+        if i == 0 or i == 3:
+            ax.set_ylabel("Score", fontweight='bold', fontsize=16)
+        plt.legend()
+        ax.set_title(f'{con_sco}')
+        plt.xticks([0.3, 0.4, 0.5, 0.6, 0.7])
+        ax.tick_params(axis='both', labelsize =12)
+    # plt.rcParams["figure.figsize"] = (25, 4)
+    plt.show()
+
+
+def plot_spray_of_targets_2_lines_2(df, metric):
+    """
+    plot k1, k2 (on top of it) vs step size, iou, ccs
+    """
+    fig, axs = plt.subplots(2, 3, figsize=(18, 9), constrained_layout=True)
+    fig.suptitle(f'Hit rate (k1) for Step size, IoU, Classification confidence score '
+                 f'and classification confidence score', fontweight='bold', fontsize=23)
+    labels = df['IoU'].unique()
+    df = df.sort_values(by=['IoU'], ascending=False)
+    for i, con_sco in enumerate(np.linspace(0.5, 0.9, 5)):
+        row = 0 if i < 3 else 1
+        ax = axs[row, i % 3]
+        if i % 2 == 1 and i % 3 == 2:
+            continue
+        metric_df = df[df['confidence_score'] == con_sco][['IoU', 'k_1', 'k_2', 'steps_gap']]
+        metric_df = metric_df.sort_values(by=['IoU'], ascending=True)
+        df_0 = metric_df[metric_df['steps_gap'] == 1]['k_1'] / 15
+        df_1 = metric_df[metric_df['steps_gap'] == 2]['k_1'] / 15
+        df_2 = metric_df[metric_df['steps_gap'] == 4]['k_1'] / 15
+        ax.bar(labels - 0.03, df_0, width=0.03,  label='0.1m', edgecolor="black", color='green')
+        ax.bar(labels, df_1, width=0.03, label='0.2m', edgecolor="black", color='lime')
+        ax.bar(labels + 0.03, df_2, width=0.03, label='0.4m', edgecolor="black", color='greenyellow')
+        ax.set_ylim(0, 1)
+        if i == 3 or i == 4:
+            ax.set_xlabel("IoU", fontweight='bold', fontsize=21)
+        if i == 0 or i == 3:
+            ax.set_ylabel("Hit rate", fontweight='bold', fontsize=22)
+        plt.legend()
+        ax.set_title(f'confidence score {con_sco}', fontweight='bold', fontsize=21)
+        plt.xticks(df_0.IoU.unique())#[0.3, 0.4, 0.5, 0.6, 0.7])
+        ax.tick_params(axis='both', labelsize=20)
+    # plt.rcParams["figure.figsize"] = (25, 4)
+    axs[0, 0].legend(loc="upper right")
+    for ax in axs.flat:
+        ## check if something was plotted
+        if not bool(ax.has_data()):
+            fig.delaxes(ax)
+    plt.show()
+
+
+def plot_spray_of_targets_2_lines_3(df, metric):
+    """
+    plot k1 + k2 (on top of it) vs step size, iou, ccs
+    """
+    fig, axs = plt.subplots(2, 3, figsize=(18, 9), constrained_layout=True)
+    fig.suptitle(f'Total sprays of targets for different overlapping size, '
+                 f'IoU and classification confidence score', fontweight='bold', fontsize=23)
+    labels = df['IoU'].unique()
+    for i, con_sco in enumerate(np.linspace(0.5, 0.9, 5)):
+        row = 0 if i < 3 else 1
+        ax = axs[row, i % 3]
+        if i % 2 == 1 and i % 3 == 2:
+            continue
+        metric_df = df[df['confidence_score'] == con_sco][['k_1', 'k_2', 'steps_gap']]
+        df_0 = metric_df[metric_df['steps_gap'] == 1]['k_1'] + metric_df[metric_df['steps_gap'] == 1]['k_2']
+        df_1 = metric_df[metric_df['steps_gap'] == 2]['k_1'] + metric_df[metric_df['steps_gap'] == 2]['k_2']
+        df_2 = metric_df[metric_df['steps_gap'] == 4]['k_1'] + metric_df[metric_df['steps_gap'] == 4]['k_2']
+        df_0 /= 15
+        df_1 /= 15
+        df_2 /= 15
+        ax.bar(labels, df_0, width=0.03,  label='0.1, k_1', edgecolor="black", color='darkred')
+        ax.bar(labels + 0.03, df_1, width=0.03, label='0.2, k_1', edgecolor="black", color='red')
+        ax.bar(labels - 0.03, df_2, width=0.03, label='0.4, k_1', edgecolor="black", color='lightsalmon')
+        ax.set_ylim(0, 1)
+        if i == 3 or i == 4:
+            ax.set_xlabel("IoU", fontweight='bold', fontsize=21)
+        if i == 0 or i == 3:
+            ax.set_ylabel("Score", fontweight='bold', fontsize=22)
+        plt.legend()
+        ax.set_title(f'{con_sco}', fontweight='bold', fontsize=21)
+        plt.xticks([0.3, 0.4, 0.5, 0.6, 0.7])
+        ax.tick_params(axis='both', labelsize=20)
+    # plt.rcParams["figure.figsize"] = (25, 4)
+    axs[0, 0].legend(loc="upper right")
+    for ax in axs.flat:
+        ## check if something was plotted
+        if not bool(ax.has_data()):
+            fig.delaxes(ax)
+    plt.show()
+
+
+def gt_counter(size):
+    if size < 1.5:
+        return 15
+    elif size < 2.5:
+        return 14
+    return 12
+
+
+def plot_k1_k2_spraying(df, show_limits):
+    """
+    plot k1, k2 (on top of it) vs step size, iou, ccs.
+    Plot it in two lines [(0.5, 0.6, 0.7), (0.8, 0.9)
+    """
+    fig, axs = plt.subplots(2, 3, figsize=(18, 9), constrained_layout=True)
+    fig.suptitle(f'Spray rate (k1, k2) for Step size, IoU, and'
+                 f' Classification confidence score', fontweight='bold', fontsize=23)
+    labels = df['IoU'].unique()
+    for i, con_sco in enumerate(np.linspace(0.5, 0.9, 5)):
+        row = 0 if i < 3 else 1
+        ax = axs[row, i % 3]
+        if i % 2 == 1 and i % 3 == 2:
+            continue
+        labels = np.sort(labels)
+        metric_df = df[df['confidence_score'] == con_sco][['IoU', 'k_1', 'k_2', 'steps_gap']]
+        metric_df = metric_df.sort_values(by=['IoU', 'steps_gap'])
+        metric_df['gt_count'] = metric_df.apply(lambda x: gt_counter(x.steps_gap), axis=1)
+        df_0 = metric_df[metric_df['steps_gap'] == 1]['k_1'] / 15
+        df_1 = metric_df[metric_df['steps_gap'] == 2]['k_1'] / 15
+        df_2 = metric_df[metric_df['steps_gap'] == 4]['k_1'] / 15
+        df_0_1 = metric_df[metric_df['steps_gap'] == 1]['k_2'] / 15
+        df_1_1 = metric_df[metric_df['steps_gap'] == 2]['k_2'] / 15
+        df_2_1 = metric_df[metric_df['steps_gap'] == 4]['k_2'] / 15
+
+        if show_limits:  # draw red lines with the gt count of grape.
+            df_0_2 = metric_df[metric_df['steps_gap'] == 1]['gt_count'] / 15
+            df_1_2 = metric_df[metric_df['steps_gap'] == 2]['gt_count'] / 15
+            df_2_2 = metric_df[metric_df['steps_gap'] == 4]['gt_count'] / 15
+            ax.bar(labels - 0.03, df_0_2,  color='none', edgecolor='red', width=0.03)
+            ax.bar(labels, df_1_2,   color='none', edgecolor='red', width=0.03)
+            ax.bar(labels + 0.03, df_2_2, color='none', edgecolor='red', width=0.03)
+        params_0 = {'edgecolor': "black", 'color': 'green', 'width': 0.03}
+        params_1 = {'edgecolor': "black", 'color': 'lime', 'width': 0.03}
+        params_2 = {'edgecolor': "black", 'color': 'lightgreen', 'width': 0.03}
+        ax.bar(labels - 0.03, df_0,   label='0.1[m], k1', **params_0 )
+        ax.bar(labels - 0.03, df_0_1,  bottom=df_0, label='0.1[m], k2', alpha=0.3,  **params_0)
+        ax.bar(labels, df_1, label='0.2[m], k1', **params_1)
+        ax.bar(labels, df_1_1, bottom=df_1,  label='0.2[m], k2', alpha=0.3, **params_1)
+        ax.bar(labels + 0.03, df_2, label='0.4[m], k1', **params_2)
+        ax.bar(labels + 0.03, df_2_1, bottom=df_2, label='0.4[m], k2', **params_2, alpha=0.3)
+        ax.set_ylim(0, 1)
+        if i == 3 or i == 4:
+            ax.set_xlabel("IoU", fontweight='bold', fontsize=21)
+        if i == 0 or i == 3:
+            ax.set_ylabel("Spray rate", fontweight='bold', fontsize=22)
+        # plt.legend() #FIXME- add legend()
+        ax.set_title(f'Confidence score {con_sco}', fontweight='bold', fontsize=21)
+        # plt.xticks([0.3, 0.4, 0.5, 0.6, 0.7])
+        ax.tick_params(axis='both', labelsize=20)
+    if not show_limits:
+        axs[1, 1].legend(loc="upper right")
+    # plt.rcParams["figure.figsize"] = (25, 4)
+    for ax in axs.flat:
+        # check if something was plotted, else delete plot (remove empty plots).
+        if not bool(ax.has_data()):
+            fig.delaxes(ax)
+    plt.show()
+
+
 if __name__ == '__main__':
     # three_d_two()
     path_sim = Path(r'D:\Users\NanoProject\simulations')
@@ -291,10 +557,17 @@ if __name__ == '__main__':
     table_2 = pd.concat([table_1, table_0], axis=1)
 
     # todo: uncomment to write results to csv
-    # table_2.to_csv(r'C:\Users\Administrator\Desktop\grapes\results.csv')
+    table_2.to_csv(r'C:\Users\Administrator\Desktop\grapes\results.csv')
     table_2 = table_2.apply(pd.to_numeric)
     metric = 'recall'
-    three_d_two_colors(table_2[[metric, 'IoU', 'confidence_score', 'steps_gap', 'k_1', 'k_2']], metric)
+
+    plot_k1_k2_spraying(table_2, False) # K1, K2
+    # plot_spray_of_targets_2_lines_2(table_2, metric=metric)  # K1
+    # plot_spray_of_targets_2_lines_3(table_2, metric=metric) # K1 + K2
+    # plot_spray_of_targets(table_2, metric=metric)
+    # plot_spray_of_targets_2(table_2, metric=metric)
+    # plot_spray_of_targets_3(table_2, metric=metric)
+    # three_d_two_colors(table_2[[metric, 'IoU', 'confidence_score', 'steps_gap', 'k_1', 'k_2']], metric)
     # three_d(table_2[[metric, 'IoU', 'confidence_score', 'steps_gap']], metric)
     # three_d_plot(big_df)
     cs = 0.9
