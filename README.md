@@ -38,6 +38,7 @@ list of parameters to tune:
     DETECTION_NMS_THRESHOLD = 0.1
     
 Requirements (python 3.7):
+
 absl-py==1.0.0
 astor==0.8.1
 attrs==21.4.0
