@@ -3,6 +3,8 @@ import os
 import pandas as pd
 from pathlib import *
 
+import g_param
+
 """
 This module includes all functions for evaluating the results of a single simulation.
 """
@@ -14,7 +16,7 @@ class Result:
         self.sim_time = sim_time_path.parts[-1]
         self.num_grapes_sprayed = self.read_tb_summary()
         self.gt_df = self.read_track_gt_df()
-        self.grapes_count_gt = self.gt_df['general_id'].unique() # 15- the real amount of grapes.
+        self.grapes_count_gt = len(self.gt_df['general_id'].unique()) # 15- the real amount of grapes.
         self.pred_df = self.read_track_pred_df()
         self.pred_df_fil = self.read_track_pred_fil_df()
         self.hit = self.pred_df_fil['global_id'].nunique()  # k1
@@ -66,9 +68,12 @@ class Result:
         return pred_track_fil
 
     def read_tb_summary(self):
-        path = self.sim_time_path.joinpath('grape_count.txt')
-        f = open(path, "r")
-        return int(f.read())
+        if g_param.process_type == 'load':
+            path = self.sim_time_path.joinpath('grape_count.txt')
+            f = open(path, "r")
+            return int(f.read())
+        else:
+            return len(g_param.TB)
 
     def write_txt(self):
         """
@@ -124,20 +129,9 @@ def get_simulation_results(take_last_exp):
 
 
 def check_for_duplicates(df):
-
-
     df2 = df.groupby(['global_id', 'global_id_TB']).size().reset_index()
     k_n = len(df2.global_id.value_counts().reset_index(name="count").query("count > 1")["index"])
     return k_n
-    # count = 0
-    # # df = res.read_track_pred_df()[['global_id', 'global_id_TB']]
-    # for i in range(0,15):
-    #     temp_df = df[df['global_id'] == i]
-    #     vals_par_id = temp_df['global_id'].unique()
-    #     if len(vals_par_id) > 1:
-    #         print(f'index {i}: matching TB indexes {vals_par_id}')
-    #         count += len(vals_par_id) - 1
-    # return count
 
 
 def get_results():
@@ -146,19 +140,20 @@ def get_results():
     or any desired exp- the specific exp should be specified inside get_simulation_results.
     Write the results into 'result' file.
     """
-    result = Result(get_simulation_results(False))
-    # result.write_txt()
-    """
-    code for re running all the results calculations.
-    Not needed, unless a change in all the results files is required.
-    :return: 
-    """
-    # sim_path = r'D:\Users\NanoProject\simulations'
-    # dirs = os.listdir(sim_path)
-    # for dir_name in dirs:
-    #     dir_path = Path(os.path.join(sim_path, dir_name))
-    #     result = Result(dir_path)
-    #     result.write_txt()
+    if g_param.eval_mode:
+        result = Result(get_simulation_results(True))
+        result.write_txt()
+        """
+        code for re running all the results calculations.
+        Not needed, unless a change in all the results files is required.
+        :return: 
+        """
+        # sim_path = r'D:\Users\NanoProject\simulations'
+        # dirs = os.listdir(sim_path)
+        # for dir_name in dirs:
+        #     dir_path = Path(os.path.join(sim_path, dir_name))
+        #     result = Result(dir_path)
+        #     result.write_txt()
 
 
 if __name__ == '__main__':

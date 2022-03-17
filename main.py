@@ -78,7 +78,6 @@ step_direction = ["right", "up", "right", "down"]  # the order of movement # ["r
 direction = None
 g_param.init()
 g_param.distances_gt = pd.read_csv(r'C:\Users\Administrator\Desktop\grapes\2d_distances.csv', header=None)
-g_param.eval_mode = True
 first_run = True
 external_signal_all_done = False
 not_finished = True
@@ -979,7 +978,7 @@ def find_item(lst, key, value):
     return -1
 
 
-def  calc_y_diff(y_list):
+def calc_y_diff(y_list):
     """
     :param y_list: list of y values of the corrdiantes
     :return: average difference between two values that represent veritcal movement of the capturing position.
@@ -995,7 +994,6 @@ def  calc_y_diff(y_list):
 
 
 def plot_2_d_track():
-    # ADD TITLE WITH IMAGE NUMBER. CHECK JUMP FROM IMAGE 5 TO 10.
     """
     2D plot of the location of the grape clusters in the image (in pixels) over time.
     Print twice the same plot every movement of the platform (Bug, but doesn't disturb anything).
@@ -1011,19 +1009,12 @@ def plot_2_d_track():
     print(g_param.two_dim_track)
     if len(g_param.two_dim_track) > 0:
         list_to_print = [col for col in zip(*[d.values() for d in g_param.two_dim_track])]
-        # b ={item['index']:item for item in g_param.two_dim_track}
         xs, ys=list_to_print[1], list_to_print[0]
         fig, (ax) = plt.subplots(ncols=1)
         colors = ['b','r','g','c','k','y','m']
         for i in range(min(len(ys), 4)):
             x, y = map(list, zip(*xs[i]))
             x, y = np.array(x), np.array(y)
-
-
-            # y_diff, locs = calc_y_diff(y) # for better visulization- substruct y_diff from all relevent locations in y.
-            # UNCOMMENT NEXT 2 LINES! ONLY FOR CHECKING NOW
-            # if abs(x[-1] - x[0] > 1000 or len([t for t in x if t < - 512]) > 0): # if the grape cluster had gone out of the frame, don't track it anymore.
-            #     continue
             ax.plot(x, y, marker="o", markerfacecolor=colors[i % len(colors)])
         plt.title(f'{get_image_num_sim(g_param.image_number)} -2D track')
         plt.show()
@@ -1106,8 +1097,8 @@ def check_end_program_time():
     eleven = "\033[1m" + "11" + "\033[0m"
     enter = "\033[1m" + "Enter" + "\033[0m"
     # Uncomment for allow manual exit points for the program
-    # temp_input = input(f"Press {eleven} to end the program. Press {enter} to continue.")
-    temp_input = ""
+    temp_input = input(f"Press {eleven} to end the program. Press {enter} to continue.")
+    # temp_input = ""
     if temp_input == "11" or check_sim_img_num():
         log_statistics()
         return True, False
@@ -1152,10 +1143,45 @@ def check_more_than_half_away(x_center, half_step_size):
     return x_center > half_step_size
 
 
+def system_check():
+    """
+    :return: True if all checks are good, False otherwise
+    """
+    if g_param.process_type == 'load':
+        return
+    print("A list of things to check will be display now upon running the program.\n"
+          "Press 'ENTER' button if condition is good, any key otherwise")
+    if input("All good, skip checks (press 'q')") == "q":
+        return True
+    if input("Surrounding of the robot is clear?") != "":
+        return False
+    if input("Robot's controlling pad is in reach?") != "":
+        return False
+    if input("Camera cable is connected on both ends?") != "":
+        return False
+    if input("Camera green light is on?") != "":
+        return False
+    if input("Camera lens cap removed?") != "":
+        return False
+    if input("Sonar cable is connected on both ends?") != "":
+        return False
+    if input("Sonar A2D is on and (2) blue lights on?") != "":
+        return False
+    if input("Sonar microphone has light on? (red, one constant and one blinking)") != "":
+        return False
+    if input("The tap of the air pressure hose is open (same direction as the hose)") != "":
+        return False
+    if input("ALL cables are lose and the robot and platform are free to move") != "":
+        return False
+    print("\n All good to go!")
+    return True
+
+
 def init_program():
     """
     init the program
     """
+    system_check()
     init_variables()
     init_arm_and_platform()
     g_param.images_in_run = g_param.read_write_object.count_images()
@@ -1375,8 +1401,6 @@ def evaluate_detections(prediction_masks, pred_score):
     if prediction_masks.ndim > 2:
         pred_boxes = utils.extract_bboxes(prediction_masks).astype('int32')
     else:
-        # pred_boxes = np.zeros([1, 4], dtype=np.int32)
-
         pred_boxes = np.array([0, 0, 0, 0])
         pred_boxes = np.expand_dims(pred_boxes, axis=0).astype('int32')
         prediction_masks = np.reshape(prediction_masks, (1024, 1024, 1))
@@ -1420,10 +1444,8 @@ def evaluate_detections(prediction_masks, pred_score):
             except ValueError:
                 i_val = None
                 flag_missing_val = True
-            if i_val is None :
+            if i_val is None:
                 i_val = 0
-        # row = [get_image_num_sim(g_param.image_number), pred_match[i], i,
-        #        None, round(overlaps[i][int(pred_match[int(i_val)])],3)]
         if flag_missing_val:
             rounded_iou = 0
         else:
@@ -1437,9 +1459,6 @@ def evaluate_detections(prediction_masks, pred_score):
         else:
             row[3] = int(general_id[0])
         g_param.pred_gt_tracking.loc[len(g_param.pred_gt_tracking)] = row
-
-    #  TODO: find a way to sync pred, GT table of tracking.
-
     g_param.table_of_stats.at['total_pred', get_image_num_sim(g_param.image_number)] = prediction_masks.shape[2]
     g_param.table_of_stats.at['total_gt', get_image_num_sim(g_param.image_number)] = gt_mask.shape[2]
     if gt_mask.shape[2] > 0 and prediction_masks.shape[2] > 0:
@@ -1452,8 +1471,6 @@ def evaluate_detections(prediction_masks, pred_score):
     g_param.table_of_stats.at['precision', get_image_num_sim(g_param.image_number)] = precision_val
     g_param.read_write_object.write_tracking_pred(g_param.pred_gt_tracking)
     g_param.read_write_object.write_tracking_pred_filterd(create_track_pred_fillterd_df())
-
-     # g_param.read_write_object.write_tracking_pred(create_track_pred_df())
     return prediction_masks.shape[2]
 
 
@@ -1484,7 +1501,6 @@ def print_time():
             g_param.read_write_object.create_simulation_config_file()
 
 
-
 def default_fake_grapes():
     for i in range(len(g_param.TB)):
         if g_param.TB[i].fake_grape and g_param.TB[i].amount_times_updated > 0:
@@ -1494,7 +1510,7 @@ def default_fake_grapes():
 
 def check_ttmp():
     """
-    ttmp = Time To Move Platform.
+    ttmp = Time to move platform.
     four conditions should be satisfied in order to return True (ttmp).
     1) at least 'number_of_stetps' had been made
     2) 'image_num" fulfils 'next step' cartire. 1,2 toghther are condtion_1.
@@ -1508,12 +1524,6 @@ def check_ttmp():
     cond_d = (get_image_num_sim(g_param.image_number + 1) > 7)
     return (cond_a or cond_b) and cond_c and cond_d
 
-    # (return True every time image is (multiply of 8) or [(multiply of 8)  + 1]  )
-    # next_step = (math.floor(get_image_num_sim(g_param.image_number) / 2) == 4)
-    # condition_1 = (steps_counter >= number_of_steps or next_step == 1)
-    # condition_2 = step_direction[(g_param.plat_position_step_number + 1) % 4] == "right"
-    # condition_3 = (get_image_num_sim(g_param.image_number)  - g_param.last_movement > 2)
-    # return (condition_1 and condition_2 and condition_3)
 
 if __name__ == '__main__':
     init_program()
@@ -1583,14 +1593,14 @@ if __name__ == '__main__':
                 if is_grape and g_param.TB[i].in_range == "ok":  # 21 - yes
                     spray_process(grape)
                     if g_param.time_to_move_platform:  # 27
-                        break  #
-                    move2capture() #
+                        break
+                    move2capture()
                     update_database_sprayed(i)  # 28
-                    mark_sprayed_and_display()# fixme- not working
+                    mark_sprayed_and_display()
                 else:
                     update_database_no_grape(i)  # 22
-                    mark_sprayed_and_display()# fixme- not working
-            # default_fake_grapes()  #TODO- check with and without it.
+                    mark_sprayed_and_display()
+            # default_fake_grapes()  # TODO- check with and without it.
         else:  # 15- no grapes to spray_procedure
             print(print_line_sep_time(), "No more targets to spray_procedure. take another picture")
             if external_signal_all_done:  # 20- yes # every 4 movements and press 11.

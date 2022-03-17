@@ -8,10 +8,9 @@ if an experiment wants to test step size of 0.2m, than steps_gap should be equal
 
 # params for exp:
 iou = 0.4  # 0.5 - 0.8
-steps_gap = 2
-confidence_score = 0.9
+steps_gap = 1
+confidence_score = 0.5
 same_grape_distance_threshold = 0.08
-
 
 manual_work = False
 TB = []
@@ -28,19 +27,17 @@ spray_sonar = True
 trans = None
 distances_gt = None
 last_movement = 0
-
-
 centers_df = None
 pred_gt_tracking = None
 gt_track_df = None
 pred_gt_df = None
 pred_df = None
 avg_dist = 0.6  # 75
-platform_step_size = 0.5  # TODO (change to 0.5 for exp movement default)
+platform_step_size = 0.4
 sum_platform_steps = 0  # sum of all platform steps
 last_grape_dist = 0.6
 step_size = 0.1
-height_step_size = 1.5  # parameter to_tune
+height_step_size = 1.5  # parameter to_tune. the vertical step is step size multiplied by this value.
 # avg_dist = (avg_dist * 10 + average(TB.distance) * len(TB)) / (10 + len(TB)) # for future work - (after exp)
 image_number = 0
 plat_position_step_number = 0
@@ -56,9 +53,9 @@ max_spray_dist = 0.25
 min_vel = 0.2
 max_vel = 0.5
 const_vel = max_vel
-x_lim = (0.0, 1.0)  # (-1.2, 1)
-y_lim = (-0.5, 2.5)
-z_lim = (0.0, 0.9)
+x_lim = (0.0, 1.0)  # should be adjusted according to Volcani/BGU. Volcani values are used
+y_lim = (-0.5, 2.5)  # should be adjusted according to Volcani/BGU. Volcani values are used
+z_lim = (0.0, 0.9)  # should be adjusted according to Volcani/BGU. Volcani values are used
 # x_lim = (0, 0.1)
 # y_lim = (0, 0.1)
 # z_lim = (0, 0.1)
@@ -69,7 +66,7 @@ z_min = -0.35
 y_max = 0.6
 sonar_x_length = 0.075
 sprayer_x_length = 0.095
-base_rotation_ang = 225  # 180 for lab 225 for volcani # TODO- don't forget to change value!
+base_rotation_ang = 180  # 180 for lab 225 for Volcani # TODO- don't forget to change value!
 images_in_run = 1  # amount of images in the current run
 two_dim_track = []
 distances_matrix_2d = []
@@ -91,9 +88,9 @@ record- save all relevant data in folders (as CSV/JPG..)
 load- load all the date that was recorded.
 change parameters if necessary.
 """
-process_type = 'load'
+process_type = 'record'
 work_place = 'field'  # lab. to know which function of image processing to use.
-eval_mode = True
+eval_mode = False
 
 
 def calc_image_width():

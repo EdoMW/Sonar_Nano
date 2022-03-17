@@ -20,6 +20,8 @@ from PIL import Image
 import scipy.misc
 from add_grapes import add_grapes
 from sty import fg, Style, RgbFg
+import matplotlib.pyplot as plt
+
 
 
 fg.green = Style(RgbFg(31, 177, 31))
@@ -1161,7 +1163,7 @@ def capture_update_TB():
         img_with_masks = img.copy()
         arr = [im0]
         # use THE MASK R-CNN for real grapes: next 93 lines
-        results = model.detect(arr, verbose=1)
+        results = model.detect(arr, verbose=0)
         r = results[0]
         pred_masks = r['masks']
         pred_scores = r['scores']
